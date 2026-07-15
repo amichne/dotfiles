@@ -1,0 +1,16 @@
+.DS_Store
+*.swp
+*.tmp
+
+# Machine-local data and private profile overlays.
+config/local/
+profiles/*.private.conf
+profiles/*.local.conf
+
+# Never admit active auth or credential state into the optional home source.
+home/**/hosts.yml
+home/**/*token*
+home/**/*credential*
+home/**/auth.db*
+home/dot_ssh/private_*
+home/private_*

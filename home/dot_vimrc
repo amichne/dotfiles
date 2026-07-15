@@ -1,0 +1,7 @@
+set nocompatible
+set number
+set clipboard+=unnamed
+filetype plugin indent on
+syntax enable
+
+let mapleader = ","

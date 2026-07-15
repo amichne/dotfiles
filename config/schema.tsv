@@ -1,0 +1,39 @@
+# key	type	default	runtime_var	override_var	description
+credential.github-provider	enum:none,gh,env,security,op,pass	gh	DOTFILES_CFG_CREDENTIAL_GITHUB_PROVIDER	DOTFILES_GITHUB_CREDENTIAL_PROVIDER	Provider used for command-scoped GitHub credentials.
+credential.github-reference	secret-ref		DOTFILES_CFG_CREDENTIAL_GITHUB_REFERENCE	DOTFILES_GITHUB_CREDENTIAL_REFERENCE	Provider-specific GitHub credential reference.
+enterprise.ca-bundle	path		DOTFILES_CFG_ENTERPRISE_CA_BUNDLE	DOTFILES_CA_BUNDLE	Optional enterprise CA bundle path.
+feature.atuin	toggle	auto	DOTFILES_CFG_FEATURE_ATUIN	DOTFILES_FEATURE_ATUIN	Atuin history integration state.
+feature.git	toggle	on	DOTFILES_CFG_FEATURE_GIT	DOTFILES_FEATURE_GIT	Portable Git helper state.
+feature.github	toggle	auto	DOTFILES_CFG_FEATURE_GITHUB	DOTFILES_FEATURE_GITHUB	GitHub CLI helper state.
+feature.gradle	toggle	auto	DOTFILES_CFG_FEATURE_GRADLE	DOTFILES_FEATURE_GRADLE	Gradle helper state.
+feature.jira	toggle	off	DOTFILES_CFG_FEATURE_JIRA	DOTFILES_FEATURE_JIRA	Enterprise Jira helper state.
+feature.sdkman	toggle	auto	DOTFILES_CFG_FEATURE_SDKMAN	DOTFILES_FEATURE_SDKMAN	SDKMAN lazy integration state.
+feature.search	toggle	on	DOTFILES_CFG_FEATURE_SEARCH	DOTFILES_FEATURE_SEARCH	Portable search helper state.
+feature.starship	toggle	auto	DOTFILES_CFG_FEATURE_STARSHIP	DOTFILES_FEATURE_STARSHIP	Starship prompt integration state.
+feature.warp	toggle	off	DOTFILES_CFG_FEATURE_WARP	DOTFILES_FEATURE_WARP	Warp terminal integration state.
+feature.zoxide	toggle	auto	DOTFILES_CFG_FEATURE_ZOXIDE	DOTFILES_FEATURE_ZOXIDE	Zoxide navigation integration state.
+git.branch-prefix	string	feature/	DOTFILES_CFG_GIT_BRANCH_PREFIX	DOTFILES_GIT_BRANCH_PREFIX	Default prefix for new branches.
+git.commit-stage	enum:none,tracked,all	none	DOTFILES_CFG_GIT_COMMIT_STAGE	DOTFILES_GIT_COMMIT_STAGE	Files staged by the commit helper.
+git.default-branch	string	main	DOTFILES_CFG_GIT_DEFAULT_BRANCH	DOTFILES_GIT_DEFAULT_BRANCH	Fallback default branch name.
+git.enforce-ticket-remote	string		DOTFILES_CFG_GIT_ENFORCE_TICKET_REMOTE	DOTFILES_GIT_ENFORCE_TICKET_REMOTE	Remote URL requiring a ticket-bearing branch.
+git.remote	string	origin	DOTFILES_CFG_GIT_REMOTE	DOTFILES_GIT_REMOTE	Default Git remote name.
+git.ticket-regex	string	[A-Z][A-Z0-9]+-[0-9]+	DOTFILES_CFG_GIT_TICKET_REGEX	DOTFILES_GIT_TICKET_REGEX	Extended regular expression used to detect ticket ids.
+path.append	path-list		DOTFILES_CFG_PATH_APPEND	DOTFILES_PATH_APPEND	Portable paths appended after the inherited PATH.
+path.prepend	path-list		DOTFILES_CFG_PATH_PREPEND	DOTFILES_PATH_PREPEND	Portable paths prepended before the inherited PATH.
+plugins.external-roots	path-list		DOTFILES_CFG_PLUGINS_EXTERNAL_ROOTS	DOTFILES_PLUGIN_ROOTS	Trusted external roots containing plugins.tsv and optional dependencies.tsv.
+proxy.credential-provider	enum:none,env,security,op,pass	none	DOTFILES_CFG_PROXY_CREDENTIAL_PROVIDER	DOTFILES_PROXY_CREDENTIAL_PROVIDER	Provider for command-scoped proxy credentials.
+proxy.credential-reference	secret-ref		DOTFILES_CFG_PROXY_CREDENTIAL_REFERENCE	DOTFILES_PROXY_CREDENTIAL_REFERENCE	Provider-specific proxy credential reference.
+proxy.mode	enum:inherit,off,explicit	inherit	DOTFILES_CFG_PROXY_MODE	DOTFILES_PROXY_MODE	Proxy environment resolution mode.
+proxy.no-proxy	csv	localhost,127.0.0.1	DOTFILES_CFG_PROXY_NO_PROXY	DOTFILES_PROXY_NO_PROXY	Hosts excluded from proxy routing.
+proxy.scope	enum:command,shell	command	DOTFILES_CFG_PROXY_SCOPE	DOTFILES_PROXY_SCOPE	Whether an unauthenticated proxy is command or shell scoped.
+proxy.url	url		DOTFILES_CFG_PROXY_URL	DOTFILES_PROXY_URL	Unauthenticated proxy URL.
+proxy.username	string		DOTFILES_CFG_PROXY_USERNAME	DOTFILES_PROXY_USERNAME	Non-secret proxy username.
+search.command	enum:auto,rg,grep	auto	DOTFILES_CFG_SEARCH_COMMAND	DOTFILES_SEARCH_COMMAND	Search implementation preference.
+shell.editor	command	vim	DOTFILES_CFG_SHELL_EDITOR	DOTFILES_EDITOR	Interactive editor command.
+shell.history-file	path	${HOME}/.zsh_history	DOTFILES_CFG_SHELL_HISTORY_FILE	DOTFILES_HISTORY_FILE	Zsh history file.
+shell.history-size	uint	50000	DOTFILES_CFG_SHELL_HISTORY_SIZE	DOTFILES_HISTORY_SIZE	In-memory Zsh history size.
+shell.locale	string		DOTFILES_CFG_SHELL_LOCALE	DOTFILES_LOCALE	Optional locale exported by the shell.
+shell.save-history	uint	10000	DOTFILES_CFG_SHELL_SAVE_HISTORY	DOTFILES_SAVE_HISTORY	Saved Zsh history size.
+tools.codex-home	path	${HOME}/.codex	DOTFILES_CFG_TOOLS_CODEX_HOME	DOTFILES_CODEX_HOME	Codex configuration home.
+tools.java-home	path	${HOME}/.sdkman/candidates/java/current	DOTFILES_CFG_TOOLS_JAVA_HOME	DOTFILES_JAVA_HOME	Java home used when SDKMAN integration is enabled.
+tools.sdkman-dir	path	${HOME}/.sdkman	DOTFILES_CFG_TOOLS_SDKMAN_DIR	DOTFILES_SDKMAN_DIR	SDKMAN installation directory.
