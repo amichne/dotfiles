@@ -39,6 +39,14 @@ else
     test_fail "home apply writes every declared public target" "one or more targets are missing"
 fi
 
+if [ -f "$HOME/.codex/AGENTS.md" ] \
+    && grep -qF 'Commit and push each validated RED and passing GREEN checkpoint before continuing.' "$HOME/.codex/AGENTS.md" \
+    && grep -qF 'When a task, ticket, subtask, or direct message defines a deliverable or links a file containing the deliverable, raise or update a pull request and follow its latest head until green.' "$HOME/.codex/AGENTS.md"; then
+    test_pass "home apply installs the personal delivery policy"
+else
+    test_fail "home apply installs the personal delivery policy" "personal instructions are missing or stale"
+fi
+
 assert_success \
     "home apply is idempotent" \
     "$TEST_ROOT/bin/dotfiles" home apply
