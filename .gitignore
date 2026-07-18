@@ -14,3 +14,8 @@ home/**/*credential*
 home/**/auth.db*
 home/dot_ssh/private_*
 home/private_*
+
+# `private_` is Chezmoi mode metadata; admit only credential-free instructions.
+!home/private_dot_codex/
+home/private_dot_codex/**
+!home/private_dot_codex/AGENTS.md
