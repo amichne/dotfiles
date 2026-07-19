@@ -40,7 +40,7 @@ else
 fi
 
 if [ -f "$HOME/.codex/AGENTS.md" ] \
-    && grep -qF 'Commit and push each validated RED and passing GREEN checkpoint before continuing.' "$HOME/.codex/AGENTS.md" \
+    && grep -qF 'Commit and push once per validated atomic feature, not once per test or RED/GREEN checkpoint.' "$HOME/.codex/AGENTS.md" \
     && grep -qF 'When a task, ticket, subtask, or direct message defines a deliverable or links a file containing the deliverable, raise or update a pull request and follow its latest head until green.' "$HOME/.codex/AGENTS.md"; then
     test_pass "home apply installs the personal delivery policy"
 else
