@@ -1,0 +1,14 @@
+version = 1
+id = "daily-bug-scan"
+kind = "cron"
+name = "Daily bug scan"
+prompt = "Scan recent commits (since the last run, or last 24h) for likely bugs and propose minimal fixes.\n\nGrounding rules:\n- Use ONLY concrete repo evidence (commit SHAs, PRs, file paths, diffs, failing tests, CI signals).\n- Do NOT invent bugs; if evidence is weak, say so and skip.\n- Prefer the smallest safe fix; avoid refactors and unrelated cleanup."
+status = "PAUSED"
+rrule = "RRULE:FREQ=WEEKLY;BYHOUR=9;BYMINUTE=0;BYDAY=SU,MO,TU,WE,TH,FR,SA"
+model = "gpt-5.4"
+reasoning_effort = "medium"
+execution_environment = "worktree"
+target = { type = "project", project_id = "local-3ebc085f2a74a0b2b8fe38a7d7e542ed" }
+cwds = ["/Users/amichne/code/kast"]
+created_at = 1775340139313
+updated_at = 1775595825037
