@@ -39,6 +39,40 @@ else
     test_fail "home apply writes every declared public target" "one or more targets are missing"
 fi
 
+if [ -f "$HOME/.codex/config.toml" ] \
+    && [ -f "$HOME/.codex/AGENTS.md" ] \
+    && [ -f "$HOME/.codex/keybindings.json" ] \
+    && [ -f "$HOME/.codex/browser/config.toml" ] \
+    && [ -f "$HOME/.codex/computer-use/config.json" ] \
+    && [ -f "$HOME/.codex/automations/daily-bug-scan/automation.toml" ] \
+    && [ -f "$HOME/.codex/automations/skill-progression-map/automation.toml" ] \
+    && [ -f "$HOME/.codex/automations/slopsentral-plugin-consolidation/automation.toml" ] \
+    && [ -f "$HOME/.codex/automations/update-agents-md-2/automation.toml" ] \
+    && [ -f "$HOME/.codex/automations/update-agents-md-6a4ea9ab6172/automation.toml" ] \
+    && [ -f "$HOME/.codex/automations/update-agents-md/automation.toml" ]; then
+    test_pass "home apply writes the credential-free Codex configuration set"
+else
+    test_fail "home apply writes the credential-free Codex configuration set" "one or more Codex config targets are missing"
+fi
+
+if [ ! -e "$HOME/.codex/auth.json" ] \
+    && [ ! -e "$HOME/.codex/history.jsonl" ] \
+    && [ ! -e "$HOME/.codex/browser/sessions" ] \
+    && [ ! -e "$HOME/.codex/automations/.run-jitter-salt" ]; then
+    test_pass "home apply excludes Codex credentials and runtime state"
+else
+    test_fail "home apply excludes Codex credentials and runtime state" "a credential or runtime-state target was installed"
+fi
+
+if grep -qF '[marketplaces.ponytail]' "$HOME/.codex/config.toml" \
+    && grep -qF 'source = "https://github.com/DietrichGebert/ponytail.git"' "$HOME/.codex/config.toml" \
+    && grep -qF '[plugins."ponytail@ponytail"]' "$HOME/.codex/config.toml" \
+    && ! grep -Eq 'CONTEXT7_API_KEY[[:space:]]*=' "$HOME/.codex/config.toml"; then
+    test_pass "managed Codex config preserves Ponytail without the local Context7 credential"
+else
+    test_fail "managed Codex config preserves Ponytail without the local Context7 credential" "plugin state or credential sanitization is incorrect"
+fi
+
 assert_success \
     "home apply is idempotent" \
     "$TEST_ROOT/bin/dotfiles" home apply

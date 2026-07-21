@@ -1,0 +1,166 @@
+{
+  "node_count": 282,
+  "unverified_node_count": 0,
+  "raw_edge_count": 365,
+  "non_object_edges": 0,
+  "missing_endpoint_edges": 0,
+  "dangling_endpoint_edges": 25,
+  "self_loop_edges": 0,
+  "valid_candidate_edges": 340,
+  "exact_duplicate_edges": 0,
+  "directed_unique_endpoint_pairs": 335,
+  "directed_same_endpoint_collapsed_edges": 5,
+  "undirected_unique_endpoint_pairs": 335,
+  "undirected_same_endpoint_collapsed_edges": 5,
+  "same_endpoint_group_count": 4,
+  "relation_variant_groups": 0,
+  "source_file_variant_groups": 0,
+  "source_location_variant_groups": 4,
+  "context_variant_groups": 0,
+  "post_build_graph_type": "Graph",
+  "post_build_node_count": 282,
+  "post_build_edge_count": 335,
+  "post_build_error": "",
+  "producer_suppression": {
+    "path": "/Users/amichne/.cache/uv/archive-v0/ADNC5BLsm6IsaD0z/lib/python3.14/site-packages/graphify/extract.py",
+    "total_sites": 10,
+    "sites": [
+      {
+        "line": 975,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 1125,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 1127,
+        "name": "seen_doc_refs",
+        "tuple_arity": 0,
+        "sample": "seen_doc_refs: set[str] = set()"
+      },
+      {
+        "line": 1550,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = {n[\"id\"] for n in nodes}"
+      },
+      {
+        "line": 2019,
+        "name": "seen_keys",
+        "tuple_arity": 0,
+        "sample": "seen_keys: set[tuple] = set()"
+      },
+      {
+        "line": 2942,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 3050,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 3129,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 3624,
+        "name": "seen_ids",
+        "tuple_arity": 0,
+        "sample": "seen_ids: set[str] = set()"
+      },
+      {
+        "line": 3625,
+        "name": "seen_edges",
+        "tuple_arity": 4,
+        "sample": "seen_edges: set[tuple[str, str, str, str | None]] = set()"
+      }
+    ],
+    "error": ""
+  },
+  "examples": [
+    {
+      "source": "tests_plugins_test",
+      "target": "tests_plugins_test_dotfiles_feature_demo",
+      "edge_count": 3,
+      "relations": [
+        "defines"
+      ],
+      "source_files": [
+        "tests/plugins_test.sh"
+      ],
+      "source_locations": [
+        "L71",
+        "L77",
+        "L82"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "tests_credential_proxy_test",
+      "target": "tests_credential_proxy_test_dotfiles_github_credential_reference",
+      "edge_count": 2,
+      "relations": [
+        "defines"
+      ],
+      "source_files": [
+        "tests/credential_proxy_test.sh"
+      ],
+      "source_locations": [
+        "L20",
+        "L35"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "tests_credential_proxy_test",
+      "target": "tests_credential_proxy_test_dotfiles_proxy_credential_provider",
+      "edge_count": 2,
+      "relations": [
+        "defines"
+      ],
+      "source_files": [
+        "tests/credential_proxy_test.sh"
+      ],
+      "source_locations": [
+        "L45",
+        "L63"
+      ],
+      "contexts": [
+        ""
+      ]
+    },
+    {
+      "source": "tests_credential_proxy_test",
+      "target": "tests_credential_proxy_test_dotfiles_proxy_credential_reference",
+      "edge_count": 2,
+      "relations": [
+        "defines"
+      ],
+      "source_files": [
+        "tests/credential_proxy_test.sh"
+      ],
+      "source_locations": [
+        "L64",
+        "L74"
+      ],
+      "contexts": [
+        ""
+      ]
+    }
+  ]
+}

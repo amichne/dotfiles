@@ -7,7 +7,7 @@ permanently: all three define overlapping shell names.
 ## 1. Validate without changing the home directory
 
 ```sh
-cd /Users/amichne/Documents/dotfiles
+cd "$HOME/code/dotfiles"
 ./scripts/check.sh
 ./bin/dotfiles profile set personal
 ./bin/dotfiles doctor
@@ -123,7 +123,7 @@ cp -p ~/.zshrc.pre-dotfiles ~/.zshrc
 exec zsh -l
 ```
 
-Use `chezmoi -S /Users/amichne/Documents/dotfiles/home diff` to inspect static
+Use `chezmoi -S "${HOME}/code/dotfiles/home" diff` to inspect static
 file drift before reversing any home-managed file. No automated rollback should
 guess which preexisting application file is authoritative.
 

@@ -25,7 +25,28 @@ exec zsh -l
 ```
 
 Re-run `install apply` only when installer ownership changes. Run `home plan`
-before `home apply` whenever static public files change.
+before `home apply` whenever static home files change.
+
+## Update Codex configuration
+
+The `home/private_dot_codex` source owns durable, credential-free Codex
+preferences: `config.toml`, global `AGENTS.md`, keybindings, browser and
+computer-use preferences, and automation definitions. Keep `config.toml`
+private on disk because Codex or a local operator may add credential-backed
+settings later.
+
+Do not copy `auth.json`, history, sessions, memories, caches, generated plugin
+contents, marketplace snapshots, native-host state, or automation memory into
+the repository. Static MCP headers that contain credentials are also excluded;
+configure those locally or through an environment-backed header after applying
+the tracked configuration on another machine.
+
+Preview and apply updates with:
+
+```sh
+./bin/dotfiles home plan
+./bin/dotfiles home apply
+```
 
 ## Add a configuration key
 
@@ -54,7 +75,8 @@ override built-in IDs.
   enterprise provider.
 - Keep only provider references in machine config.
 - Never add active `gh/hosts.yml`, SSH private keys, auth databases, tokens, or
-  company host inventories to `home/`, `config/`, or `profiles/`.
+  company host inventories to `home/`, `config/`, or `profiles/`. This includes
+  static credential headers in Codex `config.toml`.
 - Prefer command-scoped `with-github-token` and `with-proxy` wrappers.
 - Run `dotfiles status` and `dotfiles doctor`; neither prints secret references.
 

@@ -1,0 +1,37 @@
+[project]
+site_name = "Dotfiles Knowledge Base"
+site_description = "Source-backed architecture, configuration, and operations for the dotfiles runtime."
+docs_dir = "docs"
+site_dir = "site"
+nav = [
+  { "Home" = "index.md" },
+  { "Guides" = [
+    { "Architecture" = "architecture.md" },
+    { "Configuration" = "configuration.md" },
+    { "Behavioral contract" = "behavioral-contract.md" },
+    { "Migration" = "migration.md" },
+    { "Operations" = "operations.md" },
+    { "Baseline evidence" = "baseline.md" },
+  ] },
+  { "Knowledge base" = [
+    { "Overview" = "knowledge/index.md" },
+    { "Runtime architecture" = "knowledge/runtime-architecture.md" },
+    { "Configuration model" = "knowledge/configuration-model.md" },
+    { "Plugin runtime" = "knowledge/plugin-runtime.md" },
+    { "Safe operations" = "knowledge/safe-operations.md" },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.code.copy",
+  "navigation.indexes",
+  "navigation.sections",
+  "search.suggest",
+]
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.toc]
+permalink = true

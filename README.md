@@ -28,16 +28,20 @@ the plan and backing up `~/.zshrc`, migrate explicitly:
 exec zsh -l
 ```
 
-Static public files are a separate opt-in step:
+Static home files are a separate opt-in step:
 
 ```sh
 ./bin/dotfiles home plan
 ./bin/dotfiles home apply
 ```
 
-`home apply` manages only public Git defaults, the global ignore file, Atuin
-behavior, Vim, and IdeaVim. It does not manage `gh/hosts.yml`, SSH keys, auth
-databases, tokens, Git identity, or enterprise host state.
+`home apply` manages public Git defaults, the global ignore file, Atuin
+behavior, Vim, IdeaVim, and credential-free Codex preferences. Codex auth,
+history, sessions, caches, generated plugin contents, and automation runtime
+state remain local. The tracked Codex config omits static credential headers,
+so restore those through a local credential source after applying on a new
+machine. The adapter also does not manage `gh/hosts.yml`, SSH keys, Git
+identity, or enterprise host state.
 
 ## Commands
 

@@ -1,0 +1,581 @@
+personality = "pragmatic"
+model_reasoning_effort = "xhigh"
+approval_policy = "on-request"
+approvals_reviewer = "user"
+sandbox_mode = "danger-full-access"
+
+notify = ["/Users/amichne/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+model = "gpt-5.6-sol"
+
+
+[tools]
+web_search = true
+
+[mcp_servers]
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+# Context7 authentication is local-only and intentionally excluded from dotfiles.
+
+[mcp_servers.node_repl]
+args = []
+command = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node_repl"
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = "/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules"
+NODE_REPL_NODE_PATH = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/amichne/.codex"
+CODEX_HOME = "/Users/amichne/.codex"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "5b74180ac40ca4cf726cad15c5ff886f159224f1c0306ea364ad9eea6a7e7ac2,6d25aa7656feac858f3a3bdaea5bcbab0dbfd426c9de8e6931ce90c399ee8e4f"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
+NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = "Control desktop apps on macOS through Computer Use."
+BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
+BROWSER_USE_CODEX_APP_VERSION = "26.715.21425"
+SKY_CUA_SERVICE_PATH = "/Users/amichne/.codex/plugins/cache/openai-bundled/computer-use/1.0.1000451/Codex Computer Use.app"
+CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
+
+[mcp_servers.computer-use]
+command = "./Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
+args = ["mcp"]
+cwd = "."
+enabled = false
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[projects."/Users/amichne/code/kast"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-05-26/help-me-install-docker-locally"]
+trust_level = "trusted"
+
+
+[projects."/Users/amichne/code/kast-rs"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/code/homebrew-kast"]
+trust_level = "trusted"
+
+[projects."/Users/amichne"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/code"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/.agents"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/code/intelligence"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/code/konditional"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-06-10/goal-skill-creator-users-amichne-codex"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/code/slopsentral"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Downloads"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/code/kast-action"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-06-20/i-want-to-set-up-an"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-06-20/use-the-attached-response-to-plan"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-06-23/new-chat"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-06-27/plugin-creator-users-amichne-codex-skills"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/.codex"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-08/search-for-a-skill-to-facilitate"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Library/Mobile Documents/iCloud~md~obsidian/Documents/core"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-11/sites-plugin-sites-openai-bundled-create"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-11/sites-plugin-sites-openai-bundled-create-2"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/code/vault"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-12/audit-the-recent-conversations-in-which"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-13/referenced-chatgpt-conversation-this-is-untrusted"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-14/give-me-a-brief-overview-of"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-14/write-a-script-that-will-close"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-14/assess-kast-s-performance-in-the"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-14/please-kill-al"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/dotfiles"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-15/assess-the-performance-of-the-kast"]
+trust_level = "trusted"
+
+[projects."/Users/amichne/Documents/Codex/2026-07-15/assess-the-performance-of-the-kast-2"]
+trust_level = "trusted"
+
+[tui]
+theme = "monokai-extended-bright"
+session_picker_view = "comfortable"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
+"gpt-5.6-sol" = 4
+
+[features]
+js_repl = false
+terminal_resize_reflow = true
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/workflow/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/web-artifacts-builder/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/stripe-best-practices/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/source-graph-consolidation/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/runtime-linking/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/react-best-practices/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/primitive-quality-audit/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/primitive-routing-evaluation/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/pull-request-lifecycle/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/migrate-to-codex/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/jira-resolve-ticket/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/ink/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.codex/skills/.system/imagegen/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/frontend-design/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/cli/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/agents-sdk/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/typed-service-contracts/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/tdd-red-green-refactor/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/review-duplication/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/gh-cli/SKILL.md"
+enabled = false
+
+[[skills.config]]
+name = "browser:browser"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/define-goal/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/kotlin-gradle-validation/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/kotlin-standards/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/manage-json-schemas/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/openapi-contract-authoring/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/openapi-contract-rating/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/openapi-schema-modeling/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.agents/source/skills/plugin-composition-authoring/SKILL.md"
+enabled = false
+
+[[skills.config]]
+name = "spreadsheets:Spreadsheets"
+enabled = false
+
+[[skills.config]]
+name = "agentic-development:agentic-development"
+enabled = false
+
+[[skills.config]]
+name = "computer-use:computer-use"
+enabled = false
+
+[[skills.config]]
+name = "contract-governance:openapi-contract-rating"
+enabled = false
+
+[[skills.config]]
+name = "contract-governance:openapi-schema-modeling"
+enabled = false
+
+[[skills.config]]
+name = "documents:documents"
+enabled = false
+
+[[skills.config]]
+name = "contract-governance:openapi-contract-authoring"
+enabled = false
+
+[[skills.config]]
+name = "contract-governance:manage-json-schemas"
+enabled = false
+
+[[skills.config]]
+name = "github:gh-address-comments"
+enabled = false
+
+[[skills.config]]
+name = "evidence-driven-delivery:pull-request-lifecycle"
+enabled = false
+
+[[skills.config]]
+name = "gmail:gmail"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/code/kast/.agents/skills/kast/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/code/intelligence/.agents/skills/grill-me/SKILL.md"
+enabled = false
+
+[[skills.config]]
+name = "gmail:gmail-inbox-triage"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/code/konditional/.agents/skills/kast-callgraph-review/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/code/konditional/.agents/skills/kast-safe-rename/SKILL.md"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:github-ci-operations"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:git-change-flow"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/code/konditional/.agents/skills/kast-symbol-investigation/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/code/konditional/.agents/skills/kast-api-surface-change/SKILL.md"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:kotlin-standards"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:kotlin-gradle-validation"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:kotlin-agentic-correctness"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:pull-request-lifecycle"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:shell-script-safety"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-agentic-correctness:tdd"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-correctness:kotlin-gradle-validation"
+enabled = false
+
+[[skills.config]]
+name = "kotlin-correctness:kotlin-standards"
+enabled = false
+
+[[skills.config]]
+name = "notion:notion-knowledge-capture"
+enabled = false
+
+[[skills.config]]
+name = "chrome:control-chrome"
+enabled = false
+
+[[skills.config]]
+name = "browser:control-in-app-browser"
+enabled = false
+
+[[skills.config]]
+path = "/Users/amichne/.codex/skills/cli-creator/SKILL.md"
+enabled = false
+
+[[skills.config]]
+name = "superpowers:writing-skills"
+enabled = false
+
+[marketplaces.openai-primary-runtime]
+last_updated = "2026-07-16T08:29:17Z"
+source_type = "local"
+source = "/Users/amichne/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[marketplaces.slopsentral]
+last_updated = "2026-07-14T16:30:15Z"
+last_revision = "cabf8fa21eb8727af66e1795c6f7fbc7cb557ede"
+source_type = "git"
+source = "git@github.com:amichne/slopsentral.git"
+
+[marketplaces.openai-bundled]
+last_updated = "2026-07-17T04:39:42Z"
+source_type = "local"
+source = "/Users/amichne/.codex/.tmp/bundled-marketplaces/openai-bundled"
+
+[marketplaces.ponytail]
+last_updated = "2026-07-17T12:59:58Z"
+source_type = "git"
+source = "https://github.com/DietrichGebert/ponytail.git"
+
+
+[desktop]
+preventSleepWhileRunning = true
+git-branch-prefix = "feature/"
+git-pull-request-merge-method = "squash"
+git-show-sidebar-pr-icons = true
+git-pr-instructions = """
+Details, minimal links, no more than a single page. You cover what , why, not how; that's the code.
+
+Any callouts/risks/uncertainty should be explicitly called out ahead of time """
+git-commit-instructions = """
+1. First line: conventional commit format (type: concise description) (remember to use semantic types like feat, fix, docs, style, refactor, perf, test, chore, etc.)
+2. Optional bullet points if more context helps:
+   - Keep the second line blank
+   - Keep them short and direct
+   - Focus on what changed
+   - Always be terse
+   - Don't overly explain
+   - Drop any fluffy or formal language
+
+Return ONLY the commit message - no introduction, no explanation, no quotes around it."""
+followUpQueueMode = "steer"
+show-context-window-usage = true
+appearanceTheme = "dark"
+appearanceDarkCodeThemeId = "dracula"
+keepRemoteControlAwakeWhilePluggedIn = true
+usePointerCursors = false
+appearanceDiffMarkerStyle = "symbols"
+selected-avatar-id = "null-signal"
+dock-icon-preference = "app-default"
+avatar-overlay-mascot-width-px = 89
+conversationDetailMode = "STEPS_COMMANDS"
+appearanceLightCodeThemeId = "proof"
+
+[desktop.open-in-target-preferences]
+global = "intellij"
+
+[desktop.open-in-target-preferences.perPath]
+"/Users/amichne/code/kast" = "intellij"
+
+[desktop.appearanceDarkChromeTheme]
+accent = "#ff79c6"
+contrast = 88
+ink = "#f8f8f2"
+opaqueWindows = false
+surface = "#282a36"
+
+[desktop.appearanceDarkChromeTheme.fonts]
+code = '"Jetbrains Mono"'
+ui = "Inter"
+
+[desktop.appearanceDarkChromeTheme.semanticColors]
+diffAdded = "#50fa7b"
+diffRemoved = "#ff5555"
+skill = "#ff79c6"
+
+[desktop.appearanceLightChromeTheme]
+accent = "#3d755d"
+contrast = 40
+ink = "#2f312d"
+opaqueWindows = false
+surface = "#f5f3ed"
+
+[desktop.appearanceLightChromeTheme.fonts]
+
+[desktop.appearanceLightChromeTheme.semanticColors]
+diffAdded = "#3d755d"
+diffRemoved = "#ba2623"
+skill = "#5f6ac2"
+
+[plugins."documents@openai-primary-runtime"]
+enabled = false
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = false
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = false
+
+[plugins."chrome@openai-bundled"]
+enabled = true
+
+[plugins."agent-platform-authoring@slopsentral"]
+enabled = true
+
+[plugins."kotlin-engineering@slopsentral"]
+enabled = true
+
+[plugins."git-ci-operations@slopsentral"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = false
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = false
+
+[plugins."code-knowledge-base@slopsentral"]
+enabled = true
+
+[plugins."sites@openai-bundled"]
+enabled = false
+
+[plugins."visualize@openai-bundled"]
+enabled = false
+
+[plugins."engineering-baseline@slopsentral"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."ponytail@ponytail"]
+enabled = true
+
+[hooks.state]
+
+[hooks.state."/Users/amichne/code/slopsentral/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:43d803fa1af829d1a5cc49468c2af78e3fd85ab5eaeab81307353d6e3f6bd446"
+
+[hooks.state."/Users/amichne/code/slopsentral/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:7671363277ac2d3e8e1ceda753097d425bbb60dccfb06605b6caec64958f4a15"
+
+[hooks.state."/Users/amichne/code/slopsentral/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:89cc321086e0b23eb8c2246995d1c6c00462f495c8cd5a6a3aa209104c05aff3"
+
+[apps.asdk_app_6938a94a61d881918ef32cb999ff937c]
+enabled = false
+
+[apps.connector_5f3c8c41a1e54ad7a76272c89e2554fa]
+enabled = false
+
+[apps.asdk_app_696609ce0304819185fafa6a660e0f1e]
+enabled = false
+
+[apps.asdk_app_69fb9378663481919a68e8a2109644e5]
+enabled = false
+
+[apps.connector_20205bf7d4e99a89d7154bb849718324]
+enabled = false
+
+[shell_environment_policy.set]
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "5b74180ac40ca4cf726cad15c5ff886f159224f1c0306ea364ad9eea6a7e7ac2,6d25aa7656feac858f3a3bdaea5bcbab0dbfd426c9de8e6931ce90c399ee8e4f"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/amichne/.codex"
