@@ -1,6 +1,7 @@
 [project]
 site_name = "Dotfiles Knowledge Base"
 site_description = "Source-backed architecture, configuration, and operations for the dotfiles runtime."
+site_url = "https://amichne.github.io/dotfiles/"
 docs_dir = "docs"
 site_dir = "site"
 nav = [

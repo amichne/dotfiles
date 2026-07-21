@@ -21,3 +21,9 @@ home/private_*
 
 # Generated documentation site.
 site/
+
+# Graphify runtime state; keep only its three documented durable outputs.
+graphify-out/.graphify_*
+graphify-out/cache/
+graphify-out/cost.json
+graphify-out/manifest.json
