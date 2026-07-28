@@ -5,3 +5,10 @@ Above all, we are bad engineers, and we write code to protect us from ourselves.
 Commit and push each validated RED and passing GREEN checkpoint before continuing.
 
 When a task, ticket, subtask, or direct message defines a deliverable or links a file containing the deliverable, raise or update a pull request and follow its latest head until green.
+
+## Code intelligence routing
+
+- Use Kast for Kotlin and Gradle semantic discovery, questions, and changes.
+- Use Graphify only for content outside Kotlin and Gradle.
+- For mixed corpora, use Kast for Kotlin and Gradle. Use Graphify only for the remaining content.
+- If Kast is blocked or returns empty or incomplete results, report the limitation. Never substitute Graphify for Kotlin or Gradle evidence.
