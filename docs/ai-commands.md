@@ -27,6 +27,7 @@ After source review, install the links:
 This command trusts the reviewed registry through `mise trust`.
 It creates `~/.local/bin/ai` and `${XDG_CONFIG_HOME:-$HOME/.config}/ai` as links to this checkout.
 It preserves existing targets when their ownership differs.
+If a file operation fails or you interrupt installation, the installer removes links that it created.
 It does not edit `.zshrc`, `.bashrc`, or the global mise configuration.
 
 The shell's `PATH` must include `~/.local/bin`.
@@ -85,6 +86,7 @@ ai/requirements/<name>.md
 ```
 
 Unrelated staged files stay staged. Existing commands cannot be overwritten.
+Deleted paths in the Git index or current commit also prevent registration.
 A failed commit removes the new files from the registry.
 Mise discovers the task file in subsequent sessions.
 No push occurs. Normal Git hooks and local Git identity still govern the commit.
@@ -112,6 +114,7 @@ External checks without Actions job links remain visible with an explicit log li
 
 CI keeps pending, successful, failed, skipped, neutral, canceled, and unavailable records distinct.
 No check records means unavailable. It never means success.
+An empty Pi response means unavailable. The report keeps the native evidence.
 
 | Result | Exit status |
 | --- | --- |

@@ -134,6 +134,22 @@ def test_review_report_and_no_repository_changes(shell: Shell) -> None:
     assert before == after
 
 
+@pytest.mark.parametrize("mode", ["review", "ci"])
+def test_empty_pi_output_is_unavailable(shell: Shell, mode: str) -> None:
+    prepare(shell, [check("COMPLETED", "FAILURE")])
+    pi = Path(shell.env["PATH"].split(":")[0]) / "pi"
+    _ = pi.write_text(f"#!{sys.executable}\nprint('   ')\n", encoding="utf-8")
+    result = shell.run("run", mode, "42")
+    assert result.returncode == 69, result.stderr + result.stdout
+    assert "empty response" in result.stderr
+    report = next(Path(shell.env["XDG_STATE_HOME"]).glob("ai/reports/*/report.md"))
+    assert "Pi diagnosis unavailable" in report.read_text()
+    assert HEAD in report.read_text()
+    if mode == "ci":
+        assert "Status: FAILED" in report.read_text()
+        assert "unresolved reference Widget" in report.read_text()
+
+
 def test_missing_logs_remain_explicit(shell: Shell) -> None:
     prepare(shell, [check("COMPLETED", "FAILURE")])
     shell.env["NO_LOGS"] = "1"

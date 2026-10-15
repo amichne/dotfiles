@@ -72,7 +72,7 @@ def main(arguments: list[str]) -> int:
                 target.destination.parent.mkdir(parents=True, exist_ok=True)
                 target.destination.symlink_to(target.source)
                 created.append(target.destination)
-    except OSError:
+    except (OSError, KeyboardInterrupt):
         for path in created:
             path.unlink()
         raise
