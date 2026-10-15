@@ -51,7 +51,7 @@ def shell(tmp_path: Path) -> Shell:
     # Resolve a mise shim before the disposable HOME removes its tool registry.
     resolved = subprocess.run([uv, "--version"], capture_output=True, text=True, check=False)
     assert resolved.returncode == 0
-    if "shims" in uv:
+    if "shims" in uv or Path(uv).resolve().name == "mise":
         resolved = subprocess.run(
             [mise, "which", "uv"], capture_output=True, text=True, check=False
         )

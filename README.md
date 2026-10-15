@@ -53,6 +53,7 @@ dotfiles status
 dotfiles doctor [--strict]
 dotfiles install plan|apply|uninstall
 dotfiles ai plan|apply|uninstall
+dotfiles cutover inventory|plan|apply|status|recover
 dotfiles credential exec github -- <command>
 dotfiles proxy exec -- <command>
 dotfiles home plan|apply|status
@@ -72,6 +73,7 @@ See [AI shell commands](docs/ai-commands.md) for installation, dependencies, rep
 
 The [consolidation and cutover record](docs/cutover/index.md) moves the replacement plan and Git proofs into this repository.
 It preserves the original Config change and states the remaining live-cutover conditions.
+The [cutover procedure](docs/cutover/procedure.md) documents the new inventory, apply, and independent recovery commands.
 
 ## Design boundaries
 

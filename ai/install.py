@@ -23,9 +23,7 @@ class Link:
     state: LinkState
 
 
-def links() -> tuple[Link, ...]:
-    home = Path.home()
-    config = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config")))
+def links_for(home: Path, config: Path) -> tuple[Link, ...]:
     if not config.is_absolute():
         raise ValueError("XDG_CONFIG_HOME must be absolute")
     result: list[Link] = []
@@ -41,6 +39,11 @@ def links() -> tuple[Link, ...]:
             state = LinkState.ABSENT
         result.append(Link(source, destination, state))
     return tuple(result)
+
+
+def links() -> tuple[Link, ...]:
+    home = Path.home()
+    return links_for(home, Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))))
 
 
 def main(arguments: list[str]) -> int:

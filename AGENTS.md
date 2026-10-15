@@ -10,6 +10,9 @@ validated types instead of unstructured strings or ambient environment state.
 
 Additional project rules:
 
+- `cutover/` owns whole-path replacement and guarded recovery.
+  The normal installer owns the marked entrypoint that cutover renders.
+
 - `config/schema.tsv` is the public configuration authority.
 - Configuration files are data, never sourced shell code.
 - Shell startup must not perform network access, install software, prompt, or

@@ -42,6 +42,10 @@ uv run --locked --project tests/upstream-plan pyright --project tests/upstream-p
 uv run --locked --project tests/upstream-plan pytest tests/upstream-plan -q -p no:cacheprovider
 uv run --locked --script tests/upstream-plan/standalone.py --self-test
 
+printf '==> Clean-slate cutover contracts\n'
+uv run --locked --project cutover python cutover/check.py
+uv run --locked --script cutover/standalone.py --self-test
+
 printf '==> Whitespace and secret-shaped source scan\n'
 if rg -n '[[:blank:]]+$' . \
     -g '!**/.git/**' \

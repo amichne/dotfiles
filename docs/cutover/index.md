@@ -72,13 +72,17 @@ The archive case examines hashes and the original path inventory without applyin
 These cases prove Git behavior and source preservation.
 They do not prove profile precedence, a production upstream planner, runtime replacement, or installed-host parity.
 
-## Remaining implementation
+## Cutover tooling
 
 The [upstream proposal](upstream.md) keeps enterprise decisions separate from portable source.
 The current dotfiles schema and trusted plugin roots remain the composition owners.
 New work must extend those owners instead of importing Config's independent runtime.
 
-Live cutover needs a reviewed replacement inventory, exact preimages, guarded recovery, and fresh-shell acceptance.
-The existing installer refuses the conflicting AI targets on this host.
-It does not yet archive those targets or retire the unmarked .cfg startup files.
-The marked-block installer alone cannot establish a clean-slate cutover.
+The `dotfiles cutover` commands now supply inventory admission, exact preimages, guarded recovery, and fresh-shell acceptance.
+The coordinator renders the normal installer's marked entrypoint.
+It gets the AI targets from the AI installer.
+An approved plan can archive conflicting legacy paths and retire unmarked Zsh startup files.
+
+The [procedure](procedure.md) documents the commands, supported paths, and effect limits.
+The automated cases use disposable HOME directories.
+No live cutover occurred.

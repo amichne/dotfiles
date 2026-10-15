@@ -40,6 +40,7 @@ Usage:
   dotfiles doctor
   dotfiles install <plan|apply|uninstall>
   dotfiles ai <plan|apply|uninstall>
+  dotfiles cutover <inventory|plan|apply|status|recover>
   dotfiles credential exec <id> -- <command> [args]
   dotfiles proxy exec -- <command> [args]
   dotfiles home <plan|apply|status>
@@ -69,6 +70,9 @@ dotfiles_main() {
             ;;
         ai)
             "$DOTFILES_ROOT/bin/ai" install "$@"
+            ;;
+        cutover)
+            uv run --offline --locked --no-dev --project "$DOTFILES_ROOT/cutover" python "$DOTFILES_ROOT/cutover/standalone.py" "$@"
             ;;
         credential)
             dotfiles_credential_command "$@"
