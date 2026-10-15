@@ -1,6 +1,0 @@
-# Public behavior only. Authentication and sync session state stay unmanaged.
-enter_accept = true
-secrets_filter = true
-
-[sync]
-records = true

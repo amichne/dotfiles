@@ -31,7 +31,7 @@ If a file operation fails or you interrupt installation, the installer removes l
 It does not edit `.zshrc`, `.bashrc`, or the global mise configuration.
 
 The shell's `PATH` must include `~/.local/bin`.
-If that path is absent, use `./bin/ai` directly or select the path through the existing `path.prepend` configuration.
+If that path is absent, use `./bin/ai` directly or add `~/.local/bin` to `PATH`.
 
 ## Discover and run
 

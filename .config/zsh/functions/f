@@ -1,0 +1,9 @@
+# description: Search a path's contents with ripgrep, respecting ignore rules.
+# usage: f PATH PATTERN
+# example: f .config pattern
+emulate -L zsh
+if (( $# != 2 )); then
+    print -u2 -- 'usage: f <path> <pattern>'
+    return 2
+fi
+command rg -- "$2" "$1"

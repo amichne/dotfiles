@@ -1,23 +1,67 @@
-.DS_Store
-*.swp
-*.tmp
+# Public HOME inventory. Unlisted files stay private.
+*
+!/.gitignore
+!/.python-version
+!/.zshrc
+!/.zprofile
+!/AGENTS.md
+!/README.md
+!/pyproject.toml
+!/uv.lock
+!/zensical.toml
 
-# Machine-local data and private profile overlays.
-config/local/
-profiles/*.private.conf
-profiles/*.local.conf
+!/.config/
+!/.config/atuin/
+!/.config/atuin/config.toml
+!/.config/mise/
+!/.config/mise/config.toml
+!/.config/nvim/
+!/.config/nvim/**
+!/.config/prompt.json
+!/.config/starship.toml
+!/.config/yazi/
+!/.config/yazi/*.toml
+!/.config/zsh/
+!/.config/zsh/functions/
+!/.config/zsh/functions/*
+!/.config/shell-prompt/
+!/.config/shell-prompt/*.mjs
 
-# Never admit active auth or credential state into the optional home source.
-home/**/hosts.yml
-home/**/*token*
-home/**/*credential*
-home/**/auth.db*
-home/dot_ssh/private_*
-home/private_*
+!/.local/
+!/.local/bin/
+!/.local/bin/df
+!/.local/bin/dotfiles
+!/.local/bin/keys
+!/.local/bin/keys.lock
+!/.local/bin/shell-prompt
 
-# `private_` is Chezmoi mode metadata here; contents remain credential-free.
-!home/private_dot_codex/
-!home/private_dot_codex/**
+!/.pi/
+!/.pi/agent/
+!/.pi/agent/APPEND_SYSTEM.md
+!/.pi/agent/pi-lsp.json
+!/.pi/agent/agents/
+!/.pi/agent/agents/*.md
+!/.pi/agent/prompts/
+!/.pi/agent/prompts/*.md
 
-# Generated documentation site.
-site/
+!/ai/
+!/ai/**
+!/bin/
+!/bin/ai
+!/bin/dotfiles
+!/docs/
+!/docs/*.md
+!/scripts/
+!/scripts/*.py
+!/scripts/*.py.lock
+!/scripts/check.sh
+!/tests/
+!/tests/*.py
+!/tests/*.mjs
+
+# Generated state stays outside the source inventory.
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.DS_Store

@@ -1,0 +1,53 @@
+[project]
+name = "dotfiles"
+version = "0.1.0"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff==0.14.0",
+    "pyright[nodejs]==1.1.407",
+    "pytest==8.4.2",
+    "zensical==0.0.70",
+]
+
+[tool.uv]
+package = false
+no-build = true
+required-version = ">=0.12.9"
+index-strategy = "first-index"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["scripts", "tests", ".local/bin/keys"]
+exclude = ["**/.venv"]
+reportMatchNotExhaustive = "error"
+reportUnnecessaryTypeIgnoreComment = "error"
+reportImplicitOverride = "error"
+reportUnusedCallResult = "error"
+reportPrivateUsage = "error"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+include = ["*.py", "keys"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "RUF"]
+ignore = ["E501", "S603", "S607"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["S101"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --import-mode=importlib -ra"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+filterwarnings = ["error"]

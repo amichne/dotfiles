@@ -1,27 +1,30 @@
 # Repository instructions
 
-Type safety is king. Treat configuration parsing, schema validation, dependency
-checks, and shell lint as compiler boundaries. Do not cast, override, bypass, or
-silence those boundaries.
+HOME is the installed worktree. `~/.dotfiles.git` holds its sole Git index.
+The origin is `amichne/dotfiles`.
+Keep configuration at its HOME-relative path. Do not create another runtime copy.
 
-Assume intention does not imply outcome. Verify base cases before changing
-behavior, add executable checks for every contract, and encode information in
-validated types instead of unstructured strings or ambient environment state.
+- `.gitignore` owns the default-deny public inventory.
+- `.zshrc` and `.zprofile` own shell startup.
+- `.config/zsh/functions` owns the autoloaded shell functions.
+- `.local/bin/keys` owns the shortcut browser.
+- `.config/shell-prompt` owns Git prompt context and its pure model.
+- `scripts/df.py` owns bare Git selection and read-only setup inspection.
+- `bin/dotfiles` dispatches only `ai`. `ai/install.py` owns the AI links.
+- `.pi` contains public Pi resources. Keep authentication and sessions private.
 
-Additional project rules:
+Keep configuration data inert. Parse external values once into constrained values.
+Keep expected failures finite. Preserve native command failures.
+Do not bypass type analysis, data parsing, dependency errors, or shell lint.
+Shell startup must not access the network, install software, prompt, or export credentials.
+Missing shell dependencies must produce a named failure.
+Load only the two named system Zsh packages from reviewed physical package roots.
+Keep private settings outside the public inventory.
 
-- `cutover/` owns whole-path replacement and guarded recovery.
-  The normal installer owns the marked entrypoint that cutover renders.
+Tests use disposable HOME and XDG directories without host credentials.
+Never replace live HOME files from a test.
+Use `./scripts/check.sh` for Ruff, strict Pyright, pytest, shell syntax, ShellCheck,
+Node tests, data parsing, AI contracts, and the documentation build.
+Each portable Python command needs its adjacent uv lock.
 
-- `config/schema.tsv` is the public configuration authority.
-- Configuration files are data, never sourced shell code.
-- Shell startup must not perform network access, install software, prompt, or
-  export credentials globally.
-- A feature explicitly set to `on` must fail clearly when its dependency is
-  missing. `auto` may skip an unavailable optional dependency; `off` must do
-  nothing.
-- Plugins are loaded only from validated manifests and trusted physical roots.
-- Tests use disposable `HOME` and XDG directories. Never read or mutate live
-  credentials, host files, or shell startup files from a test.
-- Preserve unrelated user work and keep migration actions previewable,
-  idempotent, and reversible.
+Do not install, publish, or change remotes without explicit authorization.

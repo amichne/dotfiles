@@ -1,2 +1,0 @@
-source ~/.vimrc
-nmap K :action com.github.vsuhanov.fastpeek.peek<CR>

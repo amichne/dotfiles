@@ -2,9 +2,10 @@
 
 `mise.toml` owns task discovery. `tasks/` contains ordinary executables.
 `create.py` owns draft review, verification, and local Git registration.
+When the registry lives in HOME, `create.py` uses `df git` and the bare index.
+A normal development checkout uses project-local Git.
 `workflows.py` owns GitHub data and local reports. Pi receives evidence with its tools disabled.
 `install.py` owns the two installed links. Keep shell startup outside this installer.
-Its `links_for` function also supplies targets to the cutover coordinator.
 
 From the repository root, run `uv run --locked --project ai python ai/check.py`.
 The repository gate is `./scripts/check.sh`.

@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node "${XDG_CONFIG_HOME:-$HOME/.config}/shell-prompt/context.mjs" "$@"

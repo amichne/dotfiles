@@ -138,6 +138,12 @@ def verify(draft: Draft) -> _VerifiedDraft | VerificationFailed:
         return _VerifiedDraft(draft)
 
 
+def git_arguments(*arguments: str) -> list[str]:
+    if REPO == Path.home().resolve():
+        return [str(REPO / ".local/bin/df"), "git", *arguments]
+    return ["git", "-C", str(REPO), *arguments]
+
+
 def register(verified: _VerifiedDraft) -> int:
     draft = verified.draft
     files = {
@@ -150,7 +156,7 @@ def register(verified: _VerifiedDraft) -> int:
         return 65
     paths = [str(path.relative_to(REPO)) for path in files]
     tracked = subprocess.run(
-        ["git", "-C", str(REPO), "ls-files", "--cached", "--with-tree=HEAD", "--", *paths],
+        git_arguments("ls-files", "--cached", "--with-tree=HEAD", "--", *paths),
         stdout=subprocess.PIPE,
         check=False,
     )
@@ -168,28 +174,25 @@ def register(verified: _VerifiedDraft) -> int:
                 _ = output.write(content)
             written.append(path)
             path.chmod(0o644 if path.suffix == ".md" else 0o755)
-        added = subprocess.run(["git", "-C", str(REPO), "add", "--", *paths], check=False)
+        added = subprocess.run(git_arguments("add", "--", *paths), check=False)
         if added.returncode:
             return added.returncode
         result = subprocess.run(
-            [
-                "git",
-                "-C",
-                str(REPO),
+            git_arguments(
                 "commit",
                 "--only",
                 "-m",
                 f"feat: add ai command {draft.name}",
                 "--",
                 *paths,
-            ],
+            ),
             check=False,
         )
         committed = result.returncode == 0
         return result.returncode
     finally:
         if not committed:
-            _ = subprocess.run(["git", "-C", str(REPO), "reset", "-q", "--", *paths], check=False)
+            _ = subprocess.run(git_arguments("reset", "-q", "--", *paths), check=False)
             for path in written:
                 path.unlink()
 

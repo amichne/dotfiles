@@ -1,106 +1,13 @@
-#!/usr/bin/env bash
+#!/bin/sh
+set -eu
 
-set -euo pipefail
-
-DOTFILES_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-export DOTFILES_ROOT
-
-# shellcheck source=lib/core.sh
-. "$DOTFILES_ROOT/lib/core.sh"
-# shellcheck source=lib/config.sh
-. "$DOTFILES_ROOT/lib/config.sh"
-# shellcheck source=lib/profile.sh
-. "$DOTFILES_ROOT/lib/profile.sh"
-# shellcheck source=lib/dependencies.sh
-. "$DOTFILES_ROOT/lib/dependencies.sh"
-# shellcheck source=lib/plugins.sh
-. "$DOTFILES_ROOT/lib/plugins.sh"
-# shellcheck source=lib/install.sh
-. "$DOTFILES_ROOT/lib/install.sh"
-# shellcheck source=lib/credentials.sh
-. "$DOTFILES_ROOT/lib/credentials.sh"
-# shellcheck source=lib/proxy.sh
-. "$DOTFILES_ROOT/lib/proxy.sh"
-# shellcheck source=lib/status.sh
-. "$DOTFILES_ROOT/lib/status.sh"
-# shellcheck source=lib/home.sh
-. "$DOTFILES_ROOT/lib/home.sh"
-# shellcheck source=lib/migrate.sh
-. "$DOTFILES_ROOT/lib/migrate.sh"
-
-dotfiles_usage() {
-    cat <<'EOF'
-dotfiles shell manager
-
-Usage:
-  dotfiles help
-  dotfiles config <validate|list|export>
-  dotfiles plugins <validate|list|paths>
-  dotfiles status
-  dotfiles doctor
-  dotfiles install <plan|apply|uninstall>
-  dotfiles ai <plan|apply|uninstall>
-  dotfiles cutover <inventory|plan|apply|status|recover>
-  dotfiles credential exec <id> -- <command> [args]
-  dotfiles proxy exec -- <command> [args]
-  dotfiles home <plan|apply|status>
-  dotfiles profile <get|set>
-  dotfiles migrate apollo <plan|render> --source <path>
-EOF
-}
-
-dotfiles_main() {
-    local command_name="${1:-help}"
-    if [ "$#" -gt 0 ]; then
+case "${1:-help}" in
+    help|-h|--help)
+        printf '%s\n' 'Usage: dotfiles ai <plan|apply|uninstall>' ;;
+    ai)
         shift
-    fi
-
-    case "$command_name" in
-        help|-h|--help)
-            dotfiles_usage
-            ;;
-        config)
-            dotfiles_config_command "$@"
-            ;;
-        plugins)
-            dotfiles_plugins_command "$@"
-            ;;
-        install)
-            dotfiles_install_command "$@"
-            ;;
-        ai)
-            "$DOTFILES_ROOT/bin/ai" install "$@"
-            ;;
-        cutover)
-            uv run --offline --locked --no-dev --project "$DOTFILES_ROOT/cutover" python "$DOTFILES_ROOT/cutover/standalone.py" "$@"
-            ;;
-        credential)
-            dotfiles_credential_command "$@"
-            ;;
-        proxy)
-            dotfiles_proxy_command "$@"
-            ;;
-        status)
-            dotfiles_status_command "$@"
-            ;;
-        doctor)
-            dotfiles_doctor_command "$@"
-            ;;
-        home)
-            dotfiles_home_command "$@"
-            ;;
-        profile)
-            dotfiles_profile_command "$@"
-            ;;
-        migrate)
-            dotfiles_migrate_command "$@"
-            ;;
-        *)
-            printf 'dotfiles: unknown command: %s\n' "$command_name" >&2
-            dotfiles_usage >&2
-            return 64
-            ;;
-    esac
-}
-
-dotfiles_main "$@"
+        exec "$(dirname -- "$0")/ai" install "$@" ;;
+    *)
+        printf 'dotfiles: unknown command: %s\n' "$1" >&2
+        exit 64 ;;
+esac

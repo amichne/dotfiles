@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -7,6 +8,71 @@ from pathlib import Path
 import pytest
 
 from .conftest import Shell, copy_runtime, init_git
+
+
+@pytest.mark.parametrize("reject_commit", [False, True])
+def test_creation_uses_the_single_bare_home_index(shell: Shell, reject_commit: bool) -> None:
+    prepare(shell)
+    source = Path(__file__).resolve().parents[2]
+    for name in ("scripts/df.py", "scripts/df.py.lock", ".local/bin/df"):
+        destination = shell.root / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        _ = shutil.copy2(source / name, destination)
+    metadata = shell.root / ".dotfiles.git"
+    _ = (shell.root / ".git").rename(metadata)
+    base = ["git", f"--git-dir={metadata}", f"--work-tree={shell.root}"]
+    for args in (
+        ["config", "core.bare", "true"],
+        ["remote", "add", "origin", "git@github.com:amichne/dotfiles.git"],
+    ):
+        _ = subprocess.run([*base, *args], env=shell.env, check=True)
+    shell.env["HOME"] = str(shell.root)
+    for key, path in (
+        ("XDG_CONFIG_HOME", ".config"),
+        ("XDG_DATA_HOME", ".local/share"),
+        ("XDG_STATE_HOME", ".local/state"),
+        ("XDG_CACHE_HOME", ".cache"),
+    ):
+        shell.env[key] = str(shell.root / path)
+    shell.env["UV_PYTHON"] = sys.executable
+    shell.env["UV_PYTHON_DOWNLOADS"] = "never"
+    unrelated = shell.root / "unrelated"
+    _ = unrelated.write_text("keep staged\n")
+    _ = subprocess.run([*base, "add", "--", "unrelated"], env=shell.env, check=True)
+    if reject_commit:
+        hook = metadata / "hooks/pre-commit"
+        _ = hook.write_text('#!/bin/sh\nprintf attempted > "$HOME/hook-ran"\nexit 1\n')
+        hook.chmod(0o755)
+    result = shell.run("create", "Greet", input_text="y\ny\n")
+    task = shell.root / "ai/tasks/greet"
+    if reject_commit:
+        assert result.returncode != 0
+        assert (shell.root / "hook-ran").read_text() == "attempted"
+        assert not task.exists()
+    else:
+        assert result.returncode == 0, result.stderr + result.stdout
+        assert task.exists()
+        committed = subprocess.run(
+            [*base, "show", "--format=", "--name-only", "HEAD"],
+            env=shell.env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert set(committed.stdout.splitlines()) == {
+            "ai/tasks/greet",
+            "ai/verification/greet",
+            "ai/requirements/greet.md",
+        }
+    staged = subprocess.run(
+        [*base, "diff", "--cached", "--name-only"],
+        env=shell.env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert staged.stdout == "unrelated\n"
+    assert not (shell.root / ".git").exists()
 
 
 def prepare(shell: Shell, *, ready: bool = True, passes: bool = True) -> None:
