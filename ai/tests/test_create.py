@@ -111,6 +111,45 @@ def test_commit_failure_removes_unregistered_files(shell: Shell) -> None:
     assert not (shell.root / "ai/verification/greet").exists()
 
 
+@pytest.mark.parametrize("state", ["deleted", "staged-deletion", "staged-addition"])
+def test_deleted_git_path_cannot_be_reused(shell: Shell, state: str) -> None:
+    prepare(shell)
+    task = shell.root / "ai/tasks/greet"
+    _ = task.write_text("keep the existing source\n", encoding="utf-8")
+    commands = [["add", "ai/tasks/greet"]]
+    if state != "staged-addition":
+        commands.append(["commit", "-qm", "existing command"])
+    for command in commands:
+        _ = subprocess.run(["git", "-C", str(shell.root), *command], env=shell.env, check=True)
+    task.unlink()
+    if state == "staged-deletion":
+        _ = subprocess.run(
+            ["git", "-C", str(shell.root), "add", "ai/tasks/greet"], env=shell.env, check=True
+        )
+    command = ["git", "-C", str(shell.root), "status", "--porcelain=v1"]
+    before = subprocess.run(command, env=shell.env, capture_output=True, check=True).stdout
+    head = subprocess.run(
+        ["git", "-C", str(shell.root), "rev-parse", "HEAD"],
+        env=shell.env,
+        capture_output=True,
+        check=True,
+    ).stdout
+    result = shell.run("create", "Greet", input_text="y\ny\n")
+    assert result.returncode == 65, result.stderr + result.stdout
+    assert "command already exists" in result.stderr
+    assert not task.exists()
+    assert subprocess.run(command, env=shell.env, capture_output=True, check=True).stdout == before
+    assert (
+        subprocess.run(
+            ["git", "-C", str(shell.root), "rev-parse", "HEAD"],
+            env=shell.env,
+            capture_output=True,
+            check=True,
+        ).stdout
+        == head
+    )
+
+
 def test_generated_command_survives_clone(shell: Shell) -> None:
     prepare(shell)
     assert shell.run("create", "Greet", input_text="y\ny\n").returncode == 0

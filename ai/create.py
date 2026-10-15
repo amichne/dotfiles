@@ -149,6 +149,16 @@ def register(verified: _VerifiedDraft) -> int:
         print(f"ai: {Rejection.EXISTS}", file=sys.stderr)
         return 65
     paths = [str(path.relative_to(REPO)) for path in files]
+    tracked = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "--cached", "--with-tree=HEAD", "--", *paths],
+        stdout=subprocess.PIPE,
+        check=False,
+    )
+    if tracked.returncode:
+        return tracked.returncode
+    if tracked.stdout:
+        print(f"ai: {Rejection.EXISTS}", file=sys.stderr)
+        return 65
     written: list[Path] = []
     committed = False
     try:

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 from .conftest import Shell, copy_runtime, init_git
 
@@ -60,6 +63,34 @@ def test_conflict_preserves_all_targets(shell: Shell) -> None:
     assert "conflict" in result.stderr
     assert (destination / "keep").read_text() == "user data"
     assert not (Path(shell.env["HOME"]) / ".local/bin/ai").exists()
+
+
+@pytest.mark.parametrize(("failure", "status"), [("OSError", 74), ("KeyboardInterrupt", 130)])
+def test_partial_install_removes_created_links(shell: Shell, failure: str, status: int) -> None:
+    prepare(shell)
+    # Inject a failure at the second filesystem effect after the first real link.
+    script = (
+        "from pathlib import Path\nimport runpy, sys\n"
+        "original = Path.symlink_to\n"
+        "def interrupted(path, target, target_is_directory=False):\n"
+        " if path.parent.name != 'bin':\n"
+        f"  raise {failure}()\n"
+        " original(path, target, target_is_directory)\n"
+        "Path.symlink_to = interrupted\n"
+        "sys.argv = [sys.argv[1], 'apply']\n"
+        "runpy.run_path(sys.argv[0], run_name='__main__')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script, str(shell.root / "ai/install.py")],
+        env=shell.env,
+        cwd=shell.cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == status, result.stderr
+    assert not (Path(shell.env["HOME"]) / ".local/bin/ai").is_symlink()
+    assert not (Path(shell.env["XDG_CONFIG_HOME"]) / "ai").is_symlink()
 
 
 def test_clean_clone_recovers_commands(shell: Shell) -> None:

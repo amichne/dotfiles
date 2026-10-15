@@ -190,7 +190,7 @@ def log_evidence(pr: PullRequest, item: Check, directory: Path, index: int) -> s
 
 
 def reason(mode: str, directory: Path, attachments: list[Path]) -> Captured | Failed:
-    return capture(
+    result = capture(
         [
             "pi",
             "--print",
@@ -209,6 +209,9 @@ def reason(mode: str, directory: Path, attachments: list[Path]) -> Captured | Fa
             f"Produce the local {mode} report from these attachments. Artifacts: {directory}",
         ],
     )
+    if isinstance(result, Captured) and not result.text.strip():
+        return Failed("pi", 69, "empty response")
+    return result
 
 
 def main(arguments: list[str]) -> int:
