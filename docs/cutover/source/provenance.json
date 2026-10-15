@@ -1,0 +1,33 @@
+{
+  "sourceRepository": "https://github.com/amichne/Config",
+  "sourcePullRequest": 16,
+  "sourceCommit": "1cbcb524a2a1723e3de9ed57635874b6b4a781ed",
+  "sourceBase": "2dd7998b973735353b9099ea23d9098c5a6ce239",
+  "targetRepository": "https://github.com/amichne/dotfiles",
+  "targetBase": "259c8da0f7be839f05b684a5dcc8449152d2e233",
+  "archive": "config-pr16.patch.gz",
+  "archiveSha256": "1f16523122ea77903706631b301223fe06d4da7eb77736b781f461fa35755997",
+  "patchSha256": "5ad9e4f0454e103b8fd3819f9d5a19fafb259a7b07f9686c74a14892ad6f0b70",
+  "originalPaths": [
+    ".cfg/shell/docs/cutover.md",
+    ".cfg/shell/docs/evolution-authority.md",
+    ".cfg/shell/docs/replacement-cutover.md",
+    ".cfg/shell/docs/upstream-plan.md",
+    ".cfg/shell/tests/configure.py",
+    ".cfg/shell/tests/upstream-plan/.gitignore",
+    ".cfg/shell/tests/upstream-plan/.python-version",
+    ".cfg/shell/tests/upstream-plan/baseline-results.json",
+    ".cfg/shell/tests/upstream-plan/cutover-results.json",
+    ".cfg/shell/tests/upstream-plan/proof-results.txt",
+    ".cfg/shell/tests/upstream-plan/pyproject.toml",
+    ".cfg/shell/tests/upstream-plan/review-notes.json",
+    ".cfg/shell/tests/upstream-plan/standalone.py",
+    ".cfg/shell/tests/upstream-plan/standalone.py.lock",
+    ".cfg/shell/tests/upstream-plan/text-assessment.json",
+    ".cfg/shell/tests/upstream-plan/uv.lock",
+    ".gitignore"
+  ],
+  "activeProof": "tests/upstream-plan/standalone.py",
+  "legacyFixtureFix": "The python.sh fixture repair remains in the source archive. Dotfiles has no matching configure.py fixture.",
+  "proofBase": "6765d34a572b94f76592ef9dd0b0cdb5c9baac2b"
+}

@@ -12,6 +12,9 @@ nav = [
     { "Migration" = "migration.md" },
     { "Operations" = "operations.md" },
     { "AI shell commands" = "ai-commands.md" },
+    { "Consolidation and cutover" = "cutover/index.md" },
+    { "Cutover procedure" = "cutover/procedure.md" },
+    { "Enterprise integration" = "cutover/upstream.md" },
     { "Baseline evidence" = "baseline.md" },
   ] },
   { "Knowledge base" = [

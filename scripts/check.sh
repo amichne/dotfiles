@@ -35,6 +35,13 @@ shellcheck -S warning -x -s bash bin/dotfiles bin/ai ai/tasks/ci ai/tasks/review
 printf '==> AI command contracts\n'
 uv run --locked --project ai python ai/check.py
 
+printf '==> Consolidated integration proofs\n'
+uv run --locked --project tests/upstream-plan ruff format --check tests/upstream-plan
+uv run --locked --project tests/upstream-plan ruff check tests/upstream-plan
+uv run --locked --project tests/upstream-plan pyright --project tests/upstream-plan/pyproject.toml
+uv run --locked --project tests/upstream-plan pytest tests/upstream-plan -q -p no:cacheprovider
+uv run --locked --script tests/upstream-plan/standalone.py --self-test
+
 printf '==> Whitespace and secret-shaped source scan\n'
 if rg -n '[[:blank:]]+$' . \
     -g '!**/.git/**' \
