@@ -11,7 +11,6 @@ The source contains:
 - `.config/` for Atuin, mise, Neovim, Starship, Yazi, and the shell helpers.
 - `.local/bin/keys` and `.local/bin/shell-prompt` for shortcuts and Git prompt context.
 - `.pi/` for public Pi instructions, agents, prompts, and LSP settings.
-- `ai/` and `bin/ai` for the current AI commands.
 - `scripts/df.py` and `.local/bin/df` for selected HOME files in Git.
 
 Use `df` for the bare repository:
@@ -31,16 +30,7 @@ df setup plan
 Git controls commit identity, hooks, and signatures.
 Ordinary `git` keeps its normal behavior in project directories.
 
-The shell manager exposes one operation:
-
-```sh
-dotfiles ai plan
-dotfiles ai apply
-dotfiles ai uninstall
-```
-
-Use `ai list`, `ai inspect ci`, `ai run review <pr>`, and `ai run ci <pr>` for AI workflows.
-Use `ai create "<description>"` to draft and review a new command before local registration.
+The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ai` commands and their installer.
 
 Read [HOME setup](docs/home.md), [configuration](docs/configuration.md), and [AI commands](docs/ai-commands.md).
 The [source instructions](AGENTS.md) define ownership and the local gate:

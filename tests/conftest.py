@@ -43,9 +43,6 @@ def home(tmp_path: Path) -> Home:
         ".pi",
         "scripts/df.py",
         "scripts/df.py.lock",
-        "bin/dotfiles",
-        "bin/ai",
-        "ai/.gitignore",
     ):
         source = ROOT / name
         if source.is_dir():

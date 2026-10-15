@@ -10,7 +10,6 @@ The tracked files are the live files. No extra runtime directory exists.
 | `~/.config` | Tool configuration and the shell helpers |
 | `~/.local/bin` | Small command entry points |
 | `~/scripts/df.py` | Locked Python manager for the bare repository |
-| `~/ai`, `~/bin/ai` | AI registry and dispatcher |
 | `~/.pi` | Public Pi resources |
 
 ## Daily use
@@ -61,8 +60,8 @@ df setup plan
 
 Review `.config/mise/config.toml` before explicit tool installation.
 Read [configuration](configuration.md) for shell dependencies and [AI commands](ai-commands.md) for optional links.
-When HOME contains the registry, AI registration uses `df` and the same bare index.
-A development checkout uses its own normal Git repository.
+AI commands live in a separate [Ayi checkout](https://github.com/amichne/ayi).
+Generated commands use that checkout's Git index.
 
 Keep credentials, Pi authentication, sessions, caches, and machine overrides outside the public inventory.
 The default-deny `.gitignore` lists the public source paths.

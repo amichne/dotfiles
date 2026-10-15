@@ -10,7 +10,7 @@ Keep configuration at its HOME-relative path. Do not create another runtime copy
 - `.local/bin/keys` owns the shortcut browser.
 - `.config/shell-prompt` owns Git prompt context and its pure model.
 - `scripts/df.py` owns bare Git selection and read-only setup inspection.
-- `bin/dotfiles` dispatches only `ai`. `ai/install.py` owns the AI links.
+- `amichne/ayi` owns the separate AI commands and their installer.
 - `.pi` contains public Pi resources. Keep authentication and sessions private.
 
 Keep configuration data inert. Parse external values once into constrained values.
@@ -24,7 +24,7 @@ Keep private settings outside the public inventory.
 Tests use disposable HOME and XDG directories without host credentials.
 Never replace live HOME files from a test.
 Use `./scripts/check.sh` for Ruff, strict Pyright, pytest, shell syntax, ShellCheck,
-Node tests, data parsing, AI contracts, and the documentation build.
+Node tests, data parsing, and the documentation build.
 Each portable Python command needs its adjacent uv lock.
 
 Do not install, publish, or change remotes without explicit authorization.

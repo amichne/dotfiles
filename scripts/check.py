@@ -12,14 +12,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_SOURCE = ("scripts", "tests", ".local/bin/keys")
 SHELL_SOURCE = (
-    "bin/ai",
-    "bin/dotfiles",
     ".local/bin/df",
-    ".local/bin/dotfiles",
     ".local/bin/shell-prompt",
     "scripts/check.sh",
-    "ai/tasks/ci",
-    "ai/tasks/review",
 )
 
 
@@ -29,7 +24,7 @@ def run(arguments: list[str], env: dict[str, str]) -> int:
 
 
 def main() -> int:
-    for name in ("uv", "node", "zsh", "shellcheck", "mise", "git", "nvim"):
+    for name in ("uv", "node", "zsh", "shellcheck", "git", "nvim"):
         if shutil.which(name) is None:
             print(f"check: missing dependency: {name}", file=sys.stderr)
             return 69
@@ -58,7 +53,6 @@ def main() -> int:
         ["node", "--test", "tests/prompt.test.mjs"],
         ["node", "--check", ".config/shell-prompt/context.mjs"],
         ["node", "--check", ".config/shell-prompt/model.mjs"],
-        ["uv", "run", "--locked", "--project", "ai", "python", "ai/check.py"],
         ["shellcheck", "-S", "warning", *SHELL_SOURCE],
     ]
     commands.extend(["bash", "-n", name] for name in SHELL_SOURCE)
