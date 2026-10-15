@@ -7,7 +7,7 @@ nav = [
   { "Home" = "index.md" },
   { "HOME setup" = "home.md" },
   { "Configuration" = "configuration.md" },
-  { "AI commands" = "ai-commands.md" },
+  { "Ayi commands" = "ayi-commands.md" },
 ]
 
 [project.theme]

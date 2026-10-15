@@ -30,9 +30,9 @@ df setup plan
 Git controls commit identity, hooks, and signatures.
 Ordinary `git` keeps its normal behavior in project directories.
 
-The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ai` commands and their installer.
+The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ayi` commands and their installer.
 
-Read [HOME setup](docs/home.md), [configuration](docs/configuration.md), and [AI commands](docs/ai-commands.md).
+Read [HOME setup](docs/home.md), [configuration](docs/configuration.md), and [Ayi commands](docs/ayi-commands.md).
 The [source instructions](AGENTS.md) define ownership and the local gate:
 
 ```sh

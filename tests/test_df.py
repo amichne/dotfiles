@@ -135,10 +135,10 @@ def test_public_inventory_ignores_private_and_generated_state(home: Home) -> Non
         ".ssh/id_ed25519",
         ".pi/agent/auth.json",
         ".pi/agent/sessions/example.jsonl",
-        ".config/ai/config.json",
+        ".config/ayi/config.json",
         ".config/work/config.json",
         ".zshrc.local",
-        "ai/drafts/task",
+        "ayi/drafts/task",
         ".local/state/tool/data",
         ".dotfiles.git/index",
     ):

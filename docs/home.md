@@ -59,8 +59,8 @@ df setup plan
 ```
 
 Review `.config/mise/config.toml` before explicit tool installation.
-Read [configuration](configuration.md) for shell dependencies and [AI commands](ai-commands.md) for optional links.
-AI commands live in a separate [Ayi checkout](https://github.com/amichne/ayi).
+Read [configuration](configuration.md) for shell dependencies and [Ayi commands](ayi-commands.md) for optional links.
+Ayi commands live in a separate [Ayi checkout](https://github.com/amichne/ayi).
 Generated commands use that checkout's Git index.
 
 Keep credentials, Pi authentication, sessions, caches, and machine overrides outside the public inventory.
