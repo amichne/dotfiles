@@ -70,6 +70,9 @@ Use `./bin/ai run review <pr>` for a local PR report.
 Use `./bin/ai create "<description>"` to refine a command through Pi before verification and explicit local registration.
 See [AI shell commands](docs/ai-commands.md) for installation, dependencies, reports, and acceptance checks.
 
+The [consolidation and cutover record](docs/cutover/index.md) moves the replacement plan and Git proofs into this repository.
+It preserves the original Config change and states the remaining live-cutover conditions.
+
 ## Design boundaries
 
 - Configuration is `key=value` data validated by
