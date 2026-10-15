@@ -8,7 +8,8 @@ Config PR #16 supplies historical source. It no longer owns the active cutover p
 
 | Source | Revision | Role |
 | --- | --- | --- |
-| Dotfiles AI MVP | 259c8da0f7be839f05b684a5dcc8449152d2e233 | Parent change |
+| Dotfiles AI MVP at import | 259c8da0f7be839f05b684a5dcc8449152d2e233 | Original parent revision in the source record |
+| Dotfiles AI MVP merge | 05ae49a85ab533ead9e725616b93899b4a693ba1 | Merged parent with review repairs |
 | Dotfiles main baseline | 6765d34a572b94f76592ef9dd0b0cdb5c9baac2b | Fixture baseline that survives a squash merge |
 | Config cutover change | 1cbcb524a2a1723e3de9ed57635874b6b4a781ed | Imported plan and proof source |
 | Config baseline | 2dd7998b973735353b9099ea23d9098c5a6ce239 | Original proof baseline |

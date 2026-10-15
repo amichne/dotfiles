@@ -103,7 +103,7 @@ def parse_merge(status: int, raw: bytes) -> MergeEvidence:
     tree = parse_object_id(fields[0])
     if isinstance(tree, InvalidGitOutput) or fields[-1] != b"":
         return InvalidGitOutput()
-    records = tuple(field for field in fields[1:-1] if field)
+    records = fields[1:-1]
     if status == 0 and not records:
         return MergedTree(tree)
     if status != 1 or not records:
@@ -338,6 +338,18 @@ def test_merge_protocol_rejects_failure_and_incomplete_conflicts() -> None:
     assert parse_merge(1, tree) == InvalidGitOutput()
     assert parse_merge(128, tree) == InvalidGitOutput()
     assert parse_merge(0, tree + b"unrecognized\0") == InvalidGitOutput()
+
+
+@pytest.mark.parametrize(
+    ("status", "records"),
+    [
+        (0, b"\0"),
+        (1, b"\0" + b"100644 " + b"b" * 40 + b" 2\tprofile.conf\0"),
+        (1, b"100644 " + b"b" * 40 + b" 2\tprofile.conf\0\0"),
+    ],
+)
+def test_merge_protocol_rejects_empty_records(status: int, records: bytes) -> None:
+    assert parse_merge(status, b"a" * 40 + b"\0" + records) == InvalidGitOutput()
 
 
 def main(arguments: list[str]) -> int:
