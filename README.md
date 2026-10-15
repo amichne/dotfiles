@@ -52,6 +52,7 @@ dotfiles plugins validate|list|paths
 dotfiles status
 dotfiles doctor [--strict]
 dotfiles install plan|apply|uninstall
+dotfiles ai plan|apply|uninstall
 dotfiles credential exec github -- <command>
 dotfiles proxy exec -- <command>
 dotfiles home plan|apply|status
@@ -61,6 +62,13 @@ dotfiles migrate apollo plan|render --source <path>
 Use `doctor` for normal operation: unavailable `auto` integrations are
 explained and skipped. Use `doctor --strict` when provisioning a machine and
 every selected optional dependency must be present.
+
+## AI commands
+
+Use `./bin/ai list`, `./bin/ai inspect ci`, and `./bin/ai run ci <pr>` from the checkout.
+Use `./bin/ai run review <pr>` for a local PR report.
+Use `./bin/ai create "<description>"` to refine a command through Pi before verification and explicit local registration.
+See [AI shell commands](docs/ai-commands.md) for installation, dependencies, reports, and acceptance checks.
 
 ## Design boundaries
 
