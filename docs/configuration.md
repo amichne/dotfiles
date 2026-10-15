@@ -28,5 +28,4 @@ The helper needs Node and Git. The refresh operation also needs authenticated `g
 
 `.pi` keeps public instructions, agent definitions, a prompt, and LSP settings.
 Pi authentication and session data remain private.
-The current AI registry lives in `ai/`.
-Its optional `.config/ai` link points to that source without another copy.
+The separate [Ayi repository](https://github.com/amichne/ayi) owns the AI registry and its optional installed links.

@@ -30,7 +30,6 @@
 !/.local/
 !/.local/bin/
 !/.local/bin/df
-!/.local/bin/dotfiles
 !/.local/bin/keys
 !/.local/bin/keys.lock
 !/.local/bin/shell-prompt
@@ -44,11 +43,6 @@
 !/.pi/agent/prompts/
 !/.pi/agent/prompts/*.md
 
-!/ai/
-!/ai/**
-!/bin/
-!/bin/ai
-!/bin/dotfiles
 !/docs/
 !/docs/*.md
 !/scripts/

@@ -34,14 +34,11 @@ REQUIRED = (
     ".zshrc",
     ".zprofile",
     ".local/bin/df",
-    ".local/bin/dotfiles",
     ".local/bin/keys",
     ".local/bin/keys.lock",
     ".local/bin/shell-prompt",
     "scripts/df.py",
     "scripts/df.py.lock",
-    "bin/dotfiles",
-    "bin/ai",
 )
 USAGE = """Usage: df status [args] | diff [args] | add PATH... | commit [args]
        df git <git arguments> | setup plan [--json]

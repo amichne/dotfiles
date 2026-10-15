@@ -57,8 +57,6 @@ def test_repository_contains_only_current_source_owners() -> None:
         ".zshrc",
         "AGENTS.md",
         "README.md",
-        "ai",
-        "bin",
         "docs",
         "pyproject.toml",
         "scripts",
@@ -182,31 +180,3 @@ def test_prompt_launcher_uses_the_direct_source(home: Home) -> None:
     )
     assert result.returncode == 2
     assert "stage=settings outcome=invalid" in result.stderr
-
-
-def test_dotfiles_dispatches_only_the_current_ai_installer(home: Home) -> None:
-    # The dispatcher owns routing. AI installation has its own real acceptance cases.
-    _ = (home.path / "bin/ai").write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
-    launcher = str(home.path / ".local/bin/dotfiles")
-    result = home.run(launcher, "--help")
-    assert result.returncode == 0, result.stderr
-    assert result.stdout == "Usage: dotfiles ai <plan|apply|uninstall>\n"
-    for name in (
-        "config",
-        "profile",
-        "plugins",
-        "status",
-        "doctor",
-        "install",
-        "credential",
-        "proxy",
-        "home",
-        "migrate",
-    ):
-        result = home.run(launcher, name)
-        assert result.returncode == 64
-        assert "unknown command" in result.stderr
-    result = home.run(launcher, "ai", "plan")
-    assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == ["install", "plan"]
-    assert not (home.path / ".local/bin/ai").exists()
