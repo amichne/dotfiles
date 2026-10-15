@@ -11,6 +11,7 @@ nav = [
     { "Behavioral contract" = "behavioral-contract.md" },
     { "Migration" = "migration.md" },
     { "Operations" = "operations.md" },
+    { "AI shell commands" = "ai-commands.md" },
     { "Baseline evidence" = "baseline.md" },
   ] },
   { "Knowledge base" = [

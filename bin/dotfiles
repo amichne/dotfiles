@@ -39,6 +39,7 @@ Usage:
   dotfiles status
   dotfiles doctor
   dotfiles install <plan|apply|uninstall>
+  dotfiles ai <plan|apply|uninstall>
   dotfiles credential exec <id> -- <command> [args]
   dotfiles proxy exec -- <command> [args]
   dotfiles home <plan|apply|status>
@@ -65,6 +66,9 @@ dotfiles_main() {
             ;;
         install)
             dotfiles_install_command "$@"
+            ;;
+        ai)
+            "$DOTFILES_ROOT/bin/ai" install "$@"
             ;;
         credential)
             dotfiles_credential_command "$@"

@@ -30,7 +30,10 @@ while IFS= read -r check_file; do
 done < <(find shell plugins tests/fixtures -type f -name '*.zsh' | sort)
 
 printf '==> ShellCheck\n'
-shellcheck -S warning -x -s bash bin/dotfiles lib/*.sh scripts/*.sh tests/*.sh
+shellcheck -S warning -x -s bash bin/dotfiles bin/ai ai/tasks/ci ai/tasks/review lib/*.sh scripts/*.sh tests/*.sh
+
+printf '==> AI command contracts\n'
+uv run --locked --project ai python ai/check.py
 
 printf '==> Whitespace and secret-shaped source scan\n'
 if rg -n '[[:blank:]]+$' . \
