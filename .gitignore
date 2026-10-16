@@ -9,6 +9,11 @@
 !/pyproject.toml
 !/uv.lock
 !/zensical.toml
+!/containers/
+!/containers/Dockerfile
+!/.github/
+!/.github/workflows/
+!/.github/workflows/sandbox.yml
 
 !/.config/
 !/.config/atuin/

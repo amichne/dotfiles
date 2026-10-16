@@ -50,6 +50,8 @@ def main() -> int:
         ["uv", "run", "--locked", "pytest", "-q"],
         ["uv", "lock", "--check", "--script", ".local/bin/keys"],
         ["uv", "lock", "--check", "--script", "scripts/df.py"],
+        ["uv", "lock", "--check", "--script", "scripts/sandbox.py"],
+        ["uv", "run", "--locked", "--script", "scripts/sandbox.py", "--self-test"],
         ["node", "--test", "tests/prompt.test.mjs"],
         ["node", "--check", ".config/shell-prompt/context.mjs"],
         ["node", "--check", ".config/shell-prompt/model.mjs"],

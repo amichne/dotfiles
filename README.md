@@ -33,6 +33,7 @@ Ordinary `git` keeps its normal behavior in project directories.
 The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ayi` commands and their installer.
 
 Read [HOME setup](docs/home.md), [configuration](docs/configuration.md), and [Ayi commands](docs/ayi-commands.md).
+Read [disposable containers](docs/testing.md) for the same isolated gate on local and cloud Docker workers.
 The [source instructions](AGENTS.md) define ownership and the local gate:
 
 ```sh

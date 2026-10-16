@@ -49,6 +49,7 @@ def test_repository_contains_only_current_source_owners() -> None:
     roots = {Path(p).parts[0] for p in result.stdout.split("\0") if p and (ROOT / p).exists()}
     assert roots == {
         ".config",
+        ".github",
         ".gitignore",
         ".local",
         ".pi",
@@ -57,6 +58,7 @@ def test_repository_contains_only_current_source_owners() -> None:
         ".zshrc",
         "AGENTS.md",
         "README.md",
+        "containers",
         "docs",
         "pyproject.toml",
         "scripts",
