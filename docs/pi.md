@@ -59,8 +59,9 @@ pi install npm:pi-subagents@0.79.0
 
 Use `/reload` after installation.
 The package owns child sessions, fan-out, cancellation, retained results, and later messages.
-The local configuration selects foreground work by default.
-It sets four concurrent children per run, eight child launches per run, and 32 launches per parent session.
+Direct child launches default to foreground work.
+Workflow scripts need `async: false` for foreground work.
+The configuration sets four concurrent children per run, eight child launches per run, and 32 launches per parent session.
 It limits nested delegation to one level and sets a ten-minute tool deadline.
 It permits two active background runs per session and disables schedules.
 These package settings are defaults, not an operating-system sandbox.
