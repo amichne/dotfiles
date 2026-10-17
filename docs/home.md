@@ -1,7 +1,7 @@
 # HOME setup
 
 `amichne/dotfiles` uses HOME as its worktree and `~/.dotfiles.git` for Git metadata.
-The tracked files are the live files. No extra runtime directory exists.
+The tracked files are the live files.
 
 | Path | Purpose |
 | --- | --- |
@@ -10,7 +10,7 @@ The tracked files are the live files. No extra runtime directory exists.
 | `~/.config` | Tool configuration and the shell helpers |
 | `~/.local/bin` | Small command entry points |
 | `~/scripts/df.py` | Locked Python manager for the bare repository |
-| `~/.pi` | Public Pi resources |
+| `~/.pi/agent` | Pi configuration and public resources |
 
 ## Daily use
 
@@ -38,7 +38,7 @@ A missing file or unexpected repository causes a nonzero exit status.
 
 ## Start in a new HOME
 
-Install Git, uv, and Python 3.12 before these steps.
+Install Git, uv 0.12.9 or later, and Python 3.12 or 3.13 before these steps.
 Use a reviewed revision of `amichne/dotfiles`.
 Before checkout, compare its tracked paths with existing HOME files.
 Keep each conflict for explicit review.
@@ -59,7 +59,9 @@ df setup plan
 ```
 
 Review `.config/mise/config.toml` before explicit tool installation.
-Read [configuration](configuration.md) for shell dependencies and [Ayi commands](ayi-commands.md) for optional links.
+Read [configuration](configuration.md) for shell dependencies.
+Use [Pi setup](pi.md) to register Kast at `~/.pi/agent`.
+Read [Ayi commands](ayi-commands.md) for optional links.
 Ayi commands live in a separate [Ayi checkout](https://github.com/amichne/ayi).
 Generated commands use that checkout's Git index.
 

@@ -15,6 +15,8 @@ The shell loads `f`, `rr`, and `y` from `.config/zsh/functions`.
 They search with ripgrep, enter the Git root, and return the selected Yazi directory.
 `zs` starts a fresh login shell. Ctrl-W deletes identifier parts and path parts.
 Ctrl-X ? opens `keys`. Ctrl-R uses Atuin history.
+Ctrl-T selects files with a bat preview.
+Set `FZF_CTRL_T_OPTS` in `.zshrc.local` to customize the file preview.
 
 `keys --list` prints shell and Yazi shortcuts.
 `keys nvim --list` reads mappings from Neovim and can start its configured plugins.
@@ -26,6 +28,6 @@ Starship uses `.config/starship.toml` and `shell-prompt` for local Git context.
 `shell-prompt refresh-pr` explicitly refreshes PR data through GitHub CLI.
 The helper needs Node and Git. The refresh operation also needs authenticated `gh`.
 
-`.pi` keeps public instructions, agent definitions, a prompt, and LSP settings.
-Pi authentication and session data remain private.
+`~/.pi/agent` holds Pi configuration, public instructions, agents, prompts, and LSP settings.
+Use [Pi setup](pi.md) for the public inventory and Kast registration.
 The separate [Ayi repository](https://github.com/amichne/ayi) owns the AI registry and its optional installed links.
