@@ -42,7 +42,10 @@
 !/.pi/
 !/.pi/agent/
 !/.pi/agent/APPEND_SYSTEM.md
+!/.pi/agent/deepen.md
 !/.pi/agent/pi-lsp.json
+!/.pi/agent/extensions/
+!/.pi/agent/extensions/deepen.ts
 !/.pi/agent/agents/
 !/.pi/agent/agents/*.md
 !/.pi/agent/prompts/

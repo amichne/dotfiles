@@ -32,6 +32,8 @@ class Home:
 
 @pytest.fixture
 def home(tmp_path: Path) -> Home:
+    if (ROOT / ".dotfiles.git").is_dir():
+        pytest.fail("Use a public source snapshot or development checkout, not the installed HOME")
     path = tmp_path / "home with spaces"
     path.mkdir()
     for name in (

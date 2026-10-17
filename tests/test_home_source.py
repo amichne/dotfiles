@@ -28,6 +28,8 @@ def test_home_source_contains_the_requested_public_files() -> None:
     }
     assert {str(p.relative_to(ROOT / ".pi")) for p in (ROOT / ".pi").rglob("*") if p.is_file()} == {
         "agent/APPEND_SYSTEM.md",
+        "agent/deepen.md",
+        "agent/extensions/deepen.ts",
         "agent/agents/researcher.md",
         "agent/agents/scout.md",
         "agent/agents/worker.md",

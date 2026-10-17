@@ -9,7 +9,7 @@ The source contains:
 - `.zshrc` and `.zprofile` for Zsh startup.
 - `.config/` for Atuin, mise, Neovim, Starship, Yazi, and the shell helpers.
 - `.local/bin/keys` and `.local/bin/shell-prompt` for shortcuts and Git prompt context.
-- `.pi/agent/` for public Pi instructions, agents, prompts, and LSP settings.
+- `.pi/agent/` for public Pi resources and the `/deepen` prompt rewrite command.
 - `scripts/df.py` and `.local/bin/df` for selected HOME files in Git.
 
 Use `df` for the bare repository:

@@ -9,6 +9,8 @@ Pi keeps authentication and session data private.
 | Path under `~/.pi/agent` | Purpose |
 | --- | --- |
 | `APPEND_SYSTEM.md` | Instructions for Pi sessions |
+| `deepen.md` | Instructions for the `/deepen` command |
+| `extensions/deepen.ts` | One-call prompt rewrite command |
 | `agents/*.md` | Agent definitions |
 | `prompts/*.md` | Reusable prompts |
 | `pi-lsp.json` | Settings for language servers |
@@ -21,6 +23,27 @@ df add .pi/agent/APPEND_SYSTEM.md
 df diff --cached
 df commit -m "docs: refine Pi instructions"
 ```
+
+## Rewrite a prompt
+
+Use `/deepen` with the original task:
+
+```text
+/deepen Add a read-only report of unused CSS selectors.
+```
+
+Pi sends the supplied text and `deepen.md` in one model completion.
+The command uses Pi's selected model with high reasoning.
+Sign in to the selected provider through Pi before use.
+The request excludes the chat history and tools.
+
+The response gives four short assessments, then the rewritten prompt.
+Pi displays the result and waits for your next message.
+Each request has a two-minute deadline.
+A session change or shutdown cancels a pending rewrite.
+Incomplete responses produce an error.
+
+After a change to the extension, use `/reload` in Pi.
 
 ## Kast extension
 
