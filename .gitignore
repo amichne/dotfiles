@@ -46,6 +46,12 @@
 !/.pi/agent/pi-lsp.json
 !/.pi/agent/extensions/
 !/.pi/agent/extensions/deepen.ts
+!/.pi/agent/extensions/ask-questions.ts
+!/.pi/agent/lib/
+!/.pi/agent/lib/questions.ts
+!/.pi/agent/questions.json
+!/.pi/agent/extensions/subagent/
+!/.pi/agent/extensions/subagent/config.json
 !/.pi/agent/agents/
 !/.pi/agent/agents/*.md
 !/.pi/agent/prompts/

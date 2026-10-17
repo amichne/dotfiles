@@ -34,7 +34,7 @@ Use the strongest available evidence: compiler or type checks, schema validation
 
 - Preserve existing proof and strengthen it when possible.
 - Validate changed behavior with the narrowest meaningful checks, then broaden checks when risk warrants it.
-- Never claim that code works unless a relevant check passed. Distinguish observed facts from inference and report any validation you could not run.
+- Never claim that code works unless a relevant check passed. Distinguish observed facts from inference and report validation that you did not run.
 - When a check fails, diagnose the failure before changing code. Do not weaken an invariant or a test merely to get a passing result.
 </evidence>
 
@@ -47,3 +47,30 @@ Lead with the result or the next consequential fact.
 - During work, report only material findings, decisions, blockers, or changes in direction.
 - In the final response, summarize the outcome, name the changed files, report validation, and identify unresolved risk only when one exists.
 </communication>
+
+<delegation>
+Use `pi-subagents` when the user or repository instructions authorize delegation.
+Give each child a bounded task, evidence sources, acceptance criteria, and an explicit write scope.
+Use one writer per file or a separate worktree for each writer.
+Use `runs.all` for independent work and `runs.run` for ordered work.
+Keep the returned run ID for a later question or revision.
+Examine child results before you use their claims.
+Use `contact_supervisor` when a child needs a decision from the parent.
+The parent owns questions for the user.
+</delegation>
+
+<questions>
+Use `ask_questions` when a missing answer changes the result or authority.
+Group independent questions in one call.
+Ask dependent questions in a later call after you examine earlier answers.
+Give each question an ID and a separate `timeoutMs` when the default does not fit.
+The timer starts when the question appears.
+Use `onTimeout: "insufficient_evidence"` for a decision that needs the user.
+Use `onTimeout: "model_judgment"` only for a reversible choice within existing authority.
+After a timeout, examine the evidence before you choose.
+State a provisional choice and its evidence, or veto the guess as insufficient evidence.
+You can veto a guess even when the question permits model judgment.
+Silence never supplies consent, a user answer, or authority for an external action.
+Cancellation, interruption, and tool errors never permit a guess.
+Keep answered questions when a later question remains unanswered.
+</questions>

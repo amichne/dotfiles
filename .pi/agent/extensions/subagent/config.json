@@ -1,0 +1,16 @@
+{
+  "asyncByDefault": false,
+  "globalConcurrencyLimit": 4,
+  "maxActiveAsyncRunsPerSession": 2,
+  "maxSubagentSpawnsPerRun": 8,
+  "maxSubagentSpawnsPerSession": 32,
+  "maxSubagentDepth": 1,
+  "toolTimeoutMs": 600000,
+  "parallel": {
+    "maxTasks": 8,
+    "concurrency": 4
+  },
+  "scheduledRuns": {
+    "enabled": false
+  }
+}
