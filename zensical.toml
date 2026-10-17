@@ -7,6 +7,7 @@ nav = [
   { "Home" = "index.md" },
   { "HOME setup" = "home.md" },
   { "Configuration" = "configuration.md" },
+  { "Pi setup" = "pi.md" },
   { "Ayi commands" = "ayi-commands.md" },
   { "Disposable container" = "testing.md" },
 ]

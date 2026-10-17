@@ -114,7 +114,8 @@ export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:---height=40% --layout=reverse --bord
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git --exclude .dotfiles.git'
 export FZF_CTRL_T_COMMAND=$FZF_DEFAULT_COMMAND
 export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git --exclude .dotfiles.git'
-export FZF_CTRL_T_OPTS=${FZF_CTRL_T_OPTS:---preview 'bat --color=always --style=numbers --line-range=:200 -- {}' --preview-window=right:50%}
+# fzf parses this string again; preserve quotes around the preview command.
+export FZF_CTRL_T_OPTS=${FZF_CTRL_T_OPTS:-"--preview 'bat --color=always --style=numbers --line-range=:200 -- {}' --preview-window=right:50%"}
 if [[ -o zle && -t 0 && -t 1 ]]; then
     FZF_CTRL_R_COMMAND='' _shell_activate fzf --zsh
 fi

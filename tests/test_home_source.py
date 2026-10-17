@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -134,6 +135,26 @@ def test_fuzzy_search_excludes_bare_git_metadata(home: Home) -> None:
         "fd --type f --hidden --exclude .git --exclude .dotfiles.git",
         "fd --type d --hidden --exclude .git --exclude .dotfiles.git",
     ]
+
+
+def test_fzf_preview_command_is_one_option(home: Home) -> None:
+    _ = prepare_integrations(home)
+    result = home.run("/bin/zsh", "-d", "-i", "-c", 'print -r -- "$FZF_CTRL_T_OPTS"')
+    assert result.returncode == 0, result.stderr
+    assert shlex.split(result.stdout) == [
+        "--preview",
+        "bat --color=always --style=numbers --line-range=:200 -- {}",
+        "--preview-window=right:50%",
+    ]
+
+
+def test_fzf_preview_preserves_custom_options(home: Home) -> None:
+    _ = prepare_integrations(home)
+    options = "--preview 'head -n 20 -- {}' --preview-window=bottom:30%"
+    home.env["FZF_CTRL_T_OPTS"] = options
+    result = home.run("/bin/zsh", "-d", "-i", "-c", 'print -r -- "$FZF_CTRL_T_OPTS"')
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == options
 
 
 def test_missing_shell_dependency_returns_failure(home: Home) -> None:
