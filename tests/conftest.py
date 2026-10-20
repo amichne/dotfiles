@@ -4,12 +4,43 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(scope="session")
+def public_files() -> tuple[tuple[str, bytes, int], ...]:
+    # Reuse the owning public-inventory reader. Never copy private HOME trees.
+    with tempfile.TemporaryDirectory(prefix="dotfiles-public-fixture-") as directory:
+        archive = Path(directory) / "source.tar"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/sandbox.py"),
+                "--source",
+                str(ROOT),
+                "snapshot",
+                str(archive),
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        files: list[tuple[str, bytes, int]] = []
+        with tarfile.open(archive) as stream:
+            for member in stream.getmembers():
+                content = stream.extractfile(member)
+                assert content is not None and member.name.startswith("src/")
+                files.append((member.name.removeprefix("src/"), content.read(), member.mode))
+        return tuple(files)
 
 
 @dataclass(frozen=True)
@@ -31,12 +62,12 @@ class Home:
 
 
 @pytest.fixture
-def home(tmp_path: Path) -> Home:
+def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Home:
     if (ROOT / ".dotfiles.git").is_dir():
         pytest.fail("Use a public source snapshot or development checkout, not the installed HOME")
     path = tmp_path / "home with spaces"
     path.mkdir()
-    for name in (
+    selected = (
         ".gitignore",
         ".zshrc",
         ".zprofile",
@@ -45,13 +76,13 @@ def home(tmp_path: Path) -> Home:
         ".pi",
         "scripts/df.py",
         "scripts/df.py.lock",
-    ):
-        source = ROOT / name
-        if source.is_dir():
-            _ = shutil.copytree(source, path / name)
-        elif source.is_file():
-            (path / name).parent.mkdir(parents=True, exist_ok=True)
-            _ = shutil.copy2(source, path / name)
+    )
+    for name, content, mode in public_files:
+        if any(name == prefix or name.startswith(prefix + "/") for prefix in selected):
+            target = path / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            _ = target.write_bytes(content)
+            target.chmod(mode)
     tools = tmp_path / "tools"
     tools.mkdir()
     uv = os.environ.get("DOTFILES_TEST_UV") or shutil.which("uv")

@@ -29,3 +29,48 @@ jobs:
           enable-cache: false
       - name: Run disposable container gate
         run: uv run --locked --script scripts/sandbox.py check
+
+  native-engineering:
+    name: Native engineering fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: amichne/slopsentral
+          ref: aea1ab920a72199a5b5b9119139b33346090b6e8
+          path: slopsentral-qualification
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12.9"
+          python-version: "3.12.14"
+          enable-cache: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24.21.0"
+      - name: Prepare pinned native hosts and local Vale
+        run: |
+          npm install --prefix "$RUNNER_TEMP/engineering-hosts" --no-save --ignore-scripts \
+            @earendil-works/pi-coding-agent@1.3.0 @openai/codex@0.163.0 \
+            typescript@7.0.2 @types/node@26.6.5
+          uv run --locked --script \
+            slopsentral-qualification/source/skills/controlled-technical-writing/scripts/install_vale.py \
+            --destination "$RUNNER_TEMP/engineering-vale"
+          UV_CACHE_DIR="$RUNNER_TEMP/engineering-uv-cache" uv run --locked --script \
+            .config/agent-engineering/check.py --self-test
+      - name: Qualify native loading, lifecycle, and failure controls without inference
+        run: |
+          PYTHON_BIN="$(uv python find 3.12.14)"
+          UV_BIN="$(command -v uv)"
+          export PYTHON_BIN UV_BIN
+          export VALE_BIN="$RUNNER_TEMP/engineering-vale/bin/vale"
+          export ENGINEERING_SLOPSENTRAL_ROOT="$GITHUB_WORKSPACE/slopsentral-qualification"
+          export CODEX_BIN="$RUNNER_TEMP/engineering-hosts/node_modules/.bin/codex"
+          export PI_SDK_ROOT="$RUNNER_TEMP/engineering-hosts/node_modules/@earendil-works/pi-coding-agent"
+          export TYPESCRIPT_ROOT="$RUNNER_TEMP/engineering-hosts/node_modules/typescript"
+          export ENGINEERING_UV_CACHE="$RUNNER_TEMP/engineering-uv-cache"
+          node --test tests/native-agent-hosts.mjs

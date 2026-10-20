@@ -17,6 +17,7 @@ def test_home_source_contains_the_requested_public_files() -> None:
     for name in ("keys", "shell-prompt"):
         assert os.access(ROOT / ".local/bin" / name, os.X_OK)
     assert {p.name for p in (ROOT / ".config").iterdir()} == {
+        "agent-engineering",
         "atuin",
         "mise",
         "nvim",
