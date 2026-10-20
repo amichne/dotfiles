@@ -185,7 +185,9 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   assert.equal(entries[2].data.status, 'failed');
   assert.equal(entries[2].data.checks.prose.cached, true);
   assert.equal(requests.length, 1, 'validator failure must not trigger another model request');
-  assert.equal(session.extensionRunner.getRegisteredCommands().length, 0);
+  assert.equal(session.extensionRunner.getRegisteredCommands().filter(command =>
+    path.basename(command.sourceInfo.path) === 'engineering-checks.ts').length, 0,
+    'the B0 adapter must not register commands; existing user commands remain available');
   const outside = path.join(f.directory, 'nonrepo'); fs.mkdirSync(outside);
   const outsideLoader = new sdk.DefaultResourceLoader({ cwd: outside, agentDir, settingsManager });
   await outsideLoader.reload();
