@@ -4,6 +4,10 @@ This setup uses `~/.pi/agent` as the Pi directory.
 Dotfiles tracks public Pi resources there.
 Pi keeps authentication and session data private.
 
+Use the [HOME installer](home.md#install-or-update-home) to apply these resources from a reviewed revision.
+Add `--with-pi-subagents` to include the pinned delegation package.
+Existing private instructions and settings remain in place.
+
 ## Public resources
 
 | Path under `~/.pi/agent` | Purpose |
@@ -55,6 +59,8 @@ Install the reviewed package version:
 ```sh
 pi install npm:pi-subagents@0.79.0
 ```
+
+The HOME installer's `--with-pi-subagents` option does this step after the file update.
 
 Use `/reload` after installation.
 The package owns child sessions, fan-out, cancellation, retained results, and later messages.

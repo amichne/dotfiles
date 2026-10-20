@@ -51,6 +51,7 @@ def main() -> int:
         ["uv", "run", "--locked", "pytest", "-q"],
         ["uv", "lock", "--check", "--script", ".local/bin/keys"],
         ["uv", "lock", "--check", "--script", "scripts/df.py"],
+        ["uv", "lock", "--check", "--script", "scripts/install.py"],
         ["uv", "lock", "--check", "--script", "scripts/sandbox.py"],
         ["uv", "lock", "--check", "--script", ".config/agent-engineering/check.py"],
         ["uv", "run", "--locked", "python", ".config/agent-engineering/check.py", "--self-test"],
