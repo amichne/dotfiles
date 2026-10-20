@@ -372,3 +372,39 @@ def test_recovery_symlink_is_rejected_before_git_writes(home: Home, source: Path
     assert "symlink-state" in run(home, source).stderr
     assert not (home.path / ".dotfiles.git").exists()
     assert list(outside.iterdir()) == []
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_install_from_a_checkout_inside_home_uses_root_relative_git_paths(
+    home: Home,
+    source: Path,
+    existing: bool,
+) -> None:
+    if existing:
+        assert apply(home, source).returncode == 0
+        _ = (source / ".zshrc").write_text("next startup\n")
+        _ = commit(home, source, "Update")
+    nested = home.path / "code/reviewed checkout"
+    assert home.run("/usr/bin/git", "clone", str(source), str(nested)).returncode == 0
+    assert git(home, nested, "remote", "set-url", "origin", ORIGIN).returncode == 0
+
+    def invoke(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, str(ROOT / "scripts/install.py"), "--source", str(nested), *args],
+            cwd=nested,
+            env=home.env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+    result = invoke()
+    assert result.returncode == 0, result.stderr
+    report = json.loads(result.stdout)
+    assert report["action"] == ("update" if existing else "install")
+    result = invoke("--apply", "--expected-plan", report["planId"])
+    assert result.returncode == 0, result.stderr
+    assert (home.path / ".zshrc").read_bytes() == (nested / ".zshrc").read_bytes()
+    assert installed_git(home, "status", "--porcelain", "--untracked-files=no").stdout == ""
+    assert git(home, nested, "status", "--porcelain").stdout == ""

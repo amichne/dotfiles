@@ -105,7 +105,7 @@ class Entry:
 
 def tree(environment: dict[str, str], prefix: list[str], revision: str) -> dict[str, Entry]:
     entries: dict[str, Entry] = {}
-    for record in git(environment, prefix, "ls-tree", "-rz", revision).split(b"\0"):
+    for record in git(environment, prefix, "ls-tree", "--full-tree", "-rz", revision).split(b"\0"):
         if not record:
             continue
         fields, raw = record.split(b"\t", 1)
@@ -188,7 +188,7 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
         opened = open_home(source, env)
         if isinstance(opened, Failure):
             raise Rejected("invalid-source-repository", opened.reason)
-        source_git = [f"--git-dir={opened.metadata}", f"--work-tree={source}"]
+        source_git = ["-C", str(source), f"--git-dir={opened.metadata}", f"--work-tree={source}"]
     elif (
         Path(os.fsdecode(git(env, source_git, "rev-parse", "--show-toplevel")).strip()).resolve()
         != source
@@ -212,7 +212,7 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
         opened = open_home(home, env)
         if isinstance(opened, Failure):
             raise Rejected("invalid-installed-repository", opened.reason)
-        target_git = [f"--git-dir={metadata}", f"--work-tree={home}"]
+        target_git = ["-C", str(home), f"--git-dir={metadata}", f"--work-tree={home}"]
         if git(env, target_git, "status", "--porcelain=v1", "--untracked-files=no"):
             raise Rejected("dirty-home")
         current = git(env, target_git, "rev-parse", "HEAD").decode().strip()
@@ -315,7 +315,7 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
             path.chmod(item[1])
     _ = receipt.write_bytes(encoded(manifest))
     metadata = plan.home / ".dotfiles.git"
-    target_git = [f"--git-dir={metadata}", f"--work-tree={plan.home}"]
+    target_git = ["-C", str(plan.home), f"--git-dir={metadata}", f"--work-tree={plan.home}"]
     try:
         if plan.previous is None:
             with tempfile.TemporaryDirectory(prefix="metadata-", dir=state) as directory:
