@@ -66,6 +66,7 @@ The HOME files remain the runtime files.
 
 Dirty source files, dirty HOME files, divergent history, conflicting untracked files, and symlinks stop the plan.
 Ignored files receive the same protection as other untracked files.
+An untracked file with identical bytes and executable permission can become tracked without a conflict.
 Resolve each conflict in a separate reviewed change.
 The installer does not force a checkout or merge divergent commits.
 

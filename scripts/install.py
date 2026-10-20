@@ -153,6 +153,7 @@ class Plan:
     revision: str
     previous: Installed | None
     changes: tuple[str, ...]
+    adopted: tuple[str, ...]
     preserved: tuple[str, ...]
     snapshots: dict[str, tuple[bytes, int] | None]
     pi: Path | None
@@ -175,6 +176,7 @@ class Plan:
             "revision": self.revision,
             "previousRevision": self.previous.revision if self.previous else None,
             "changes": self.changes,
+            "adoptedIdenticalFiles": self.adopted,
             "preservedPrivateFiles": self.preserved,
             "packages": [PACKAGE] if self.pi else [],
         }
@@ -232,9 +234,16 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
         )
     names = sorted(entries.keys() | old.keys())
     snapshots = {name: regular_file(home, name) for name in names}
+    adopted: list[str] = []
     for name in entries.keys() - old.keys():
-        if snapshots[name] is not None:
+        item = snapshots[name]
+        if item is not None and (
+            item[0] != git(env, source_git, "cat-file", "blob", entries[name].oid)
+            or bool(item[1] & 0o111) != bool(entries[name].mode & 0o111)
+        ):
             raise Rejected("untracked-conflict", name)
+        if item is not None:
+            adopted.append(name)
     changes = tuple(name for name in names if old.get(name) != entries.get(name))
     preserved = tuple(name for name in changes if name in PRIVATE and name not in entries)
     pi: Path | None = None
@@ -264,6 +273,7 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
         revision,
         previous,
         changes,
+        tuple(sorted(adopted)),
         preserved,
         snapshots,
         pi,
@@ -326,7 +336,11 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
                 if metadata.exists() or metadata.is_symlink():
                     raise Rejected("destination-changed")
                 _ = temporary.rename(metadata)
-            _ = git(env, target_git, "checkout", "--no-overwrite-ignore")
+            _ = git(env, target_git, "read-tree", plan.revision)
+            for name in plan.changes:
+                if plan.snapshots[name] is None:
+                    # checkout-index refuses a file that appears after the plan.
+                    _ = git(env, target_git, "checkout-index", "--", name)
         elif plan.previous.revision != plan.revision:
             _ = git(
                 env,
@@ -337,7 +351,14 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
                 str(plan.source),
                 plan.revision,
             )
-            _ = git(env, target_git, "merge", "--ff-only", "--no-edit", plan.revision)
+            _ = git(
+                env,
+                target_git,
+                "merge",
+                "--ff-only",
+                "--no-edit",
+                plan.revision,
+            )
     except (Rejected, OSError):
         manifest["status"] = "files-failed"
         print(f"install: recovery-receipt:{receipt}", file=sys.stderr)

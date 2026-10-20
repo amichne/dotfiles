@@ -69,14 +69,20 @@ function fixture(t, { adopt = true } = {}) {
 test('the Pi extensions pass strict native TypeScript declarations', t => {
   const f = fixture(t);
   const piRequire = createRequire(path.join(piRoot, 'package.json'));
+  const dependency = name => {
+    const directory = piRequire.resolve.paths(name).map(base => path.join(base, name))
+      .find(candidate => fs.existsSync(path.join(candidate, 'package.json')));
+    assert.ok(directory, `Pi must supply its declared ${name} dependency`);
+    return directory;
+  };
   const config = path.join(f.directory, 'tsconfig.json');
   fs.writeFileSync(config, JSON.stringify({ compilerOptions: { target: 'ES2023', module: 'ESNext',
     moduleResolution: 'Bundler', strict: true, noUncheckedIndexedAccess: true, exactOptionalPropertyTypes: true,
     noEmit: true, allowImportingTsExtensions: true, skipLibCheck: true, types: ['node'],
     typeRoots: [path.resolve(typescriptRoot, '../@types')],
     paths: { '@earendil-works/pi-coding-agent': [path.join(piRoot, 'dist/index.d.ts')],
-      '@earendil-works/pi-ai': [piRequire.resolve('@earendil-works/pi-ai')],
-      'typebox': [piRequire.resolve('typebox')] } },
+      '@earendil-works/pi-ai': [path.join(dependency('@earendil-works/pi-ai'), 'dist/index.d.ts')],
+      'typebox': [dependency('typebox')] } },
     files: ['.config/agent-engineering/pi-extension.ts', '.pi/agent/extensions/deepen.ts',
       '.pi/agent/extensions/ask-questions.ts', '.pi/agent/lib/questions.ts'].map(name => path.join(root, name)) }));
   execFileSync(process.execPath, [path.join(typescriptRoot, 'bin/tsc'), '--project', config], { env: f.env, encoding: 'utf8' });

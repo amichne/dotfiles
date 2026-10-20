@@ -124,6 +124,68 @@ def test_changed_untracked_file_stops_an_update(home: Home, source: Path) -> Non
     assert (home.path / ".config/new").read_text() == "private\n"
 
 
+@pytest.mark.parametrize("existing", [False, True])
+def test_identical_untracked_files_can_be_adopted(
+    home: Home,
+    source: Path,
+    existing: bool,
+) -> None:
+    if existing:
+        assert apply(home, source).returncode == 0
+    candidate = source / ".pi/agent/extensions/deepen.ts"
+    candidate.parent.mkdir(parents=True)
+    _ = candidate.write_text("reviewed extension\n")
+    assert git(home, source, "add", "--force", str(candidate)).returncode == 0
+    _ = commit(home, source, "Extension")
+    destination = home.path / ".pi/agent/extensions/deepen.ts"
+    destination.parent.mkdir(parents=True)
+    _ = destination.write_text("reviewed extension\n")
+    assert plan(home, source)["adoptedIdenticalFiles"] == [".pi/agent/extensions/deepen.ts"]
+    result = apply(home, source)
+    assert result.returncode == 0, result.stderr
+    assert destination.read_bytes() == candidate.read_bytes()
+    assert (
+        installed_git(home, "ls-files", ".pi/agent/extensions/deepen.ts").stdout.strip()
+        == ".pi/agent/extensions/deepen.ts"
+    )
+
+
+def test_identical_bytes_with_different_executable_permission_are_rejected(
+    home: Home,
+    source: Path,
+) -> None:
+    _ = (home.path / ".zshrc").write_text("reviewed startup\n")
+    (home.path / ".zshrc").chmod(0o755)
+    assert "untracked-conflict" in run(home, source).stderr
+    assert not (home.path / ".dotfiles.git").exists()
+
+
+def test_full_public_snapshot_installs_runnable_home_commands(
+    home: Home,
+    source: Path,
+    public_files: tuple[tuple[str, bytes, int], ...],
+) -> None:
+    for name, content, mode in public_files:
+        path = source / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _ = path.write_bytes(content)
+        path.chmod(mode)
+    _ = commit(home, source, "Full public source")
+    result = apply(home, source)
+    assert result.returncode == 0, result.stderr
+    result = home.run(str(home.path / ".local/bin/df"), "setup", "plan", "--json")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["missing"] == []
+    assert json.loads(result.stdout)["status"] == ""
+    result = home.run(str(home.path / ".local/bin/keys"), "--json")
+    assert result.returncode == 0, result.stderr
+    assert {item["tool"] for item in json.loads(result.stdout)} == {"shell", "yazi"}
+    for name in ("extensions/deepen.ts", "extensions/ask-questions.ts", "lib/questions.ts"):
+        assert (home.path / ".pi/agent" / name).read_bytes() == (
+            source / ".pi/agent" / name
+        ).read_bytes()
+
+
 def test_update_preserves_private_files_and_rejects_dirty_work(home: Home, source: Path) -> None:
     assert apply(home, source).returncode == 0
     private = home.path / ".pi/agent/auth.json"
