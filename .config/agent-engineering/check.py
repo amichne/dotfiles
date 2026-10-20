@@ -204,7 +204,9 @@ class Tools:
         selected = [path for path in files if not path.is_dir()]
         if not selected or not all(path.is_file() for path in selected):
             raise Rejected("missing-tool")
-        return digest(encoded([(str(path), file_hash(path)) for path in selected]))
+        return digest(
+            encoded([(str(path), file_hash(path), path.stat().st_mode) for path in selected])
+        )
 
 
 @dataclass(frozen=True)
@@ -254,8 +256,8 @@ def invoke(arguments: list[str], kind: str, repo: Path) -> Result:
                 _ = process.communicate()
 
 
-def kotlin_arguments(tools: Tools, repo: Path, names: tuple[str, ...]) -> list[str]:
-    arguments = [sys.executable, str(tools.kotlin), "--repo", str(repo), "--format", "json"]
+def kotlin_targets(repo: Path, names: tuple[str, ...]) -> tuple[Path, ...]:
+    targets: list[Path] = []
     for name in names:
         # The existing checker drops deleted files. A deleted file still selects
         # its surviving package peers and ancestors, without using its Git fallback.
@@ -268,6 +270,39 @@ def kotlin_arguments(tools: Tools, repo: Path, names: tuple[str, ...]) -> list[s
                 if peers:
                     target = peers[0]
                     break
+                if tuple(directory.parts[-3:]) in KOTLIN_ROOTS:
+                    break
+        targets.append(target)
+    return tuple(targets)
+
+
+def layout_topology(repo: Path, names: tuple[str, ...]) -> list[object]:
+    directories: set[Path] = set()
+    for target in kotlin_targets(repo, names):
+        if not target.is_file():
+            continue
+        for directory in target.parents:
+            if not directory.is_relative_to(repo):
+                break
+            directories.add(directory)
+            if tuple(directory.parts[-3:]) in KOTLIN_ROOTS:
+                break
+    result: list[object] = []
+    # The recovered heuristic reads direct files and each parent's siblings.
+    # Its read set includes ignored/generated peer names.
+    for directory in sorted(directories):
+        for sibling in sorted(directory.parent.iterdir()):
+            if sibling.is_dir():
+                if not sibling.resolve().is_relative_to(repo):
+                    raise Rejected("unsafe-layout-directory")
+                peers = [(path.name, path.is_file()) for path in sorted(sibling.glob("*.kt"))]
+                result.append((str(sibling.relative_to(repo)), peers))
+    return result
+
+
+def kotlin_arguments(tools: Tools, repo: Path, names: tuple[str, ...]) -> list[str]:
+    arguments = [sys.executable, str(tools.kotlin), "--repo", str(repo), "--format", "json"]
+    for target in kotlin_targets(repo, names):
         arguments.extend(["--changed-file", str(target)])
     return arguments
 
@@ -306,11 +341,7 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
             signature = tools.signature(kind)
             # Package topology is an input to the layout heuristic. It reads names,
             # not Kotlin bodies. All session edits remain selected after a commit.
-            topology = (
-                sorted(name for name in after if name.endswith(".kt") and after[name] != "deleted")
-                if kind == "kotlin"
-                else []
-            )
+            topology = layout_topology(repo, names) if kind == "kotlin" else []
             key = digest(
                 encoded([signature, [(name, after.get(name)) for name in names], topology])
             )
@@ -336,7 +367,11 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                     )
             except (Rejected, OSError, ValueError, subprocess.SubprocessError) as error:
                 result = Result(Status.FAILED, {"failure": str(error)[:300]})
-            if snapshot(repo) != after or tools.signature(kind) != signature:
+            if (
+                snapshot(repo) != after
+                or tools.signature(kind) != signature
+                or (kind == "kotlin" and layout_topology(repo, names) != topology)
+            ):
                 raise Rejected("input-changed-during-check")
             record: dict[str, object] = {
                 "key": key,
@@ -361,7 +396,18 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
     no_changes = all(
         object_value(value).get("status") == Status.NO_CHANGES for value in results.values()
     )
-    status = Status.FAILED if failed else Status.NO_CHANGES if no_changes else Status.PASSED
+    advisory = any(
+        object_value(value).get("status") == Status.ADVISORY for value in results.values()
+    )
+    status = (
+        Status.FAILED
+        if failed
+        else Status.NO_CHANGES
+        if no_changes
+        else Status.ADVISORY
+        if advisory
+        else Status.PASSED
+    )
     report: dict[str, object] = {
         "status": status,
         "checks": results,

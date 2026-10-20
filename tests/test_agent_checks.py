@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import subprocess
@@ -12,7 +13,13 @@ from .conftest import Home
 
 def run(home: Home, *arguments: str, event: object = None) -> tuple[int, dict[str, object]]:
     result = subprocess.run(
-        [sys.executable, str(home.path / ".config/agent-engineering/check.py"), *arguments],
+        [
+            sys.executable,
+            os.environ.get(
+                "DOTFILES_TEST_AGENT_CHECK", str(home.path / ".config/agent-engineering/check.py")
+            ),
+            *arguments,
+        ],
         cwd=home.path,
         env=home.env,
         input=json.dumps(event) if event is not None else None,
@@ -217,6 +224,46 @@ def test_unsupported_kotlin_root_cannot_report_clean_layout(home: Home) -> None:
     assert home.run("/usr/bin/git", "add", "-f", "Scratch.kt").returncode == 0
     code, report = run(home, "turn", "--session", "fixture")
     assert code == 1 and "unsupported-kotlin-source-root" in str(report)
+
+
+def test_ignored_package_peer_names_invalidate_layout_cache(home: Home) -> None:
+    start(home)
+    _ = configure(home)
+    package = home.path / "src/main/kotlin/feature"
+    package.mkdir(parents=True)
+    source = package / "Changed.kt"
+    _ = source.write_text("class Changed\n")
+    assert home.run("/usr/bin/git", "add", "-f", str(source)).returncode == 0
+    first = run(home, "turn", "--session", "fixture")
+    assert first[0] == 0 and '"cached": false' in json.dumps(first[1])
+    assert '"cached": true' in json.dumps(run(home, "handoff", "--session", "fixture")[1])
+    _ = (package / "IgnoredPeer.kt").write_text("class IgnoredPeer\n")
+    result = run(home, "handoff", "--session", "fixture")
+    assert result[0] == 0 and '"cached": false' in json.dumps(result[1])
+
+
+def test_concurrent_check_rejects_without_resetting_session(home: Home) -> None:
+    start(home)
+    _, report = run(home, "begin", "--session", "fixture")
+    lock = Path(str(report["receipt"])).with_name("lock")
+    with lock.open("a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        code, report = run(home, "handoff", "--session", "fixture")
+        assert code == 1 and report["status"] == "failed"
+    assert run(home, "handoff", "--session", "fixture")[1]["status"] == "no-changes"
+
+
+def test_tool_permission_change_invalidates_receipt(home: Home) -> None:
+    start(home)
+    owner = configure(home)
+    _ = (home.path / "README.md").write_text("New prose.\n")
+    assert run(home, "handoff", "--session", "fixture")[0] == 0
+    assert run(home, "handoff", "--session", "fixture")[0] == 0
+    count = owner / "scripts/count"
+    assert count.read_text() == "1"
+    (owner / "vale").chmod(0o700)
+    assert run(home, "handoff", "--session", "fixture")[0] == 0
+    assert count.read_text() == "2"
 
 
 def test_cancellation_kills_validator_and_does_not_cache_success(home: Home) -> None:

@@ -72,6 +72,7 @@ test('the Pi adapter passes strict native TypeScript declarations', t => {
 
 test('real validators reject bad prose, expose layout advisories, and cache unchanged inputs', t => {
   const f = fixture(t);
+  fs.writeFileSync(path.join(f.cwd, '.gitignore'), 'Ignored*.kt\n');
   f.check('begin', '--session', 'real-validator');
   const packageDir = path.join(f.cwd, 'src/main/kotlin/orders'); fs.mkdirSync(packageDir, { recursive: true });
   for (let i = 0; i < 8; i++) fs.writeFileSync(path.join(packageDir, `OrderCase${i}.kt`), `class OrderCase${i}\n`);
@@ -85,9 +86,13 @@ test('real validators reject bad prose, expose layout advisories, and cache unch
   assert.ok(failed.checks.prose.report.documents[0].findings.some(x => x.rule === 'Slopsentral.Modals'));
   fs.writeFileSync(path.join(f.cwd, 'README.md'), 'Read the new file.\n');
   const passed = f.check('turn', '--session', 'real-validator');
-  assert.equal(passed.status, 'passed');
+  assert.equal(passed.status, 'advisory');
   assert.equal(passed.checks.kotlin.cached, true);
   assert.equal(f.check('handoff', '--session', 'real-validator').checks.prose.cached, true);
+  fs.writeFileSync(path.join(packageDir, 'IgnoredPeer.kt'), 'class IgnoredPeer\n');
+  const peerChange = f.check('handoff', '--session', 'real-validator');
+  assert.equal(peerChange.checks.kotlin.cached, false);
+  assert.ok(peerChange.checks.kotlin.report.findings.some(x => x.evidence.directKotlinFiles === 9));
   f.git('add', '.'); f.git('commit', '-qm', 'during session');
   assert.equal(f.check('handoff', '--session', 'real-validator').checks.kotlin.cached, true);
   t.diagnostic(`Real Vale 3.24.0 and Slopsentral ${f.git('-C', slopsentral, 'rev-parse', 'HEAD').trim()}; bad-prose control failed, layout remained advisory.`);
@@ -101,7 +106,10 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   Object.assign(process.env, f.env);
   t.after(() => { for (const key of Object.keys(process.env)) delete process.env[key]; Object.assign(process.env, previous); });
   const sdk = await import(pathToFileURL(path.join(piRoot, 'dist/index.js')));
-  const ai = await import(pathToFileURL(createRequire(path.join(piRoot, 'package.json')).resolve('@earendil-works/pi-ai')));
+  const aiRoot = createRequire(path.join(piRoot, 'package.json')).resolve.paths('@earendil-works/pi-ai')
+    .map(directory => path.join(directory, '@earendil-works/pi-ai')).find(directory => fs.existsSync(path.join(directory, 'package.json')));
+  assert.ok(aiRoot, 'Pi must supply its declared pi-ai dependency');
+  const ai = await import(pathToFileURL(path.join(aiRoot, 'dist/index.js')));
   const agentDir = f.env.PI_CODING_AGENT_DIR;
   const settingsManager = sdk.SettingsManager.inMemory({ builtInExtensions: [], cacheWarming: { mode: 'off' } });
   const loader = new sdk.DefaultResourceLoader({ cwd: f.cwd, agentDir, settingsManager });
