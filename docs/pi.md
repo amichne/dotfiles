@@ -8,7 +8,7 @@ Pi keeps authentication and session data private.
 
 | Path under `~/.pi/agent` | Purpose |
 | --- | --- |
-| `APPEND_SYSTEM.md` | Instructions for Pi sessions |
+| `AGENTS.md` | Generated engineering baseline B0 |
 | `agents/*.md` | Agent definitions |
 | `prompts/*.md` | Reusable prompts |
 | `pi-lsp.json` | Settings for language servers |
@@ -17,7 +17,7 @@ Use `df` to review and commit changes to these files:
 
 ```sh
 df diff -- .pi/agent
-df add .pi/agent/APPEND_SYSTEM.md
+df add .config/agent-engineering/B0.md
 df diff --cached
 df commit -m "docs: refine Pi instructions"
 ```
@@ -50,3 +50,6 @@ Use Kast commands to manage that file.
 A live Pi session must load the extension before it can call Kast tools.
 
 The separate [Ayi repository](https://github.com/amichne/ayi) owns the `ayi` task commands and their installer.
+
+Read the [native engineering guide](https://slopsentral.michne.com/guides/engineering-baseline)
+for B0, optional skills, local validators, and native lifecycle limits.

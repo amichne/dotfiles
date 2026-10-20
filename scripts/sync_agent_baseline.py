@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / ".config/agent-engineering/B0.md"
-TARGETS = (ROOT / ".codex/AGENTS.md", ROOT / ".pi/agent/APPEND_SYSTEM.md")
+TARGETS = (ROOT / ".codex/AGENTS.md", ROOT / ".pi/agent/AGENTS.md")
 
 
 def main() -> int:

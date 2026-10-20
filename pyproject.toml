@@ -26,7 +26,7 @@ default = true
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
-include = ["scripts", "tests", ".local/bin/keys"]
+include = ["scripts", "tests", ".local/bin/keys", ".config/agent-engineering"]
 exclude = ["**/.venv"]
 reportMatchNotExhaustive = "error"
 reportUnnecessaryTypeIgnoreComment = "error"
