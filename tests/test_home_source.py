@@ -17,6 +17,7 @@ def test_home_source_contains_the_requested_public_files() -> None:
     for name in ("keys", "shell-prompt"):
         assert os.access(ROOT / ".local/bin" / name, os.X_OK)
     assert {p.name for p in (ROOT / ".config").iterdir()} == {
+        "agent-engineering",
         "atuin",
         "mise",
         "nvim",
@@ -27,7 +28,6 @@ def test_home_source_contains_the_requested_public_files() -> None:
         "zsh",
     }
     assert {str(p.relative_to(ROOT / ".pi")) for p in (ROOT / ".pi").rglob("*") if p.is_file()} == {
-        "agent/APPEND_SYSTEM.md",
         "agent/deepen.md",
         "agent/extensions/deepen.ts",
         "agent/extensions/ask-questions.ts",

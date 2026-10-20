@@ -141,13 +141,18 @@ def test_public_inventory_ignores_private_and_generated_state(home: Home) -> Non
         "ayi/drafts/task",
         ".local/state/tool/data",
         ".dotfiles.git/index",
+        ".codex/AGENTS.md",
+        ".codex/hooks.json",
+        ".pi/agent/AGENTS.md",
+        ".pi/agent/extensions/engineering-checks.ts",
     ):
         assert git(home, "check-ignore", path).returncode == 0, path
     for path in (
         ".zshrc",
         ".config/starship.toml",
         ".local/bin/keys",
-        ".pi/agent/APPEND_SYSTEM.md",
+        ".config/agent-engineering/codex-hooks.json",
+        ".config/agent-engineering/pi-extension.ts",
     ):
         assert git(home, "check-ignore", path).returncode == 1, path
 

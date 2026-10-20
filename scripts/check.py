@@ -10,11 +10,12 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PYTHON_SOURCE = ("scripts", "tests", ".local/bin/keys")
+PYTHON_SOURCE = ("scripts", "tests", ".local/bin/keys", ".config/agent-engineering")
 SHELL_SOURCE = (
     ".local/bin/df",
     ".local/bin/shell-prompt",
     "scripts/check.sh",
+    ".local/bin/agent-check",
 )
 
 
@@ -51,6 +52,9 @@ def main() -> int:
         ["uv", "lock", "--check", "--script", ".local/bin/keys"],
         ["uv", "lock", "--check", "--script", "scripts/df.py"],
         ["uv", "lock", "--check", "--script", "scripts/sandbox.py"],
+        ["uv", "lock", "--check", "--script", ".config/agent-engineering/check.py"],
+        ["uv", "run", "--locked", "python", ".config/agent-engineering/check.py", "--self-test"],
+        ["uv", "run", "--locked", "python", "scripts/sync_agent_baseline.py", "--check"],
         ["uv", "run", "--locked", "--script", "scripts/sandbox.py", "--self-test"],
         [
             "node",

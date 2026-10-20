@@ -31,6 +31,13 @@
 !/.config/zsh/functions/*
 !/.config/shell-prompt/
 !/.config/shell-prompt/*.mjs
+!/.config/agent-engineering/
+!/.config/agent-engineering/*.md
+!/.config/agent-engineering/*.py
+!/.config/agent-engineering/*.py.lock
+!/.config/agent-engineering/*.json
+!/.config/agent-engineering/*.ts
+
 
 !/.local/
 !/.local/bin/
@@ -38,10 +45,10 @@
 !/.local/bin/keys
 !/.local/bin/keys.lock
 !/.local/bin/shell-prompt
+!/.local/bin/agent-check
 
 !/.pi/
 !/.pi/agent/
-!/.pi/agent/APPEND_SYSTEM.md
 !/.pi/agent/deepen.md
 !/.pi/agent/pi-lsp.json
 !/.pi/agent/extensions/
@@ -66,6 +73,9 @@
 !/tests/
 !/tests/*.py
 !/tests/*.mjs
+!/tests/fixtures/
+!/tests/fixtures/text-assessment.schema.json
+!/tests/fixtures/text-assessment-v1.schema.json
 
 # Generated state stays outside the source inventory.
 **/.venv/
