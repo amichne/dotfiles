@@ -62,8 +62,9 @@ jobs:
             --destination "$RUNNER_TEMP/engineering-vale"
       - name: Qualify native loading, lifecycle, and failure controls without inference
         run: |
-          export PYTHON_BIN="$(uv python find 3.12.14)"
-          export UV_BIN="$(command -v uv)"
+          PYTHON_BIN="$(uv python find 3.12.14)"
+          UV_BIN="$(command -v uv)"
+          export PYTHON_BIN UV_BIN
           export VALE_BIN="$RUNNER_TEMP/engineering-vale/bin/vale"
           export ENGINEERING_SLOPSENTRAL_ROOT="$GITHUB_WORKSPACE/slopsentral-qualification"
           export CODEX_BIN="$RUNNER_TEMP/engineering-hosts/node_modules/.bin/codex"
