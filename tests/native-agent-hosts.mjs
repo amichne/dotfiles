@@ -66,15 +66,25 @@ function fixture(t, { adopt = true } = {}) {
   return { directory, home, cwd, env, git, check, install };
 }
 
-test('the Pi adapter passes strict native TypeScript declarations', t => {
+test('the Pi extensions pass strict native TypeScript declarations', t => {
   const f = fixture(t);
+  const piRequire = createRequire(path.join(piRoot, 'package.json'));
+  const dependency = name => {
+    const directory = piRequire.resolve.paths(name).map(base => path.join(base, name))
+      .find(candidate => fs.existsSync(path.join(candidate, 'package.json')));
+    assert.ok(directory, `Pi must supply its declared ${name} dependency`);
+    return directory;
+  };
   const config = path.join(f.directory, 'tsconfig.json');
   fs.writeFileSync(config, JSON.stringify({ compilerOptions: { target: 'ES2023', module: 'ESNext',
     moduleResolution: 'Bundler', strict: true, noUncheckedIndexedAccess: true, exactOptionalPropertyTypes: true,
     noEmit: true, allowImportingTsExtensions: true, skipLibCheck: true, types: ['node'],
     typeRoots: [path.resolve(typescriptRoot, '../@types')],
-    paths: { '@earendil-works/pi-coding-agent': [path.join(piRoot, 'dist/index.d.ts')] } },
-    files: [path.join(root, '.config/agent-engineering/pi-extension.ts')] }));
+    paths: { '@earendil-works/pi-coding-agent': [path.join(piRoot, 'dist/index.d.ts')],
+      '@earendil-works/pi-ai': [path.join(dependency('@earendil-works/pi-ai'), 'dist/index.d.ts')],
+      'typebox': [dependency('typebox')] } },
+    files: ['.config/agent-engineering/pi-extension.ts', '.pi/agent/extensions/deepen.ts',
+      '.pi/agent/extensions/ask-questions.ts', '.pi/agent/lib/questions.ts'].map(name => path.join(root, name)) }));
   execFileSync(process.execPath, [path.join(typescriptRoot, 'bin/tsc'), '--project', config], { env: f.env, encoding: 'utf8' });
 });
 
@@ -188,6 +198,10 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   assert.equal(session.extensionRunner.getRegisteredCommands().filter(command =>
     path.basename(command.sourceInfo.path) === 'engineering-checks.ts').length, 0,
     'the B0 adapter must not register commands; existing user commands remain available');
+  assert.equal(session.extensionRunner.getRegisteredCommands().filter(command => command.name === 'deepen').length, 1,
+    'the private B0 adapter must coexist with the public /deepen command');
+  assert.equal(session.extensionRunner.getAllRegisteredTools().filter(tool => tool.definition.name === 'ask_questions').length, 1,
+    'the private B0 adapter must coexist with the public question tool');
   const outside = path.join(f.directory, 'nonrepo'); fs.mkdirSync(outside);
   const outsideLoader = new sdk.DefaultResourceLoader({ cwd: outside, agentDir, settingsManager });
   await outsideLoader.reload();

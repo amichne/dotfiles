@@ -28,7 +28,14 @@ def test_home_source_contains_the_requested_public_files() -> None:
         "zsh",
     }
     assert {str(p.relative_to(ROOT / ".pi")) for p in (ROOT / ".pi").rglob("*") if p.is_file()} == {
+        "agent/deepen.md",
+        "agent/extensions/deepen.ts",
+        "agent/extensions/ask-questions.ts",
+        "agent/extensions/subagent/config.json",
+        "agent/lib/questions.ts",
+        "agent/questions.json",
         "agent/agents/researcher.md",
+        "agent/agents/reviewer.md",
         "agent/agents/scout.md",
         "agent/agents/worker.md",
         "agent/pi-lsp.json",

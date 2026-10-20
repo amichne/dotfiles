@@ -9,8 +9,9 @@ The source contains:
 - `.zshrc` and `.zprofile` for Zsh startup.
 - `.config/` for Atuin, mise, Neovim, Starship, Yazi, and the shell helpers.
 - `.local/bin/keys` and `.local/bin/shell-prompt` for shortcuts and Git prompt context.
-- `.pi/agent/` for public Pi instructions, agents, prompts, and LSP settings.
+- `.pi/agent/` for public Pi resources and the `/deepen` prompt rewrite command.
 - `scripts/df.py` and `.local/bin/df` for selected HOME files in Git.
+- `scripts/install.py` for reviewed installation and updates with private recovery copies.
 
 Use `df` for the bare repository:
 
@@ -31,7 +32,8 @@ Ordinary `git` keeps its normal behavior in project directories.
 
 The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ayi` commands and their installer.
 
-Read [HOME setup](docs/home.md), [configuration](docs/configuration.md), [Pi setup](docs/pi.md), and [Ayi commands](docs/ayi-commands.md).
+Use the [HOME installer](docs/home.md#install-or-update-home) to apply a reviewed revision.
+Read [configuration](docs/configuration.md), [Pi setup](docs/pi.md), and [Ayi commands](docs/ayi-commands.md).
 Read [disposable containers](docs/testing.md) for the same isolated gate on local and cloud Docker workers.
 The [source instructions](AGENTS.md) define ownership and the local gate:
 
