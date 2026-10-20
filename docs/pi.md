@@ -1,6 +1,6 @@
 # Pi setup
 
-This setup uses `~/.pi/agent` as the Pi configuration directory.
+This setup uses `~/.pi/agent` as the Pi directory.
 Dotfiles tracks public Pi resources there.
 Pi keeps authentication and session data private.
 
@@ -25,7 +25,7 @@ df commit -m "docs: refine Pi instructions"
 ## Kast extension
 
 Install Pi and Kast before this step.
-Register the extension in the Pi configuration directory:
+Register the extension in that directory:
 
 ```sh
 kast connect pi --destination "$HOME/.pi/agent"
@@ -46,7 +46,7 @@ Kast owns the installed extension and its registration.
 The Git ignore rules exclude `extensions/kast.ts` from the public inventory.
 Use Kast commands to manage that file.
 
-`kast status` reports installation and registration state.
+`kast status` reports where Kast is set up.
 A live Pi session must load the extension before it can call Kast tools.
 
 The separate [Ayi repository](https://github.com/amichne/ayi) owns the `ayi` task commands and their installer.

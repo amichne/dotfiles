@@ -60,6 +60,8 @@ jobs:
           uv run --locked --script \
             slopsentral-qualification/source/skills/controlled-technical-writing/scripts/install_vale.py \
             --destination "$RUNNER_TEMP/engineering-vale"
+          UV_CACHE_DIR="$RUNNER_TEMP/engineering-uv-cache" uv run --locked --script \
+            .config/agent-engineering/check.py --self-test
       - name: Qualify native loading, lifecycle, and failure controls without inference
         run: |
           PYTHON_BIN="$(uv python find 3.12.14)"
@@ -70,4 +72,5 @@ jobs:
           export CODEX_BIN="$RUNNER_TEMP/engineering-hosts/node_modules/.bin/codex"
           export PI_SDK_ROOT="$RUNNER_TEMP/engineering-hosts/node_modules/@earendil-works/pi-coding-agent"
           export TYPESCRIPT_ROOT="$RUNNER_TEMP/engineering-hosts/node_modules/typescript"
+          export ENGINEERING_UV_CACHE="$RUNNER_TEMP/engineering-uv-cache"
           node --test tests/native-agent-hosts.mjs

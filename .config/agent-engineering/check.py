@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --locked --script
 # /// script
 # requires-python = ">=3.12,<3.14"
-# dependencies = []
+# dependencies = ["jsonschema==4.26.0"]
 # [tool.uv]
 # no-build = true
 # required-version = ">=0.12.9"
@@ -28,7 +28,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import cast
+from typing import Protocol, cast
+
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError
 
 SUFFIXES = frozenset({".kt", ".md", ".mdx", ".txt"})
 # Admission matches the recovered checker's SOURCE_ROOT_PARTS at the qualified revision.
@@ -36,6 +39,7 @@ KOTLIN_ROOTS = frozenset(
     {("src", "main", "kotlin"), ("src", "test", "kotlin"), ("src", "integrationTest", "kotlin")}
 )
 LIMIT = 16 * 1024 * 1024
+ASSESSMENT_SCHEMA_SHA256 = "c1913e1dbfb63c5df2518456e23f52c25c7cd08c8ae0bbe4f257c101c0f630ac"
 
 
 class Status(StrEnum):
@@ -47,6 +51,16 @@ class Status(StrEnum):
 
 class Rejected(Exception):
     """An explicit precondition or effect failure; never a passing check."""
+
+
+class OutsideRepository(Rejected):
+    """Native checks do not apply to a projectless working directory."""
+
+
+class SchemaValidator(Protocol):
+    # jsonschema's public validate API accepts an arbitrary Python instance.
+    # The pinned stubs leave that method variadic; keep that boundary local.
+    def validate(self, instance: object) -> None: ...
 
 
 def digest(data: bytes) -> str:
@@ -119,6 +133,13 @@ def git(cwd: Path, *arguments: str) -> bytes:
 
 
 def repository(cwd: Path) -> Path:
+    cwd = cwd.resolve(strict=True)
+    if not cwd.is_dir():
+        raise Rejected("invalid-working-directory")
+    if not any((parent / ".git").exists() for parent in (cwd, *cwd.parents)) and not (
+        cwd == Path.home().resolve() and (cwd / ".dotfiles.git").is_dir()
+    ):
+        raise OutsideRepository("outside-repository")
     return Path(os.fsdecode(git(cwd, "rev-parse", "--show-toplevel")).strip()).resolve()
 
 
@@ -145,21 +166,19 @@ def snapshot(repo: Path) -> dict[str, str]:
     return values
 
 
-def scope_signature(repo: Path) -> str:
-    inventory = git(repo, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
-    paths = {
-        repo / os.fsdecode(raw)
-        for raw in inventory.split(b"\0")
-        if raw and Path(os.fsdecode(raw)).name == ".gitignore"
-    }
+def scope_sources(repo: Path, names: set[str]) -> dict[str, str]:
+    # Read effective ancestor sources directly, even when Git ignores the ignore file.
+    # Remember absent sources too: adding an ignore file is a scope change.
+    paths: set[Path] = set()
+    for name in names:
+        for parent in (repo / name).parents:
+            if not parent.is_relative_to(repo):
+                break
+            paths.add(parent / ".gitignore")
     paths.add(repo / ".gitignore")
     exclude = Path(os.fsdecode(git(repo, "rev-parse", "--git-path", "info/exclude")).strip())
     paths.add(exclude if exclude.is_absolute() else repo / exclude)
-    return digest(
-        encoded(
-            [(str(path), file_hash(path) if path.is_file() else "absent") for path in sorted(paths)]
-        )
-    )
+    return {str(path): file_hash(path) if path.is_file() else "absent" for path in sorted(paths)}
 
 
 def changed(before: dict[str, str], after: dict[str, str]) -> tuple[str, ...]:
@@ -189,7 +208,12 @@ class Tools:
 
     def signature(self, kind: str) -> str:
         owner = self.kotlin if kind == "kotlin" else self.assessment
-        files = [owner, Path(sys.executable).resolve(), Path(__file__).resolve()]
+        files = [
+            owner,
+            Path(sys.executable).resolve(),
+            Path(__file__).resolve(),
+            Path(__file__).with_suffix(".py.lock"),
+        ]
         if kind == "kotlin":
             files.append(owner.with_name(owner.name + ".lock"))
         else:
@@ -200,6 +224,7 @@ class Tools:
             files.extend(sorted((skill / "assets/vale").rglob("*")))
             files.extend(sorted(owner.parent.glob("*.py")))
             files.extend(sorted(owner.parent.glob("*.lock")))
+            files.append(skill / "references/text-assessment.schema.json")
             files.append(self.vale)
         selected = [path for path in files if not path.is_dir()]
         if not selected or not all(path.is_file() for path in selected):
@@ -215,7 +240,9 @@ class Result:
     report: dict[str, object]
 
     @classmethod
-    def parse(cls, kind: str, code: int, payload: object) -> Result:
+    def parse(
+        cls, kind: str, code: int, payload: object, tools: Tools, inputs: dict[str, str]
+    ) -> Result:
         data = object_value(payload)
         if kind == "kotlin":
             findings = data.get("findings")
@@ -227,20 +254,47 @@ class Result:
             ):
                 raise Rejected("invalid-kotlin-report")
             return cls(Status.ADVISORY if findings else Status.PASSED, data)
-        if data.get("type") == "REJECTED" and code == 2:
+        skill = tools.assessment.parent.parent
+        schema = skill / "references/text-assessment.schema.json"
+        # Qualify the owner's real schema, with internal references only and no network resolver.
+        if file_hash(schema) != ASSESSMENT_SCHEMA_SHA256:
+            raise Rejected("unsupported-assessment-schema")
+        try:
+            validator = cast(SchemaValidator, Draft202012Validator(read_object(schema)))
+            validator.validate(data)
+        except ValidationError as error:
+            raise Rejected("invalid-assessment-report") from error
+        if data["type"] == "REJECTED":
+            if code != 2:
+                raise Rejected("inconsistent-assessment-exit")
             return cls(Status.FAILED, data)
-        if (
-            data.get("type") != "ASSESSED"
-            or data.get("schemaVersion") != 2
-            or code not in (0, 1)
-            or not isinstance(data.get("documents"), list)
-            or not data.get("documents")
-        ):
-            raise Rejected("invalid-assessment-report")
+        engine = object_value(data["engine"])
+        if engine["policySha256"] != file_hash(skill / "assets/vale/resources.lock.json"):
+            raise Rejected("assessment-policy-mismatch")
+        documents = cast(list[object], data["documents"])
+        observed: dict[str, str] = {}
+        has_findings = False
+        for value in documents:
+            document = object_value(value)
+            name = cast(str, document["path"])
+            if name in observed:
+                raise Rejected("duplicate-assessment-document")
+            observed[name] = cast(str, document["sourceSha256"])
+            has_findings = has_findings or bool(document["findings"])
+        if observed != inputs:
+            raise Rejected("assessment-input-mismatch")
+        if code != (1 if has_findings else 0):
+            raise Rejected("inconsistent-assessment-exit")
         return cls(Status.PASSED if code == 0 else Status.FAILED, data)
 
 
-def invoke(arguments: list[str], kind: str, repo: Path) -> Result:
+def finite_json(constant: str) -> object:
+    raise Rejected("nonfinite-json-number: " + constant)
+
+
+def invoke(
+    arguments: list[str], kind: str, repo: Path, tools: Tools, inputs: dict[str, str]
+) -> Result:
     with subprocess.Popen(
         arguments, cwd=repo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True
     ) as process:
@@ -248,7 +302,13 @@ def invoke(arguments: list[str], kind: str, repo: Path) -> Result:
             stdout, _stderr = process.communicate(timeout=35)
             if len(stdout) > LIMIT:
                 raise Rejected("oversized-report")
-            return Result.parse(kind, process.returncode, json.loads(stdout))
+            return Result.parse(
+                kind,
+                process.returncode,
+                json.loads(stdout, parse_constant=finite_json),
+                tools,
+                inputs,
+            )
         finally:
             # Cancel the whole validator group, including Vale children.
             if process.poll() is None:
@@ -311,10 +371,19 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
     state = read_object(directory / "session.json")
     if state.get("repo") != str(repo):
         raise Rejected("session-repository-mismatch")
-    if state.get("scope") != scope_signature(repo):
-        raise Rejected("ignore-scope-changed; inspect explicit file scope before handoff")
     before = string_map(state.get("baseline"))
+    observed = string_map(state.get("observed"))
     after = snapshot(repo)
+    scope = scope_sources(repo, set(observed) | set(after))
+    previous_scope = object_value(state.get("scope"))
+    if any(scope.get(name) != value for name, value in previous_scope.items()) or any(
+        name not in after and (repo / name).exists() for name in observed
+    ):
+        raise Rejected("ignore-scope-changed; inspect explicit file scope before handoff")
+    # Persist obligations before effects: failure, retry, or cancellation cannot erase them.
+    atomic_write(
+        directory / "session.json", {**state, "observed": {**observed, **after}, "scope": scope}
+    )
     selected = changed(before, after)
     results: dict[str, object] = {}
     tools: Tools | None = None
@@ -352,7 +421,7 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                 continue
             try:
                 if kind == "kotlin":
-                    result = invoke(kotlin_arguments(tools, repo, names), kind, repo)
+                    result = invoke(kotlin_arguments(tools, repo, names), kind, repo, tools, {})
                 else:
                     result = invoke(
                         [
@@ -364,11 +433,14 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                         ],
                         kind,
                         repo,
+                        tools,
+                        {str(repo / name): after[name] for name in names},
                     )
             except (Rejected, OSError, ValueError, subprocess.SubprocessError) as error:
                 result = Result(Status.FAILED, {"failure": str(error)[:300]})
             if (
                 snapshot(repo) != after
+                or scope_sources(repo, set(observed) | set(after)) != scope
                 or tools.signature(kind) != signature
                 or (kind == "kotlin" and layout_topology(repo, names) != topology)
             ):
@@ -437,8 +509,15 @@ def begin(repo: Path, directory: Path) -> dict[str, object]:
         if read_object(target).get("repo") != str(repo):
             raise Rejected("session-repository-mismatch")
         return {"status": "existing-session", "receipt": str(target)}
+    initial = snapshot(repo)
     atomic_write(
-        target, {"repo": str(repo), "baseline": snapshot(repo), "scope": scope_signature(repo)}
+        target,
+        {
+            "repo": str(repo),
+            "baseline": initial,
+            "observed": initial,
+            "scope": scope_sources(repo, set(initial)),
+        },
     )
     return {"status": "started", "receipt": str(target)}
 
@@ -447,6 +526,7 @@ def codex_response(report: dict[str, object]) -> dict[str, object]:
     message = (
         "agent-check: "
         + str(report.get("status"))
+        + ("; " + str(report["reason"]) if "reason" in report else "")
         + "; receipt="
         + str(report.get("receipt", "unavailable"))
     )
@@ -495,6 +575,11 @@ def parser() -> argparse.ArgumentParser:
         _ = command.add_argument("--repo", type=Path, default=Path.cwd())
         _ = command.add_argument("--session", required=True)
         _ = command.add_argument("--retry", action="store_true")
+        _ = command.add_argument(
+            "--native",
+            action="store_true",
+            help="Native lifecycle adapter: record projectless checks as not applicable.",
+        )
     _ = commands.add_parser("codex", help="Read a native SessionStart or Stop event from stdin.")
     _ = commands.add_parser(
         "inspect", help="Show public B0 provenance and explicit validator selection."
@@ -505,7 +590,8 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = parser().parse_args()
     report: dict[str, object]
-    native = args.command == "codex"
+    codex = args.command == "codex"
+    native = codex or bool(getattr(args, "native", False))
     try:
         if args.self_test:
             if changed({"a.md": "old"}, {"a.md": "new"}) != ("a.md",):
@@ -531,16 +617,31 @@ def main() -> int:
             report = {"status": "configured"}
         else:
             command: str = args.command
-            if native:
+            if codex:
                 payload = object_value(json.loads(sys.stdin.read(LIMIT + 1)))
                 event = payload.get("hook_event_name")
                 command = {"SessionStart": "begin", "Stop": "handoff"}.get(str(event), "invalid")
                 cwd, session = payload.get("cwd"), payload.get("session_id")
                 if command == "invalid" or not isinstance(cwd, str) or not isinstance(session, str):
                     raise Rejected("invalid-native-event")
-                repo, session_id, retry = repository(Path(cwd)), session, False
+                working, session_id, retry = Path(cwd), session, False
             else:
-                repo, session_id, retry = repository(args.repo.resolve()), args.session, args.retry
+                working, session_id, retry = args.repo.resolve(), args.session, args.retry
+            try:
+                repo = repository(working)
+            except OutsideRepository:
+                if not native:
+                    raise
+                directory = session_directory(working.resolve(), session_id)
+                report = {
+                    "status": "not-applicable",
+                    "reason": "outside-repository",
+                    "receipt": str(directory / "latest.json"),
+                }
+                with session_lock(directory):
+                    atomic_write(directory / "latest.json", report)
+                print(json.dumps(codex_response(report) if codex else report, sort_keys=True))
+                return 0
             directory = session_directory(repo, session_id)
             with session_lock(directory):
                 try:
@@ -568,7 +669,7 @@ def main() -> int:
                     atomic_write(directory / "latest.json", report)
     except (Rejected, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         report = {"status": Status.FAILED, "failure": str(error)[:300]}
-    print(json.dumps(codex_response(report) if native else report, sort_keys=True))
+    print(json.dumps(codex_response(report) if codex else report, sort_keys=True))
     return 0 if native or report.get("status") != Status.FAILED else 1
 
 

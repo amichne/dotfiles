@@ -8,7 +8,7 @@ export default function engineeringChecks(pi: ExtensionAPI) {
     let report: Record<string, unknown>;
     try {
       const result = await pi.exec(join(homedir(), ".local/bin/agent-check"), [phase,
-        "--repo", ctx.cwd, "--session", ctx.sessionManager.getSessionId()], { timeout: 110000 });
+        "--native", "--repo", ctx.cwd, "--session", ctx.sessionManager.getSessionId()], { timeout: 110000 });
       const parsed: unknown = JSON.parse(result.stdout);
       if (!parsed || typeof parsed !== "object" || !("status" in parsed) || result.code !== 0) {
         report = { status: "failed", failure: "check-failed", ...(parsed && typeof parsed === "object" ? parsed : {}) };

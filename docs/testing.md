@@ -16,7 +16,8 @@ From the repository root, run:
 uv run --locked --script scripts/sandbox.py check
 ```
 
-The command prepares the dependency image and runs `./scripts/check.sh` inside a disposable container.
+The command prepares the dependency image.
+It then runs `./scripts/check.sh` inside a disposable container.
 The command returns the gate's exit status.
 The runner removes the container after success, failure, or an interrupt.
 The dependency image stays in Docker's cache for later runs.
@@ -41,7 +42,8 @@ uv run --locked --script scripts/sandbox.py run -- /bin/sh -c 'exit 42'
 
 This example returns status 42 and removes its container.
 Changes inside the container disappear after each run.
-The source snapshot includes public edits and public files that Git does not yet track.
+The source snapshot includes public edits.
+It also includes public files that Git does not yet track.
 Ignored files stay outside the snapshot, even when Git tracks them.
 The runner rejects selected symlinks and non-file entries before Docker starts.
 
@@ -53,13 +55,14 @@ tar -tf /tmp/dotfiles-source.tar
 ```
 
 The runner rejects an existing output file.
-The `--source PATH` option selects a different source root, including a HOME with `.dotfiles.git`.
+Use `--source PATH` to select a different source root.
+That root can be a HOME with `.dotfiles.git`.
 The snapshot contains source files alone.
 A new Git index inside the container supplies the gate's repository context.
 
 ## Hosted CI
 
-`.github/workflows/sandbox.yml` runs the same container gate on GitHub's Ubuntu 24.04 workers.
+`.github/workflows/sandbox.yml` runs the same gate on GitHub's Ubuntu 24.04 workers.
 It runs for pull requests, pushes to `main`, and manual requests.
 The workflow pins each action by commit and uses read-only repository access.
 The container receives no host credentials.
@@ -84,12 +87,18 @@ For a local run, supply these paths in environment variables:
 | `CODEX_BIN` | Codex 0.163.0 executable |
 | `PI_SDK_ROOT` | Pi 1.3.0 package directory |
 | `TYPESCRIPT_ROOT` | TypeScript 7.0.2 package directory, near `@types/node` |
+| `ENGINEERING_UV_CACHE` | Explicit test cache with the adapter's locked dependencies |
 
 ```sh
+export ENGINEERING_UV_CACHE="$(mktemp -d)"
+UV_CACHE_DIR="$ENGINEERING_UV_CACHE" uv run --locked --script \
+  .config/agent-engineering/check.py --self-test
 node --test tests/native-agent-hosts.mjs
 ```
 
 Missing dependencies fail this command. They do not produce skipped coverage.
+The fixtures use the prepared cache offline and keep their HOME directories separate.
+They test projectless native sessions and a hidden ignore rule with real Vale.
 The Codex fixture needs a loopback socket for its fixed response server.
 The [native engineering guide](https://slopsentral.michne.com/guides/engineering-baseline)
 states the difference between native completion and a passing handoff check.
@@ -114,7 +123,8 @@ uv run --locked --script scripts/sandbox.py check
 
 The same files control local and cloud runs.
 The image build needs network access for Docker registries, Debian packages, Python, and PyPI.
-When a managed worker supplies `CODEX_PROXY_CERT`, the runner passes that certificate as a BuildKit secret.
+Some managed workers supply `CODEX_PROXY_CERT`.
+The runner passes that certificate as a BuildKit secret.
 Each uv download uses that certificate without a permanent copy in the image.
 The test container has no network access.
 Use a cloud checkout that contains `containers/Dockerfile` and `scripts/sandbox.py`.
@@ -132,12 +142,14 @@ The runner prints the exact image ID and source digest for each run.
 Docker selects the machine's native architecture.
 Local ARM64 results do not establish AMD64 results.
 
-The container uses UID 10001, a read-only root, no Linux capabilities, and disposable writable directories.
+The container uses UID 10001 and a read-only root.
+It has no Linux capabilities. Its writable directories are disposable.
 Docker limits each container to two CPUs, 2 GiB of memory, and 256 processes.
 The runtime tests examine these protections, network isolation, and the fresh Git index.
 They skip outside the container.
 
-The gate exercises the bare-HOME manager, shell startup, prompt logic, syntax, types, data files, and documentation.
+The gate checks the bare-HOME manager, shell startup, and prompt logic.
+It also checks syntax, types, data files, and docs.
 Shell fixtures supply bounded substitutes for external integrations.
 This setup does not establish macOS behavior, real service access, or a complete interactive desktop session.
 Container isolation also depends on Docker and the host kernel.

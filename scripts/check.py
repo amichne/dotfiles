@@ -53,7 +53,7 @@ def main() -> int:
         ["uv", "lock", "--check", "--script", "scripts/df.py"],
         ["uv", "lock", "--check", "--script", "scripts/sandbox.py"],
         ["uv", "lock", "--check", "--script", ".config/agent-engineering/check.py"],
-        ["uv", "run", "--locked", "--script", ".config/agent-engineering/check.py", "--self-test"],
+        ["uv", "run", "--locked", "python", ".config/agent-engineering/check.py", "--self-test"],
         ["uv", "run", "--locked", "python", "scripts/sync_agent_baseline.py", "--check"],
         ["uv", "run", "--locked", "--script", "scripts/sandbox.py", "--self-test"],
         ["node", "--test", "tests/prompt.test.mjs"],

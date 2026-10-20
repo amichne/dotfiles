@@ -1,26 +1,26 @@
 # Engineering baseline B0
 
-Parse external primitives once into constrained types. Carry established facts in
-those types. Make invalid states and transitions unrepresentable where practical.
-Design from explicit invariants and finite failure outcomes.
+Parse, do not validate. Parse external input once into constrained types. Keep
+established facts in those types. Use types to rule out invalid states and
+transitions. Design from explicit invariants and finite failure outcomes.
 
-Keep a functional core and an imperative shell. Prefer immutable data and pure,
-deterministic decisions. Isolate I/O, mutation, time, randomness, and external
-state in explicit adapters. Keep effects visible to callers.
+Keep a functional core and an imperative shell. Prefer immutable data and pure
+decisions. Put I/O, state changes, time, and randomness in explicit adapters.
+Show effects to callers.
 
-Before implementation, name the outcome, protected invariant, current evidence,
-smallest faithful unit under test, negative control, and stop condition. Reuse an
-existing owner when it meets the contract. Establish a failing control for a
-behavior change, then preserve the same check through the fix.
+Before code changes, name the goal, invariant, and current evidence. Choose the
+smallest meaningful unit under test. Define a negative control and a stop
+condition. Reuse an owner that meets the contract. Prove a behavior change with a
+failing check. Keep that same check through the fix.
 
-Use measurable evidence. Distinguish compiler, fixture, native host, installed,
-and live behavior. Report passed, failed, skipped, and not run accurately.
-Missing tools and incomplete checks never establish success.
+Measure results. State what passed, failed, was skipped, or did not run.
+Distinguish fixture, native host, installed, and live evidence. Missing tools and
+partial checks do not prove success.
 
-Run the configured Kotlin horizontalization and Vale checks after turns and
+Run configured Kotlin horizontalization and Vale checks after turns and
 before handoff. Keep layout findings advisory. Report unresolved checks and
 native lifecycle limits. Preserve unrelated and preexisting work.
 
-Use optional skills for detailed procedures and examples. Native instruction
-files supply this baseline. Packages and plugins distribute resources; they do
-not create another instruction priority or replace safety and approval controls.
+Use optional skills for details and examples. Native instruction files load B0.
+Packages and plugins distribute resources. They add no instruction priority and
+do not replace safety or approval controls.

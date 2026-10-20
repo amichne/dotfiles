@@ -68,6 +68,8 @@
 !/tests/
 !/tests/*.py
 !/tests/*.mjs
+!/tests/fixtures/
+!/tests/fixtures/text-assessment.schema.json
 
 # Generated state stays outside the source inventory.
 **/.venv/

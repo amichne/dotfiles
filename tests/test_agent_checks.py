@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 import os
 import subprocess
 import sys
 import time
 from pathlib import Path
+
+import pytest
 
 from .conftest import Home
 
@@ -52,16 +55,23 @@ def configure(home: Home) -> Path:
     assets = owner / "assets/vale"
     assets.mkdir(parents=True)
     _ = (assets / "resources.lock.json").write_text("{}")
+    references = owner / "references"
+    references.mkdir()
+    _ = (references / "text-assessment.schema.json").write_bytes(
+        (Path(__file__).parent / "fixtures/text-assessment.schema.json").read_bytes()
+    )
     count = scripts / "count"
     _ = count.write_text("0")
     assessment = scripts / "assess.py"
     _ = assessment.write_text(
-        "import json, pathlib, sys\n"
+        "import hashlib, json, pathlib, sys\n"
         "counter = pathlib.Path(__file__).with_name('count')\n"
         "counter.write_text(str(int(counter.read_text()) + 1))\n"
         "paths = sys.argv[3:]\n"
         "bad = any('BAD' in pathlib.Path(p).read_text() for p in paths)\n"
-        "print(json.dumps({'type':'ASSESSED','schemaVersion':2,'documents':paths}))\n"
+        "finding = {'type':'FINDING','category':'DICTION','rule':'Slopsentral.Modals','severity':'warning','line':1,'span':[1,3],'message':'Fixture finding.'}\n"
+        "documents = [{'type':'DOCUMENT_ASSESSMENT','path':p,'sourceSha256':hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest(),'metrics':{'words':4,'sentences':1,'estimatedSyllables':4,'wordsPerSentence':4.0,'fleschKincaidGrade':-2.23},'findings':[finding] if bad else []} for p in paths]\n"
+        "print(json.dumps({'type':'ASSESSED','schemaVersion':2,'engine':{'type':'VALE','version':'3.24.0','policySha256':hashlib.sha256(b'{}').hexdigest()},'comprehension':{'type':'NOT_ASSESSED'},'documents':documents}))\n"
         "sys.exit(1 if bad else 0)\n"
     )
     kotlin = owner / "kotlin"
@@ -133,6 +143,158 @@ def test_missing_tool_invalid_output_and_recovery(home: Home) -> None:
     assert run(home, "handoff", "--session", "fixture")[0] == 0
     (owner / "vale").unlink()
     assert run(home, "handoff", "--session", "fixture")[0] == 1
+
+
+def test_ignored_nested_ignore_cannot_discharge_failed_file(home: Home) -> None:
+    _ = (home.path / "README.md").write_text("Base.\n")
+    initialize(home)
+    _ = (home.path / ".gitignore").write_text("sub/.gitignore\n")
+    nested = home.path / "sub"
+    nested.mkdir()
+    owner = configure(home)
+    assert run(home, "begin", "--session", "fixture")[0] == 0
+    source = nested / "new.md"
+    _ = source.write_text("BAD prose.\n")
+    assert run(home, "handoff", "--session", "fixture")[0] == 1
+    _ = (nested / ".gitignore").write_text("new.md\n")
+    code, report = run(home, "handoff", "--session", "fixture")
+    assert code == 1 and report["status"] == "failed", report
+    assert "scope" in str(report)
+    assert (owner / "scripts/count").read_text() == "1"
+    _ = (nested / ".gitignore").write_text("")
+    assert run(home, "handoff", "--session", "fixture")[0] == 1
+    (nested / ".gitignore").unlink()
+    assert run(home, "handoff", "--session", "fixture")[0] == 1
+    _ = source.write_text("Good prose.\n")
+    assert run(home, "handoff", "--session", "fixture")[0] == 0
+
+
+def test_projectless_native_is_not_applicable_and_explicit_check_fails(home: Home) -> None:
+    for event in ("SessionStart", "Stop"):
+        code, report = run(
+            home,
+            "codex",
+            event={"hook_event_name": event, "cwd": str(home.path), "session_id": "projectless"},
+        )
+        assert code == 0 and "continue" not in report, report
+        assert "not-applicable" in str(report) and "outside-repository" in str(report)
+        assert "unavailable" not in str(report)
+    for command in ("begin", "handoff"):
+        code, report = run(home, command, "--session", "projectless")
+        assert code == 1 and report["status"] == "failed"
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "incomplete",
+        "missing-engine",
+        "wrong-version",
+        "missing-metrics",
+        "extra-document-field",
+        "wrong-path",
+        "wrong-digest",
+        "missing-document",
+        "duplicate-document",
+        "findings-exit-zero",
+        "empty-findings-exit-one",
+        "bad-finding",
+        "nonfinite-metric",
+        "wrong-policy",
+    ],
+)
+def test_malformed_assessment_never_passes_or_reuses_success(home: Home, mutation: str) -> None:
+    start(home)
+    owner = configure(home)
+    document = home.path / "README.md"
+    _ = document.write_text("New prose.\n")
+    assert run(home, "turn", "--session", "fixture")[0] == 0
+    other = home.path / "second.md"
+    _ = other.write_text("More prose.\n")
+    assert home.run("/usr/bin/git", "add", "-f", "second.md").returncode == 0
+    documents: list[dict[str, object]] = [
+        {
+            "type": "DOCUMENT_ASSESSMENT",
+            "path": str(path),
+            "sourceSha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "metrics": {
+                "words": 4,
+                "sentences": 1,
+                "estimatedSyllables": 4,
+                "wordsPerSentence": 4,
+                "fleschKincaidGrade": -2.23,
+            },
+            "findings": [],
+        }
+        for path in (document, other)
+    ]
+    payload: dict[str, object] = {
+        "type": "ASSESSED",
+        "schemaVersion": 2,
+        "engine": {
+            "type": "VALE",
+            "version": "3.24.0",
+            "policySha256": hashlib.sha256(b"{}").hexdigest(),
+        },
+        "comprehension": {"type": "NOT_ASSESSED"},
+        "documents": documents,
+    }
+    # Typed JSON mutation fixtures are external protocol inputs, independent of the parser.
+    first = dict(documents[0])
+    exit_code = 0
+    if mutation == "incomplete":
+        payload = {"type": "ASSESSED", "schemaVersion": 2, "documents": [{}]}
+    elif mutation == "missing-engine":
+        _ = payload.pop("engine")
+    elif mutation == "wrong-version":
+        payload["engine"] = {"type": "VALE", "version": "0", "policySha256": "0" * 64}
+    elif mutation == "missing-metrics":
+        del first["metrics"]
+    elif mutation == "extra-document-field":
+        first["surprise"] = True
+    elif mutation == "wrong-path":
+        first["path"] = str(home.path / "unselected.md")
+    elif mutation == "wrong-digest":
+        first["sourceSha256"] = "0" * 64
+    elif mutation == "missing-document":
+        _ = documents.pop()
+    elif mutation == "duplicate-document":
+        documents[1] = first
+    elif mutation == "findings-exit-zero":
+        first["findings"] = [
+            {
+                "type": "FINDING",
+                "category": "DICTION",
+                "rule": "Slopsentral.Modals",
+                "severity": "warning",
+                "line": 1,
+                "span": [1, 3],
+                "message": "Fixture finding.",
+            }
+        ]
+    elif mutation == "empty-findings-exit-one":
+        exit_code = 1
+    elif mutation == "bad-finding":
+        first["findings"] = [{}]
+        exit_code = 1
+    elif mutation == "nonfinite-metric":
+        first["metrics"] = {
+            "words": 4,
+            "sentences": 1,
+            "estimatedSyllables": 4,
+            "wordsPerSentence": 4,
+            "fleschKincaidGrade": float("nan"),
+        }
+    elif mutation == "wrong-policy":
+        payload["engine"] = {"type": "VALE", "version": "3.24.0", "policySha256": "0" * 64}
+    documents[0] = first
+    script = owner / "scripts/assess.py"
+    _ = script.write_text(
+        "import sys\nprint(" + repr(json.dumps(payload)) + ")\nsys.exit(" + str(exit_code) + ")\n"
+    )
+    for _ in range(2):
+        code, report = run(home, "handoff", "--session", "fixture")
+        assert code == 1 and report["status"] == "failed", (mutation, report)
 
 
 def test_literal_paths_deletion_and_unrelated_scope(home: Home) -> None:
