@@ -673,8 +673,7 @@ def main() -> int:
             report = inspect_resources()
         elif args.command in ("configure", "install"):
             tools = Tools(args.kotlin.resolve(), args.assessment.resolve(), args.vale.resolve())
-            _ = tools.signature("kotlin")
-            signature = tools.signature("prose")
+            signature = digest(encoded([tools.signature("kotlin"), tools.signature("prose")]))
             selected = {
                 "kotlin": str(tools.kotlin),
                 "assessment": str(tools.assessment),
