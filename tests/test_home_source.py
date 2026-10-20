@@ -28,8 +28,6 @@ def test_home_source_contains_the_requested_public_files() -> None:
         "zsh",
     }
     assert {str(p.relative_to(ROOT / ".pi")) for p in (ROOT / ".pi").rglob("*") if p.is_file()} == {
-        "agent/AGENTS.md",
-        "agent/extensions/engineering-checks.ts",
         "agent/agents/researcher.md",
         "agent/agents/scout.md",
         "agent/agents/worker.md",
@@ -51,7 +49,6 @@ def test_repository_contains_only_current_source_owners() -> None:
     )
     roots = {Path(p).parts[0] for p in result.stdout.split("\0") if p and (ROOT / p).exists()}
     assert roots == {
-        ".codex",
         ".config",
         ".github",
         ".gitignore",

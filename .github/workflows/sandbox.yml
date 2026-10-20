@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: amichne/slopsentral
-          ref: 9de39312f3f4d82eac0b9ac34e14e3f4475c6ea2
+          ref: aea1ab920a72199a5b5b9119139b33346090b6e8
           path: slopsentral-qualification
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0

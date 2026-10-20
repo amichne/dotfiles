@@ -43,6 +43,6 @@ Credentials, sessions, caches, and machine overrides stay outside the public inv
 The source does not contain a Git identity or SSH signing key.
 
 The short global [engineering baseline B0](.config/agent-engineering/B0.md) defines
-common rules. Run `scripts/sync_agent_baseline.py` to copy B0 to native Codex and Pi
-instruction files. Use [Slopsentral](https://slopsentral.michne.com/guides/pi) for
-skills with details and examples.
+common rules. Use the [preserving installer](docs/engineering-baseline.md) to add B0
+to native Codex and Pi instructions without replacing private text or hooks.
+[Slopsentral](https://github.com/amichne/slopsentral) owns the detailed skills and validators.

@@ -145,6 +145,65 @@ def test_missing_tool_invalid_output_and_recovery(home: Home) -> None:
     assert run(home, "handoff", "--session", "fixture")[0] == 1
 
 
+def test_current_v1_report_contract(home: Home) -> None:
+    start(home)
+    owner = configure(home)
+    _ = (owner / "references/text-assessment.schema.json").write_bytes(
+        (Path(__file__).parent / "fixtures/text-assessment-v1.schema.json").read_bytes()
+    )
+    glossary = home.path / "glossary.json"
+    _ = glossary.write_text("{}")
+    document = home.path / "README.md"
+    _ = document.write_text("Read the file.\n")
+    payload: dict[str, object] = {
+        "type": "ASSESSED",
+        "schemaVersion": 1,
+        "engine": {
+            "type": "VALE",
+            "version": "3.24.0",
+            "policySha256": hashlib.sha256(b"{}").hexdigest(),
+        },
+        "comprehension": {"type": "NOT_ASSESSED"},
+        "glossary": {
+            "type": "CHECKED",
+            "entries": 1,
+            "sourceSha256": hashlib.sha256(b"{}").hexdigest(),
+        },
+        "documents": [
+            {
+                "type": "DOCUMENT_ASSESSMENT",
+                "path": str(document),
+                "sourceSha256": hashlib.sha256(document.read_bytes()).hexdigest(),
+                "metrics": {
+                    "words": 4,
+                    "sentences": 1,
+                    "estimatedSyllables": 4,
+                    "wordsPerSentence": 4,
+                    "fleschKincaidGrade": -2.23,
+                },
+                "findings": [],
+                "terminology": {"type": "IN_SCOPE"},
+            }
+        ],
+    }
+    script = owner / "scripts/assess.py"
+    _ = script.write_text("print(" + repr(json.dumps(payload)) + ")\n")
+    code, report = run(home, "handoff", "--session", "fixture")
+    assert code == 0 and report["status"] == "passed", report
+    _ = glossary.write_text("{}\n")
+    code, report = run(home, "handoff", "--session", "fixture")
+    assert code == 1 and "assessment-glossary-mismatch" in str(report)
+    glossary.unlink()
+    payload["type"] = "INCOMPLETE"
+    payload["glossary"] = {"type": "NOT_PROVIDED"}
+    _ = script.write_text("import sys\nprint(" + repr(json.dumps(payload)) + ")\nsys.exit(2)\n")
+    code, report = run(home, "handoff", "--session", "fixture")
+    assert code == 1 and "INCOMPLETE" in str(report), report
+    assert '"cached": true' in json.dumps(run(home, "handoff", "--session", "fixture")[1])
+    _ = script.write_text("print(" + repr(json.dumps(payload)) + ")\n")
+    assert run(home, "handoff", "--session", "fixture")[0] == 1
+
+
 def test_ignored_nested_ignore_cannot_discharge_failed_file(home: Home) -> None:
     _ = (home.path / "README.md").write_text("Base.\n")
     initialize(home)

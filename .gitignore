@@ -35,10 +35,9 @@
 !/.config/agent-engineering/*.md
 !/.config/agent-engineering/*.py
 !/.config/agent-engineering/*.py.lock
+!/.config/agent-engineering/*.json
+!/.config/agent-engineering/*.ts
 
-!/.codex/
-!/.codex/AGENTS.md
-!/.codex/hooks.json
 
 !/.local/
 !/.local/bin/
@@ -50,14 +49,11 @@
 
 !/.pi/
 !/.pi/agent/
-!/.pi/agent/AGENTS.md
 !/.pi/agent/pi-lsp.json
 !/.pi/agent/agents/
 !/.pi/agent/agents/*.md
 !/.pi/agent/prompts/
 !/.pi/agent/prompts/*.md
-!/.pi/agent/extensions/
-!/.pi/agent/extensions/engineering-checks.ts
 
 !/docs/
 !/docs/*.md
@@ -70,6 +66,7 @@
 !/tests/*.mjs
 !/tests/fixtures/
 !/tests/fixtures/text-assessment.schema.json
+!/tests/fixtures/text-assessment-v1.schema.json
 
 # Generated state stays outside the source inventory.
 **/.venv/

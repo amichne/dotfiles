@@ -8,7 +8,6 @@ Pi keeps authentication and session data private.
 
 | Path under `~/.pi/agent` | Purpose |
 | --- | --- |
-| `AGENTS.md` | Generated engineering baseline B0 |
 | `agents/*.md` | Agent definitions |
 | `prompts/*.md` | Reusable prompts |
 | `pi-lsp.json` | Settings for language servers |
@@ -51,5 +50,7 @@ A live Pi session must load the extension before it can call Kast tools.
 
 The separate [Ayi repository](https://github.com/amichne/ayi) owns the `ayi` task commands and their installer.
 
-Read the [native engineering guide](https://slopsentral.michne.com/guides/engineering-baseline)
+Read the [native engineering guide](engineering-baseline.md)
 for B0, optional skills, local validators, and native lifecycle limits.
+The installer preserves existing `APPEND_SYSTEM.md` and feature extensions.
+Its installed `AGENTS.md` is private and keeps text outside the managed B0 block.

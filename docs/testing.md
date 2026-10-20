@@ -73,7 +73,7 @@ The separate `Native engineering fixtures` job runs `tests/native-agent-hosts.mj
 It pins Pi 1.3.0, Codex 0.163.0, Vale 3.24.0, and the Slopsentral source revision.
 The fixtures use disposable HOME directories and fixed local responses.
 They spend no paid model inference.
-They examine native instruction selection, override precedence, hook trust, and failure reports.
+They examine preserving installation, instruction selection, override precedence, hook trust, and failure reports.
 They also run strict TypeScript analysis against the Pi declarations.
 
 For a local run, supply these paths in environment variables:
@@ -100,7 +100,7 @@ Missing dependencies fail this command. They do not produce skipped coverage.
 The fixtures use the prepared cache offline and keep their HOME directories separate.
 They test projectless native sessions and a hidden ignore rule with real Vale.
 The Codex fixture needs a loopback socket for its fixed response server.
-The [native engineering guide](https://slopsentral.michne.com/guides/engineering-baseline)
+The [native engineering guide](engineering-baseline.md)
 states the difference between native completion and a passing handoff check.
 
 ## Cloud use
