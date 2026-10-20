@@ -30,6 +30,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, cast
 
+import resources
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
@@ -40,6 +41,7 @@ KOTLIN_ROOTS = frozenset(
 )
 LIMIT = 16 * 1024 * 1024
 ASSESSMENT_SCHEMA_SHA256 = "c1913e1dbfb63c5df2518456e23f52c25c7cd08c8ae0bbe4f257c101c0f630ac"
+RESTORED_SCHEMA_SHA256 = "65f8c2174a98d90066245a2002b3fbca7cfd04b3ed3b7783b1e41e9ab34382ff"
 
 
 class Status(StrEnum):
@@ -193,6 +195,14 @@ class Tools:
     assessment: Path
     vale: Path
 
+    def prose_version(self) -> int:
+        schema = self.assessment.parent.parent / "references/text-assessment.schema.json"
+        versions = {ASSESSMENT_SCHEMA_SHA256: 2, RESTORED_SCHEMA_SHA256: 1}
+        version = versions.get(file_hash(schema))
+        if version is None:
+            raise Rejected("unsupported-assessment-schema")
+        return version
+
     @classmethod
     def parse(cls, value: object) -> Tools:
         data = object_value(value)
@@ -214,6 +224,7 @@ class Tools:
             Path(__file__).resolve(),
             Path(__file__).with_suffix(".py.lock"),
         ]
+        files.extend(sorted(Path(__file__).parent.glob("*.py")))
         if kind == "kotlin":
             files.append(owner.with_name(owner.name + ".lock"))
         else:
@@ -224,7 +235,8 @@ class Tools:
             files.extend(sorted((skill / "assets/vale").rglob("*")))
             files.extend(sorted(owner.parent.glob("*.py")))
             files.extend(sorted(owner.parent.glob("*.lock")))
-            files.append(skill / "references/text-assessment.schema.json")
+            files.extend(sorted((skill / "references").glob("*.json")))
+            _ = self.prose_version()
             files.append(self.vale)
         selected = [path for path in files if not path.is_dir()]
         if not selected or not all(path.is_file() for path in selected):
@@ -241,7 +253,13 @@ class Result:
 
     @classmethod
     def parse(
-        cls, kind: str, code: int, payload: object, tools: Tools, inputs: dict[str, str]
+        cls,
+        kind: str,
+        code: int,
+        payload: object,
+        tools: Tools,
+        inputs: dict[str, str],
+        glossary: tuple[Path, str] | None = None,
     ) -> Result:
         data = object_value(payload)
         if kind == "kotlin":
@@ -257,8 +275,7 @@ class Result:
         skill = tools.assessment.parent.parent
         schema = skill / "references/text-assessment.schema.json"
         # Qualify the owner's real schema, with internal references only and no network resolver.
-        if file_hash(schema) != ASSESSMENT_SCHEMA_SHA256:
-            raise Rejected("unsupported-assessment-schema")
+        version = tools.prose_version()
         try:
             validator = cast(SchemaValidator, Draft202012Validator(read_object(schema)))
             validator.validate(data)
@@ -283,6 +300,14 @@ class Result:
             has_findings = has_findings or bool(document["findings"])
         if observed != inputs:
             raise Rejected("assessment-input-mismatch")
+        if version == 1:
+            terminology = object_value(data["glossary"])
+            if data["type"] == "INCOMPLETE":
+                if code != 2 or glossary is not None:
+                    raise Rejected("inconsistent-incomplete-assessment")
+                return cls(Status.FAILED, data)
+            if glossary is None or terminology.get("sourceSha256") != glossary[1]:
+                raise Rejected("assessment-glossary-mismatch")
         if code != (1 if has_findings else 0):
             raise Rejected("inconsistent-assessment-exit")
         return cls(Status.PASSED if code == 0 else Status.FAILED, data)
@@ -293,7 +318,12 @@ def finite_json(constant: str) -> object:
 
 
 def invoke(
-    arguments: list[str], kind: str, repo: Path, tools: Tools, inputs: dict[str, str]
+    arguments: list[str],
+    kind: str,
+    repo: Path,
+    tools: Tools,
+    inputs: dict[str, str],
+    glossary: tuple[Path, str] | None = None,
 ) -> Result:
     with subprocess.Popen(
         arguments, cwd=repo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True
@@ -308,6 +338,7 @@ def invoke(
                 json.loads(stdout, parse_constant=finite_json),
                 tools,
                 inputs,
+                glossary,
             )
         finally:
             # Cancel the whole validator group, including Vale children.
@@ -367,6 +398,29 @@ def kotlin_arguments(tools: Tools, repo: Path, names: tuple[str, ...]) -> list[s
     return arguments
 
 
+def glossary_input(repo: Path) -> tuple[Path, str] | None:
+    # Prefer a canonical JSON source over its generated Markdown reader view.
+    # No discovery outside these explicit repository paths, and no invented terms.
+    for candidates in (
+        ("glossary.json", "docs/glossary.json"),
+        ("GLOSSARY.md", "docs/GLOSSARY.md"),
+    ):
+        selected = [repo / name for name in candidates if (repo / name).exists()]
+        if len(selected) > 1:
+            raise Rejected("ambiguous-repository-glossary")
+        if selected:
+            path = selected[0]
+            if (
+                path.is_symlink()
+                or not path.resolve().is_relative_to(repo)
+                or not path.is_file()
+                or path.stat().st_size > LIMIT
+            ):
+                raise Rejected("unsafe-repository-glossary")
+            return path, file_hash(path)
+    return None
+
+
 def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
     state = read_object(directory / "session.json")
     if state.get("repo") != str(repo):
@@ -408,11 +462,21 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
             if tools is None:
                 tools = Tools.parse(read_object(state_root() / "tools.json"))
             signature = tools.signature(kind)
+            glossary = (
+                glossary_input(repo) if kind == "prose" and tools.prose_version() == 1 else None
+            )
             # Package topology is an input to the layout heuristic. It reads names,
             # not Kotlin bodies. All session edits remain selected after a commit.
             topology = layout_topology(repo, names) if kind == "kotlin" else []
             key = digest(
-                encoded([signature, [(name, after.get(name)) for name in names], topology])
+                encoded(
+                    [
+                        signature,
+                        [(name, after.get(name)) for name in names],
+                        topology,
+                        [str(glossary[0]), glossary[1]] if glossary else None,
+                    ]
+                )
             )
             receipt = directory / (kind + ".json")
             cached = read_object(receipt) if receipt.is_file() else {}
@@ -429,12 +493,14 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                             str(tools.assessment),
                             "--vale-bin",
                             str(tools.vale),
+                            *(["--glossary", str(glossary[0])] if glossary else []),
                             *[str(repo / name) for name in names],
                         ],
                         kind,
                         repo,
                         tools,
                         {str(repo / name): after[name] for name in names},
+                        glossary,
                     )
             except (Rejected, OSError, ValueError, subprocess.SubprocessError) as error:
                 result = Result(Status.FAILED, {"failure": str(error)[:300]})
@@ -443,6 +509,11 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                 or scope_sources(repo, set(observed) | set(after)) != scope
                 or tools.signature(kind) != signature
                 or (kind == "kotlin" and layout_topology(repo, names) != topology)
+                or (
+                    kind == "prose"
+                    and tools.prose_version() == 1
+                    and glossary_input(repo) != glossary
+                )
             ):
                 raise Rejected("input-changed-during-check")
             record: dict[str, object] = {
@@ -451,6 +522,7 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                 "toolSignature": signature,
                 "validator": str(tools.kotlin if kind == "kotlin" else tools.assessment),
                 "topologySha256": digest(encoded(topology)),
+                "glossary": {"path": str(glossary[0]), "sha256": glossary[1]} if glossary else None,
                 "status": result.status,
                 "files": list(names),
                 "report": result.report,
@@ -539,23 +611,12 @@ def inspect_resources() -> dict[str, object]:
     home = Path.home()
     source = home / ".config/agent-engineering/B0.md"
     source_hash = file_hash(source)
-    resources: list[dict[str, object]] = []
-    for agent in (home / ".codex", home / ".pi/agent"):
-        path = agent / "AGENTS.md"
-        resources.append(
-            {
-                "path": str(path),
-                "sha256": file_hash(path) if path.is_file() else None,
-                "matchesSource": path.is_file() and file_hash(path) == source_hash,
-                "overridePresent": (agent / "AGENTS.override.md").exists(),
-            }
-        )
     config = state_root() / "tools.json"
     return {
         "status": "inspected",
         "source": str(source),
         "sha256": source_hash,
-        "resources": resources,
+        "resources": resources.inventory(home, source.parent),
         "tools": read_object(config) if config.is_file() else "not-configured",
         "qualification": "file-inventory-only; use native host inspection for effective selection",
     }
@@ -570,6 +631,14 @@ def parser() -> argparse.ArgumentParser:
     )
     for name in ("kotlin", "assessment", "vale"):
         _ = setup.add_argument("--" + name, required=True, type=Path)
+    install = commands.add_parser(
+        "install",
+        help="Plan or apply a preserving B0/native resource migration; never change trust/settings.",
+    )
+    for name in ("kotlin", "assessment", "vale"):
+        _ = install.add_argument("--" + name, required=True, type=Path)
+    _ = install.add_argument("--apply", action="store_true")
+    _ = install.add_argument("--expected-plan", default="")
     for name in ("begin", "turn", "handoff", "status"):
         command = commands.add_parser(name)
         _ = command.add_argument("--repo", type=Path, default=Path.cwd())
@@ -602,17 +671,30 @@ def main() -> int:
             raise Rejected("missing-command")
         if args.command == "inspect":
             report = inspect_resources()
-        elif args.command == "configure":
+        elif args.command in ("configure", "install"):
             tools = Tools(args.kotlin.resolve(), args.assessment.resolve(), args.vale.resolve())
-            _ = tools.signature("kotlin")
-            _ = tools.signature("prose")
+            signature = digest(encoded([tools.signature("kotlin"), tools.signature("prose")]))
+            selected = {
+                "kotlin": str(tools.kotlin),
+                "assessment": str(tools.assessment),
+                "vale": str(tools.vale),
+            }
+            if args.command == "install":
+                directory = state_root()
+                with session_lock(directory / "installation-lock"):
+                    plan = resources.build_plan(
+                        Path.home(), Path(__file__).resolve().parent, directory, selected, signature
+                    )
+                    report = (
+                        resources.apply_plan(plan, args.expected_plan, directory)
+                        if args.apply
+                        else plan.report()
+                    )
+                print(json.dumps(report, sort_keys=True))
+                return 0
             atomic_write(
                 state_root() / "tools.json",
-                {
-                    "kotlin": str(tools.kotlin),
-                    "assessment": str(tools.assessment),
-                    "vale": str(tools.vale),
-                },
+                selected,
             )
             report = {"status": "configured"}
         else:

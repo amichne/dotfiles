@@ -26,15 +26,18 @@ const piRoot = required('PI_SDK_ROOT');
 const typescriptRoot = required('TYPESCRIPT_ROOT');
 const uvCache = required('ENGINEERING_UV_CACHE');
 
-function fixture(t) {
+function fixture(t, { adopt = true } = {}) {
   const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'engineering native ')));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const home = path.join(directory, 'home');
   const cwd = path.join(directory, 'project');
   fs.mkdirSync(cwd); fs.mkdirSync(home);
-  for (const name of ['.config/agent-engineering', '.codex', '.pi/agent']) {
+  fs.mkdirSync(path.join(home, '.codex'));
+  for (const name of ['.config/agent-engineering', '.pi/agent']) {
     fs.cpSync(path.join(root, name), path.join(home, name), { recursive: true });
   }
+  fs.writeFileSync(path.join(home, '.codex/AGENTS.md'), '# Existing custom instructions\n\nKeep this native global text.\n');
+  fs.writeFileSync(path.join(home, '.pi/agent/APPEND_SYSTEM.md'), 'Keep existing Pi append instructions.\n');
   const bin = path.join(home, '.local/bin'); fs.mkdirSync(bin, { recursive: true });
   fs.copyFileSync(path.join(root, '.local/bin/agent-check'), path.join(bin, 'agent-check'));
   fs.chmodSync(path.join(bin, 'agent-check'), 0o755);
@@ -49,14 +52,18 @@ function fixture(t) {
   const git = (...args) => execFileSync('/usr/bin/git', args, { cwd, env, encoding: 'utf8' });
   git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid');
   fs.writeFileSync(path.join(cwd, 'README.md'), 'Read the file.\n');
+  fs.writeFileSync(path.join(cwd, 'GLOSSARY.md'), '# Glossary\n\n- §FIXTURE§: A disposable test input.\n  - Known synonyms: none\n');
   git('add', '.'); git('commit', '-qm', 'initial');
   const check = (...args) => {
     try { return JSON.parse(execFileSync(path.join(bin, 'agent-check'), args, { cwd, env, encoding: 'utf8' })); }
     catch (error) { if (args[0] === 'status' && error.status === 1) return JSON.parse(error.stdout); throw error; }
   };
-  check('configure', '--kotlin', path.join(slopsentral, 'source/hooks/kotlin-horizontalization-check'),
-    '--assessment', path.join(slopsentral, 'source/skills/controlled-technical-writing/scripts/assess_text.py'), '--vale', vale);
-  return { directory, home, cwd, env, git, check };
+  const selection = ['--kotlin', path.join(slopsentral, 'source/hooks/kotlin-horizontalization-check'),
+    '--assessment', path.join(slopsentral, 'source/skills/controlled-technical-writing/scripts/assess_text.py'), '--vale', vale];
+  const install = () => { const plan = check('install', ...selection);
+    return check('install', ...selection, '--apply', '--expected-plan', plan.planId); };
+  if (adopt) install();
+  return { directory, home, cwd, env, git, check, install };
 }
 
 test('the Pi adapter passes strict native TypeScript declarations', t => {
@@ -67,13 +74,13 @@ test('the Pi adapter passes strict native TypeScript declarations', t => {
     noEmit: true, allowImportingTsExtensions: true, skipLibCheck: true, types: ['node'],
     typeRoots: [path.resolve(typescriptRoot, '../@types')],
     paths: { '@earendil-works/pi-coding-agent': [path.join(piRoot, 'dist/index.d.ts')] } },
-    files: [path.join(root, '.pi/agent/extensions/engineering-checks.ts')] }));
+    files: [path.join(root, '.config/agent-engineering/pi-extension.ts')] }));
   execFileSync(process.execPath, [path.join(typescriptRoot, 'bin/tsc'), '--project', config], { env: f.env, encoding: 'utf8' });
 });
 
 test('real validators reject bad prose, expose layout advisories, and cache unchanged inputs', t => {
   const f = fixture(t);
-  assert.equal(fs.readFileSync(path.join(root, 'tests/fixtures/text-assessment.schema.json'), 'utf8'),
+  assert.equal(fs.readFileSync(path.join(root, 'tests/fixtures/text-assessment-v1.schema.json'), 'utf8'),
     fs.readFileSync(path.join(slopsentral, 'source/skills/controlled-technical-writing/references/text-assessment.schema.json'), 'utf8'),
     'unit schema fixture must match the qualified owner exactly');
   fs.writeFileSync(path.join(f.cwd, '.gitignore'), 'Ignored*.kt\n');
@@ -87,7 +94,8 @@ test('real validators reject bad prose, expose layout advisories, and cache unch
   assert.equal(failed.checks.kotlin.status, 'advisory');
   assert.ok(failed.checks.kotlin.report.findings.some(x => x.evidence.directKotlinFiles === 8));
   assert.equal(failed.checks.prose.report.type, 'ASSESSED');
-  assert.ok(failed.checks.prose.report.documents[0].findings.some(x => x.rule === 'Slopsentral.Modals'));
+  assert.equal(failed.checks.prose.report.schemaVersion, 1);
+  assert.ok(failed.checks.prose.report.documents[0].findings.some(x => x.rule === 'Slopsentral.Diction'));
   fs.writeFileSync(path.join(f.cwd, 'README.md'), 'Read the new file.\n');
   const passed = f.check('turn', '--session', 'real-validator');
   assert.equal(passed.status, 'advisory');
@@ -111,6 +119,22 @@ test('real validators reject bad prose, expose layout advisories, and cache unch
   const contracted = f.check('status', '--session', 'ignored-ignore');
   assert.equal(contracted.status, 'failed');
   assert.match(contracted.failure, /ignore-scope-changed/);
+  const glossaryFile = path.join(f.cwd, 'GLOSSARY.md');
+  const glossaryBytes = fs.readFileSync(glossaryFile);
+  fs.unlinkSync(glossaryFile);
+  f.check('begin', '--session', 'missing-glossary');
+  fs.writeFileSync(path.join(f.cwd, 'README.md'), 'Read another file.\n');
+  assert.throws(() => f.check('handoff', '--session', 'missing-glossary'));
+  const incomplete = f.check('status', '--session', 'missing-glossary');
+  assert.equal(incomplete.status, 'failed');
+  assert.equal(incomplete.checks.prose.report.type, 'INCOMPLETE');
+  assert.equal(incomplete.checks.prose.report.glossary.type, 'NOT_PROVIDED');
+  fs.writeFileSync(glossaryFile, glossaryBytes);
+  f.check('begin', '--session', 'restored-glossary');
+  fs.writeFileSync(path.join(f.cwd, 'README.md'), 'Read the updated file.\n');
+  const complete = f.check('handoff', '--session', 'restored-glossary');
+  assert.equal(complete.status, 'passed');
+  assert.equal(complete.checks.prose.report.type, 'ASSESSED');
   t.diagnostic(`Real Vale 3.24.0 and Slopsentral ${f.git('-C', slopsentral, 'rev-parse', 'HEAD').trim()}; bad-prose control failed, layout remained advisory.`);
 });
 
@@ -153,6 +177,7 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   t.after(() => session.dispose());
   await session.bindExtensions({ mode: 'print', onError: error => assert.fail(error.message) });
   assert.equal(session.systemPrompt.split('# Engineering baseline B0').length - 1, 1);
+  assert.match(session.systemPrompt, /Keep existing Pi append instructions/);
   await session.prompt('Run one local canned response.');
   const entries = session.sessionManager.getEntries().filter(x => x.type === 'custom' && x.customType === 'engineering-check');
   assert.deepEqual(entries.map(x => x.data.phase), ['begin', 'turn', 'handoff']);
@@ -160,7 +185,9 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   assert.equal(entries[2].data.status, 'failed');
   assert.equal(entries[2].data.checks.prose.cached, true);
   assert.equal(requests.length, 1, 'validator failure must not trigger another model request');
-  assert.equal(session.extensionRunner.getRegisteredCommands().length, 0);
+  assert.equal(session.extensionRunner.getRegisteredCommands().filter(command =>
+    path.basename(command.sourceInfo.path) === 'engineering-checks.ts').length, 0,
+    'the B0 adapter must not register commands; existing user commands remain available');
   const outside = path.join(f.directory, 'nonrepo'); fs.mkdirSync(outside);
   const outsideLoader = new sdk.DefaultResourceLoader({ cwd: outside, agentDir, settingsManager });
   await outsideLoader.reload();
@@ -222,6 +249,31 @@ async function nativeHookTrust(f, t) {
   return hooks;
 }
 
+test('native migration keeps existing hook hashes and trust while new checks remain untrusted', async t => {
+  const f = fixture(t, { adopt: false });
+  const hooksFile = path.join(f.env.CODEX_HOME, 'hooks.json');
+  fs.writeFileSync(hooksFile, JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: 'printf existing', timeout: 5 }] }] } }));
+  let rpc = await nativeRpc(f, t);
+  const before = (await rpc.request('hooks/list', { cwds: [f.cwd] })).data.flatMap(x => x.hooks).filter(x => x.source === 'user');
+  assert.equal(before.length, 1);
+  const existing = before[0];
+  rpc.close();
+  const config = `\n[hooks.state.${JSON.stringify(existing.key)}]\ntrusted_hash = ${JSON.stringify(existing.currentHash)}\n`;
+  fs.writeFileSync(path.join(f.env.CODEX_HOME, 'config.toml'), config);
+  f.install();
+  assert.equal(fs.readFileSync(path.join(f.env.CODEX_HOME, 'config.toml'), 'utf8'), config);
+  rpc = await nativeRpc(f, t);
+  const after = (await rpc.request('hooks/list', { cwds: [f.cwd] })).data.flatMap(x => x.hooks).filter(x => x.source === 'user');
+  assert.equal(after.length, 3);
+  const retained = after.find(x => x.key === existing.key);
+  assert.ok(retained);
+  assert.equal(retained.currentHash, existing.currentHash);
+  assert.equal(retained.trustStatus, 'trusted');
+  assert.ok(after.filter(x => x.key !== existing.key).every(x => x.trustStatus === 'untrusted'));
+  rpc.close();
+  t.diagnostic('Actual Codex discovery: prior hook identity/hash/trust preserved; both new B0 definitions remain untrusted. Installer never edits config.toml.');
+});
+
 test('Codex 0.163.0 loads B0 once and hard-stops a failed native Stop check', async t => {
   const f = fixture(t);
   assert.match(execFileSync(codex, ['--version'], { env: f.env, encoding: 'utf8' }), /0\.163\.0/);
@@ -249,6 +301,7 @@ test('Codex 0.163.0 loads B0 once and hard-stops a failed native Stop check', as
   const result = await execution;
   assert.equal(count, 1, 'hard stop must not trigger a model continuation');
   assert.equal(JSON.stringify(requests[0]).split('# Engineering baseline B0').length - 1, 1);
+  assert.match(JSON.stringify(requests[0]), /Keep this native global text/);
   const sessions = path.join(f.env.XDG_STATE_HOME, 'agent-engineering/sessions');
   const latest = fs.readdirSync(sessions).map(x => path.join(sessions, x, 'latest.json')).filter(fs.existsSync);
   assert.equal(latest.length, 1, result.stdout + result.stderr);
