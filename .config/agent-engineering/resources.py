@@ -30,6 +30,13 @@ def object_data(value: object) -> dict[str, object]:
     return cast(dict[str, object], data)
 
 
+def hash_data(value: object) -> dict[str, str]:
+    data = object_data(value)
+    if any(not isinstance(item, str) for item in data.values()):
+        raise ValueError("invalid-resource-hash")
+    return cast(dict[str, str], data)
+
+
 def read(path: Path) -> bytes | None:
     if path.is_symlink():
         raise ValueError("symlink-install-target")
@@ -125,6 +132,10 @@ class Plan:
     changes: tuple[Change, ...]
     files: dict[str, str]
     baseline_sha256: str
+    baselines: dict[str, str]
+    previous_files: dict[str, str]
+    previous_baselines: dict[str, str]
+    previous_backup: str | None
 
     def report(self) -> dict[str, object]:
         return {
@@ -150,14 +161,19 @@ def build_plan(
     previous_path = state / "installation.json"
     previous_bytes = read(previous_path)
     previous = object_data(json.loads(previous_bytes)) if previous_bytes else {}
-    known = object_data(previous.get("files", {}))
+    known = hash_data(previous.get("files", {}))
+    known_baselines = hash_data(previous.get("baselines", {}))
     baseline_hash = cast(str, sha(baseline))
-    for path in (codex / "AGENTS.md", pi / "AGENTS.md"):
+    baseline_paths = (codex / "AGENTS.md", pi / "AGENTS.md")
+    for path in baseline_paths:
+        # Completed receipts from the original installer have one shared hash.
+        if "baselines" not in previous and isinstance(previous.get("baselineSha256"), str):
+            known_baselines[str(path)] = cast(str, previous["baselineSha256"])
         raw = read(path)
         managed = block(raw) if raw is not None else None
         if managed is not None and sha(managed) not in (
             baseline_hash,
-            previous.get("baselineSha256"),
+            known_baselines.get(str(path)),
         ):
             raise ValueError("modified-managed-baseline")
     extension = pi / "extensions/engineering-checks.ts"
@@ -187,12 +203,41 @@ def build_plan(
         if before != content:
             mode = stat.S_IMODE(path.stat().st_mode) if before is not None else 0o600
             changes.append(Change(path, before, content, mode))
+    previous_files = {name: value for name, value in known.items() if name in files}
+    baselines = {str(path): baseline_hash for path in baseline_paths}
+    previous_baselines = {
+        name: value for name, value in known_baselines.items() if name in baselines
+    }
+    candidate_backup = previous.get("backup")
+    previous_backup = (
+        candidate_backup
+        if isinstance(candidate_backup, str)
+        and read(Path(candidate_backup) / "manifest.json") is not None
+        else None
+    )
     identity = hashlib.sha256(
         json.dumps(
-            [signature, [change.report() for change in changes], files], sort_keys=True
+            [
+                signature,
+                [change.report() for change in changes],
+                files,
+                previous_files,
+                previous_baselines,
+                previous_backup,
+            ],
+            sort_keys=True,
         ).encode()
     ).hexdigest()
-    return Plan(identity, tuple(changes), files, baseline_hash)
+    return Plan(
+        identity,
+        tuple(changes),
+        files,
+        baseline_hash,
+        baselines,
+        previous_files,
+        previous_baselines,
+        previous_backup,
+    )
 
 
 def atomic_bytes(path: Path, data: bytes, mode: int) -> None:
@@ -248,17 +293,23 @@ def apply_plan(plan: Plan, expected: str, state: Path) -> dict[str, object]:
             changed.append(str(change.path))
     finally:
         # A partial/cancelled application never claims completion. Retry is preserving.
+        pending = {str(change.path) for change in plan.changes} - set(changed)
+        files = {**plan.previous_files}
+        baselines = {**plan.previous_baselines}
+        # Retain ownership of untouched old resources. Only completed writes and
+        # targets already equal to the desired bytes acquire the new hashes.
+        files.update({name: value for name, value in plan.files.items() if name not in pending})
+        baselines.update(
+            {name: value for name, value in plan.baselines.items() if name not in pending}
+        )
         report = {
             "baselineSha256": plan.baseline_sha256,
+            "baselines": baselines,
             "status": "installed" if len(changed) == len(plan.changes) else "partial-install",
             "planId": plan.identity,
             "changed": changed,
-            "files": {
-                name: digest
-                for name, digest in plan.files.items()
-                if sha(read(Path(name))) == digest
-            },
-            "backup": str(backup),
+            "files": files,
+            "backup": str(backup) if plan.changes else plan.previous_backup,
             "trust": "unchanged; native Codex hook review may be required",
         }
         atomic_bytes(receipt, (json.dumps(report, sort_keys=True) + "\n").encode(), 0o600)
