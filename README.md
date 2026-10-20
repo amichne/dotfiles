@@ -1,6 +1,6 @@
 # Dotfiles
 
-Personal shell, editor, prompt, and Pi configuration for `amichne/dotfiles`.
+Shell, editor, prompt, and Pi setup for `amichne/dotfiles`.
 Each file uses its HOME-relative path.
 A bare repository at `~/.dotfiles.git` tracks HOME directly.
 
@@ -41,3 +41,8 @@ The [source instructions](AGENTS.md) define ownership and the local gate:
 
 Credentials, sessions, caches, and machine overrides stay outside the public inventory.
 The source does not contain a Git identity or SSH signing key.
+
+The short global [engineering baseline B0](.config/agent-engineering/B0.md) defines
+common rules. Run `scripts/sync_agent_baseline.py` to copy B0 to native Codex and Pi
+instruction files. Use [Slopsentral](https://slopsentral.michne.com/guides/pi) for
+skills with details and examples.

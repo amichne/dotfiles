@@ -147,7 +147,7 @@ def test_public_inventory_ignores_private_and_generated_state(home: Home) -> Non
         ".zshrc",
         ".config/starship.toml",
         ".local/bin/keys",
-        ".pi/agent/APPEND_SYSTEM.md",
+        ".pi/agent/AGENTS.md",
     ):
         assert git(home, "check-ignore", path).returncode == 1, path
 

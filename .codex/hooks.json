@@ -1,0 +1,6 @@
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "\"$HOME/.local/bin/agent-check\" codex", "timeout": 120, "statusMessage": "Record engineering check scope"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "\"$HOME/.local/bin/agent-check\" codex", "timeout": 120, "statusMessage": "Examine engineering checks"}]}]
+  }
+}
