@@ -160,6 +160,18 @@ def test_identical_bytes_with_different_executable_permission_are_rejected(
     assert not (home.path / ".dotfiles.git").exists()
 
 
+def test_group_execute_permission_cannot_replace_owner_execute_permission(
+    home: Home,
+    source: Path,
+) -> None:
+    (source / ".zshrc").chmod(0o755)
+    _ = commit(home, source, "Executable source")
+    _ = (home.path / ".zshrc").write_text("reviewed startup\n")
+    (home.path / ".zshrc").chmod(0o654)
+    assert "untracked-conflict" in run(home, source).stderr
+    assert not (home.path / ".dotfiles.git").exists()
+
+
 def test_full_public_snapshot_installs_runnable_home_commands(
     home: Home,
     source: Path,

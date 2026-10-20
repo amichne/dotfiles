@@ -239,7 +239,7 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
         item = snapshots[name]
         if item is not None and (
             item[0] != git(env, source_git, "cat-file", "blob", entries[name].oid)
-            or bool(item[1] & 0o111) != bool(entries[name].mode & 0o111)
+            or bool(item[1] & 0o100) != bool(entries[name].mode & 0o100)
         ):
             raise Rejected("untracked-conflict", name)
         if item is not None:
