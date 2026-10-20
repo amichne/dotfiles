@@ -61,8 +61,38 @@ A new Git index inside the container supplies the gate's repository context.
 
 `.github/workflows/sandbox.yml` runs the same container gate on GitHub's Ubuntu 24.04 workers.
 It runs for pull requests, pushes to `main`, and manual requests.
-The workflow pins both actions by commit and uses read-only repository access.
+The workflow pins each action by commit and uses read-only repository access.
 The container receives no host credentials.
+
+## Native engineering fixtures
+
+The separate `Native engineering fixtures` job runs `tests/native-agent-hosts.mjs`.
+It pins Pi 1.3.0, Codex 0.163.0, Vale 3.24.0, and the Slopsentral source revision.
+The fixtures use disposable HOME directories and fixed local responses.
+They spend no paid model inference.
+They examine native instruction selection, override precedence, hook trust, and failure reports.
+They also run strict TypeScript analysis against the Pi declarations.
+
+For a local run, supply these paths in environment variables:
+
+| Variable | Path |
+| --- | --- |
+| `PYTHON_BIN` | Python 3.12 or 3.13 executable |
+| `UV_BIN` | uv 0.12.9 executable |
+| `VALE_BIN` | Vale 3.24.0 executable |
+| `ENGINEERING_SLOPSENTRAL_ROOT` | Slopsentral checkout |
+| `CODEX_BIN` | Codex 0.163.0 executable |
+| `PI_SDK_ROOT` | Pi 1.3.0 package directory |
+| `TYPESCRIPT_ROOT` | TypeScript 7.0.2 package directory, near `@types/node` |
+
+```sh
+node --test tests/native-agent-hosts.mjs
+```
+
+Missing dependencies fail this command. They do not produce skipped coverage.
+The Codex fixture needs a loopback socket for its fixed response server.
+The [native engineering guide](https://slopsentral.michne.com/guides/engineering-baseline)
+states the difference between native completion and a passing handoff check.
 
 ## Cloud use
 

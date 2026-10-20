@@ -210,6 +210,15 @@ def test_changed_ignore_scope_does_not_expand_to_unrelated_prose(home: Home) -> 
     assert "private.md" not in str(report)
 
 
+def test_unsupported_kotlin_root_cannot_report_clean_layout(home: Home) -> None:
+    start(home)
+    _ = configure(home)
+    _ = (home.path / "Scratch.kt").write_text("class Scratch\n")
+    assert home.run("/usr/bin/git", "add", "-f", "Scratch.kt").returncode == 0
+    code, report = run(home, "turn", "--session", "fixture")
+    assert code == 1 and "unsupported-kotlin-source-root" in str(report)
+
+
 def test_cancellation_kills_validator_and_does_not_cache_success(home: Home) -> None:
     start(home)
     owner = configure(home)

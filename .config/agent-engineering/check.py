@@ -31,6 +31,10 @@ from pathlib import Path
 from typing import cast
 
 SUFFIXES = frozenset({".kt", ".md", ".mdx", ".txt"})
+# Admission matches the recovered checker's SOURCE_ROOT_PARTS at the qualified revision.
+KOTLIN_ROOTS = frozenset(
+    {("src", "main", "kotlin"), ("src", "test", "kotlin"), ("src", "integrationTest", "kotlin")}
+)
 LIMIT = 16 * 1024 * 1024
 
 
@@ -289,6 +293,14 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
             results[kind] = {"status": Status.NO_CHANGES, "files": []}
             continue
         try:
+            if kind == "kotlin" and any(
+                not any(
+                    tuple(Path(name).parts[index : index + 3]) in KOTLIN_ROOTS
+                    for index in range(len(Path(name).parts) - 2)
+                )
+                for name in names
+            ):
+                raise Rejected("unsupported-kotlin-source-root")
             if tools is None:
                 tools = Tools.parse(read_object(state_root() / "tools.json"))
             signature = tools.signature(kind)

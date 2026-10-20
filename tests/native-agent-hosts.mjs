@@ -6,6 +6,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -22,6 +23,7 @@ const vale = required('VALE_BIN');
 const slopsentral = required('ENGINEERING_SLOPSENTRAL_ROOT');
 const codex = required('CODEX_BIN');
 const piRoot = required('PI_SDK_ROOT');
+const typescriptRoot = required('TYPESCRIPT_ROOT');
 
 function fixture(t) {
   const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'engineering native ')));
@@ -36,6 +38,7 @@ function fixture(t) {
   fs.copyFileSync(path.join(root, '.local/bin/agent-check'), path.join(bin, 'agent-check'));
   fs.chmodSync(path.join(bin, 'agent-check'), 0o755);
   fs.symlinkSync(uv, path.join(bin, 'uv'));
+  fs.symlinkSync(process.execPath, path.join(bin, 'node'));
   const env = { HOME: home, CODEX_HOME: path.join(home, '.codex'),
     PI_CODING_AGENT_DIR: path.join(home, '.pi/agent'), XDG_STATE_HOME: path.join(home, '.local/state'),
     XDG_CONFIG_HOME: path.join(home, '.config'), XDG_CACHE_HOME: path.join(home, '.cache'),
@@ -54,6 +57,18 @@ function fixture(t) {
     '--assessment', path.join(slopsentral, 'source/skills/controlled-technical-writing/scripts/assess_text.py'), '--vale', vale);
   return { directory, home, cwd, env, git, check };
 }
+
+test('the Pi adapter passes strict native TypeScript declarations', t => {
+  const f = fixture(t);
+  const config = path.join(f.directory, 'tsconfig.json');
+  fs.writeFileSync(config, JSON.stringify({ compilerOptions: { target: 'ES2023', module: 'ESNext',
+    moduleResolution: 'Bundler', strict: true, noUncheckedIndexedAccess: true, exactOptionalPropertyTypes: true,
+    noEmit: true, allowImportingTsExtensions: true, skipLibCheck: true, types: ['node'],
+    typeRoots: [path.resolve(typescriptRoot, '../@types')],
+    paths: { '@earendil-works/pi-coding-agent': [path.join(piRoot, 'dist/index.d.ts')] } },
+    files: [path.join(root, '.pi/agent/extensions/engineering-checks.ts')] }));
+  execFileSync(process.execPath, [path.join(typescriptRoot, 'bin/tsc'), '--project', config], { env: f.env, encoding: 'utf8' });
+});
 
 test('real validators reject bad prose, expose layout advisories, and cache unchanged inputs', t => {
   const f = fixture(t);
@@ -86,7 +101,7 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   Object.assign(process.env, f.env);
   t.after(() => { for (const key of Object.keys(process.env)) delete process.env[key]; Object.assign(process.env, previous); });
   const sdk = await import(pathToFileURL(path.join(piRoot, 'dist/index.js')));
-  const ai = await import(pathToFileURL(path.join(piRoot, 'node_modules/@earendil-works/pi-ai/dist/index.js')));
+  const ai = await import(pathToFileURL(createRequire(path.join(piRoot, 'package.json')).resolve('@earendil-works/pi-ai')));
   const agentDir = f.env.PI_CODING_AGENT_DIR;
   const settingsManager = sdk.SettingsManager.inMemory({ builtInExtensions: [], cacheWarming: { mode: 'off' } });
   const loader = new sdk.DefaultResourceLoader({ cwd: f.cwd, agentDir, settingsManager });
