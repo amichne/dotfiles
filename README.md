@@ -41,3 +41,8 @@ The [source instructions](AGENTS.md) define ownership and the local gate:
 
 Credentials, sessions, caches, and machine overrides stay outside the public inventory.
 The source does not contain a Git identity or SSH signing key.
+
+The [engineering baseline B0](.config/agent-engineering/B0.md) owns the short global
+engineering instructions. `scripts/sync_agent_baseline.py` projects it into native
+Codex and Pi instruction files. Detailed skills remain in
+[Slopsentral](https://slopsentral.michne.com/guides/pi).
