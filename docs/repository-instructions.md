@@ -10,7 +10,7 @@ Keep configuration at its HOME-relative path. Do not create another runtime copy
 - `.local/bin/keys` owns the shortcut browser.
 - `.config/shell-prompt` owns Git prompt context and its pure model.
 - `scripts/df.py` owns bare Git selection and read-only setup inspection.
-- `scripts/install.py` owns reviewed HOME installation and fast-forward updates.
+- `scripts/install.py` owns reviewed HOME installation, fast-forward updates, and the latest Slopsentral setup.
   Keep its plans read-only and its recovery copies private.
 - `amichne/ayi` owns the separate AI commands and their installer.
 - `.pi` contains public Pi resources. Keep authentication and sessions private.

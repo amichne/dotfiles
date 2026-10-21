@@ -44,6 +44,7 @@ def test_home_source_contains_the_requested_public_files() -> None:
 
 
 def test_repository_contains_only_current_source_owners() -> None:
+    assert not (ROOT / "AGENTS.md").exists()
     git = ["git", "-C", str(ROOT)]
     if (ROOT / ".dotfiles.git").is_dir():
         git = ["git", f"--git-dir={ROOT / '.dotfiles.git'}", f"--work-tree={ROOT}"]
@@ -64,7 +65,6 @@ def test_repository_contains_only_current_source_owners() -> None:
         ".python-version",
         ".zprofile",
         ".zshrc",
-        "AGENTS.md",
         "README.md",
         "containers",
         "docs",

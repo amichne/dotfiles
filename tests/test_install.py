@@ -54,7 +54,12 @@ def source(home: Home) -> Path:
 
 def run(home: Home, source: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return home.run(
-        sys.executable, str(ROOT / "scripts/install.py"), "--source", str(source), *args
+        sys.executable,
+        str(ROOT / "scripts/install.py"),
+        "--source",
+        str(source),
+        "--without-slopsentral",
+        *args,
     )
 
 
@@ -366,9 +371,10 @@ def test_candidate_symlinks_are_rejected(home: Home, source: Path) -> None:
     assert not (home.path / ".dotfiles.git").exists()
 
 
-def test_candidate_private_instructions_are_rejected(home: Home, source: Path) -> None:
-    target = source / ".pi/agent/APPEND_SYSTEM.md"
-    target.parent.mkdir(parents=True)
+@pytest.mark.parametrize("name", [".pi/agent/APPEND_SYSTEM.md", "AGENTS.md"])
+def test_candidate_private_instructions_are_rejected(home: Home, source: Path, name: str) -> None:
+    target = source / name
+    target.parent.mkdir(parents=True, exist_ok=True)
     _ = target.write_text("private\n")
     assert git(home, source, "add", "--force", str(target)).returncode == 0
     _ = commit(home, source, "Private instructions")
@@ -402,7 +408,14 @@ def test_install_from_a_checkout_inside_home_uses_root_relative_git_paths(
 
     def invoke(*args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [sys.executable, str(ROOT / "scripts/install.py"), "--source", str(nested), *args],
+            [
+                sys.executable,
+                str(ROOT / "scripts/install.py"),
+                "--source",
+                str(nested),
+                "--without-slopsentral",
+                *args,
+            ],
             cwd=nested,
             env=home.env,
             capture_output=True,
@@ -420,3 +433,100 @@ def test_install_from_a_checkout_inside_home_uses_root_relative_git_paths(
     assert (home.path / ".zshrc").read_bytes() == (nested / ".zshrc").read_bytes()
     assert installed_git(home, "status", "--porcelain", "--untracked-files=no").stdout == ""
     assert git(home, nested, "status", "--porcelain").stdout == ""
+
+
+def native_setup(home: Home, source: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return home.run(
+        sys.executable, str(ROOT / "scripts/install.py"), "--source", str(source), *args
+    )
+
+
+def setup_tools(home: Home, status: int = 0) -> Path:
+    log = home.path.parent / "slopsentral.log"
+    home.env["SETUP_LOG"] = str(log)
+    for name, body in {
+        "pi": "exit 0\n",
+        "curl": 'printf "%s\\n" "$@" >> "$SETUP_LOG"\n'
+        "cat > \"$3\" <<'SETUP'\n#!/bin/sh\n"
+        'printf \'scope:%s\\n\' "$PWD" >> "$SETUP_LOG"\n'
+        'printf \'setup:%s\\n\' "$PI_CODING_AGENT_DIR" >> "$SETUP_LOG"\n'
+        f"exit {status}\nSETUP\n",
+    }.items():
+        tool = home.tools / name
+        _ = tool.write_text("#!/bin/sh\n" + body)
+        tool.chmod(0o755)
+    return log
+
+
+def test_slopsentral_defaults_to_latest_with_read_only_plan(home: Home, source: Path) -> None:
+    log = setup_tools(home)
+    result = native_setup(home, source)
+    assert result.returncode == 0, result.stderr
+    report = json.loads(result.stdout)
+    assert report["packages"] == ["slopsentral@latest"]
+    assert not log.exists()
+    assert not (home.path / ".local/state/dotfiles-install/slopsentral").exists()
+    result = native_setup(home, source, "--apply", "--expected-plan", report["planId"])
+    assert result.returncode == 0, result.stderr
+    lines = log.read_text().splitlines()
+    assert "https://github.com/amichne/slopsentral/releases/latest/download/install-pi.sh" in lines
+    assert lines[-1] == f"setup:{home.path / '.pi/agent'}"
+    assert json.loads(result.stdout)["status"] == "installed"
+    scope = home.path / ".local/state/dotfiles-install/slopsentral"
+    assert scope.is_dir(), "Native recovery needs one stable scope across updates"
+    assert f"scope:{scope}" in lines
+    report = json.loads(native_setup(home, source).stdout)
+    assert report["action"] == "unchanged"
+    result = native_setup(home, source, "--apply", "--expected-plan", report["planId"])
+    assert result.returncode == 0, result.stderr
+    assert log.read_text().count("setup:") == 2
+
+
+def test_slopsentral_failure_keeps_native_status_and_file_receipt(home: Home, source: Path) -> None:
+    _ = setup_tools(home, status=23)
+    report = json.loads(native_setup(home, source).stdout)
+    result = native_setup(home, source, "--apply", "--expected-plan", report["planId"])
+    assert result.returncode == 23, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt["status"] == "package-failed"
+    assert receipt["failure"] == "slopsentral-install"
+    assert (Path(receipt["backup"]) / "receipt.json").exists()
+    assert (home.path / ".zshrc").read_text() == "reviewed startup\n"
+
+
+def test_slopsentral_download_failure_does_not_start_setup(home: Home, source: Path) -> None:
+    log = setup_tools(home)
+    _ = (home.tools / "curl").write_text("#!/bin/sh\nexit 22\n")
+    report = json.loads(native_setup(home, source).stdout)
+    result = native_setup(home, source, "--apply", "--expected-plan", report["planId"])
+    assert result.returncode == 22, result.stderr
+    assert json.loads(result.stdout)["failure"] == "slopsentral-download"
+    assert not log.exists()
+
+
+def test_default_slopsentral_needs_pi_before_home_writes(home: Home, source: Path) -> None:
+    result = native_setup(home, source)
+    assert result.returncode == 69 and "missing-dependency:pi" in result.stderr
+    assert not (home.path / ".dotfiles.git").exists()
+
+
+def test_retired_root_instructions_are_removed_with_recovery(home: Home, source: Path) -> None:
+    root = source / "AGENTS.md"
+    _ = root.write_text("Dotfiles instructions\n")
+    assert git(home, source, "add", "--force", "AGENTS.md").returncode == 0
+    _ = commit(home, source, "Old root instructions")
+    assert (
+        home.run(
+            "/usr/bin/git", "clone", "--bare", str(source), str(home.path / ".dotfiles.git")
+        ).returncode
+        == 0
+    )
+    assert installed_git(home, "remote", "set-url", "origin", ORIGIN).returncode == 0
+    assert installed_git(home, "checkout", "--no-overwrite-ignore").returncode == 0
+    root.unlink()
+    _ = commit(home, source, "Remove global repository instructions")
+    result = apply(home, source)
+    assert result.returncode == 0, result.stderr
+    assert not (home.path / "AGENTS.md").exists()
+    backup = Path(json.loads(result.stdout)["backup"])
+    assert (backup / "files/AGENTS.md").read_text() == "Dotfiles instructions\n"

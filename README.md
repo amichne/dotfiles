@@ -33,9 +33,10 @@ Ordinary `git` keeps its normal behavior in project directories.
 The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ayi` commands and their installer.
 
 Use the [HOME installer](docs/home.md#install-or-update-home) to apply a reviewed revision.
+It includes the latest stable Slopsentral release for Pi by default.
 Read [configuration](docs/configuration.md), [Pi setup](docs/pi.md), and [Ayi commands](docs/ayi-commands.md).
 Read [disposable containers](docs/testing.md) for the same isolated gate on local and cloud Docker workers.
-The [source instructions](AGENTS.md) define ownership and the local gate:
+The [source instructions](docs/repository-instructions.md) define ownership and the local gate:
 
 ```sh
 ./scripts/check.sh
