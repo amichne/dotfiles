@@ -98,7 +98,7 @@ node --test tests/native-agent-hosts.mjs
 
 Missing dependencies fail this command. They do not produce skipped coverage.
 The fixtures use the prepared cache offline and keep their HOME directories separate.
-They test projectless native sessions and a hidden ignore rule with real Vale.
+They assess explicit file scopes with real Vale and report native sessions without a selection.
 The Codex fixture needs a loopback socket for its fixed response server.
 The [native engineering guide](engineering-baseline.md)
 states the difference between native completion and a passing handoff check.
