@@ -39,9 +39,14 @@ A missing file or unexpected repository causes a nonzero exit status.
 ## Install or update HOME
 
 Install Git, uv 0.12.9 or later, and Python 3.12 or 3.13 first.
+The default setup also needs Pi 1.3.0, Node.js 22.19 or later, curl, and system tar.
 Use a reviewed, clean checkout of `amichne/dotfiles` as the source.
 The installer uses that checkout's committed `HEAD`.
 It applies the full revision, including public Pi resources.
+After the file update, it installs the latest stable Slopsentral release for Pi.
+The plan lists `slopsentral@latest` without a network request.
+The application resolves the release through Slopsentral's published installer.
+Each application selects the current release, including applications without file changes.
 
 From the reviewed checkout, get the JSON plan:
 
@@ -74,9 +79,22 @@ Before a Git write, the installer copies changed preimages under `~/.local/state
 Its private receipt records the source revision, previous revision, and recovery directory.
 Each recovery directory contains a `files` tree with the original bytes and modes.
 Formerly tracked native instructions, including Pi's `APPEND_SYSTEM.md`, remain as private files after their removal from the public inventory.
+The retired root `AGENTS.md` is removed, with its original bytes in the recovery directory.
+[Repository instructions](repository-instructions.md) remain documentation and do not apply to projects beneath HOME.
 An interrupted update can leave partial state.
 Use its receipt and preimages to examine that state before another application.
 Git failures preserve their exit status and name the failed command stage.
+
+To skip Slopsentral, add `--without-slopsentral` to both the plan and application commands.
+This option also removes the Pi, Node.js, curl, and tar prerequisites when no other package option needs them.
+
+Slopsentral owns its native resources, release admission, and private recovery records.
+The installer uses the [latest release launcher](https://github.com/amichne/slopsentral/releases/latest/download/install-pi.sh).
+It uses `~/.local/state/dotfiles-install/slopsentral` as a stable scope for native recovery.
+HOME does not become a project scope.
+A download or setup failure preserves its exit status and reports `package-failed` with the failed stage.
+The file update remains in place.
+Use a fresh plan before another application.
 
 To include the pinned delegation package, add `--with-pi-subagents` to both commands:
 

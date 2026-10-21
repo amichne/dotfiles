@@ -5,6 +5,8 @@ Dotfiles tracks public Pi resources there.
 Pi keeps authentication and session data private.
 
 Use the [HOME installer](home.md#install-or-update-home) to apply these resources from a reviewed revision.
+The installer includes the latest stable Slopsentral release by default.
+Add `--without-slopsentral` to omit that setup.
 Add `--with-pi-subagents` to include the pinned delegation package.
 Existing private instructions and settings remain in place.
 

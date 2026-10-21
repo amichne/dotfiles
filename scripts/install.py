@@ -39,6 +39,7 @@ PRIVATE = frozenset(
     }
 )
 PACKAGE = "npm:pi-subagents@0.79.0"
+SLOPSENTRAL = "https://github.com/amichne/slopsentral/releases/latest/download/install-pi.sh"
 Reason = Literal[
     "git-failed",
     "unsupported-tree-entry",
@@ -56,6 +57,7 @@ Reason = Literal[
     "untracked-conflict",
     "missing-dependency",
     "symlink-state",
+    "non-directory-state",
     "destination-changed",
     "stale-plan",
 ]
@@ -74,6 +76,7 @@ class Arguments(argparse.Namespace):
     apply: bool
     expected_plan: str | None
     with_pi_subagents: bool
+    without_slopsentral: bool
 
 
 def digest(data: bytes) -> str:
@@ -146,6 +149,12 @@ class Installed:
 
 
 @dataclass(frozen=True)
+class SlopsentralSetup:
+    pi: Path
+    curl: Path
+
+
+@dataclass(frozen=True)
 class Plan:
     source: Path
     home: Path
@@ -157,6 +166,7 @@ class Plan:
     preserved: tuple[str, ...]
     snapshots: dict[str, tuple[bytes, int] | None]
     pi: Path | None
+    slopsentral: SlopsentralSetup | None
     identity: str
 
     def report(self) -> dict[str, object]:
@@ -178,11 +188,15 @@ class Plan:
             "changes": self.changes,
             "adoptedIdenticalFiles": self.adopted,
             "preservedPrivateFiles": self.preserved,
-            "packages": [PACKAGE] if self.pi else [],
+            "packages": (["slopsentral@latest"] if self.slopsentral else [])
+            + ([PACKAGE] if self.pi else []),
+            "slopsentralDirectory": str(slopsentral_scope(self.home)) if self.slopsentral else None,
         }
 
 
-def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) -> Plan:
+def build_plan(
+    source: Path, home: Path, packages: bool, env: dict[str, str], slopsentral: bool = True
+) -> Plan:
     source_git = ["-C", str(source)]
     if (source / ".dotfiles.git").exists():
         opened = open_home(source, env)
@@ -203,7 +217,7 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
     entries = tree(env, source_git, revision)
     if not entries:
         raise Rejected("empty-source")
-    if PRIVATE.intersection(entries):
+    if (PRIVATE | {"AGENTS.md"}).intersection(entries):
         raise Rejected("private-source-path")
     metadata = home / ".dotfiles.git"
     previous: Installed | None = None
@@ -247,11 +261,19 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
     changes = tuple(name for name in names if old.get(name) != entries.get(name))
     preserved = tuple(name for name in changes if name in PRIVATE and name not in entries)
     pi: Path | None = None
-    if packages:
+    setup: SlopsentralSetup | None = None
+    if packages or slopsentral:
         binary = shutil.which("pi", path=env.get("PATH"))
         if binary is None:
             raise Rejected("missing-dependency", "pi", 69)
-        pi = Path(binary).resolve()
+        selected_pi = Path(binary).resolve()
+        if packages:
+            pi = selected_pi
+        if slopsentral:
+            curl = shutil.which("curl", path=env.get("PATH"))
+            if curl is None:
+                raise Rejected("missing-dependency", "curl", 69)
+            setup = SlopsentralSetup(selected_pi, Path(curl).resolve())
     facts = {
         "source": str(source),
         "home": str(home),
@@ -264,8 +286,17 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
             name: [digest(item[0]), item[1]] if item else None for name, item in snapshots.items()
         },
         "pi": [str(pi), digest(pi.read_bytes())] if pi else None,
+        "slopsentral": {
+            "source": SLOPSENTRAL,
+            "pi": [str(setup.pi), digest(setup.pi.read_bytes())],
+            "curl": [str(setup.curl), digest(setup.curl.read_bytes())],
+        }
+        if setup
+        else None,
     }
     _ = state_path(home)
+    if setup:
+        _ = slopsentral_scope(home)
     return Plan(
         source,
         home,
@@ -277,6 +308,7 @@ def build_plan(source: Path, home: Path, packages: bool, env: dict[str, str]) ->
         preserved,
         snapshots,
         pi,
+        setup,
         digest(encoded(facts)),
     )
 
@@ -290,6 +322,15 @@ def state_path(home: Path) -> Path:
         if parent == home:
             break
     return state
+
+
+def slopsentral_scope(home: Path) -> Path:
+    directory = state_path(home) / "slopsentral"
+    if directory.is_symlink():
+        raise Rejected("symlink-state")
+    if directory.exists() and not directory.is_dir():
+        raise Rejected("non-directory-state")
+    return directory
 
 
 def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, object], int]:
@@ -395,6 +436,39 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
             manifest["failure"] = "pi-unavailable"
         if status:
             manifest["status"] = "package-failed"
+    if status == 0 and plan.slopsentral is not None:
+        # Native recovery binds one stable scope across later applications.
+        with tempfile.TemporaryDirectory(prefix="dotfiles-slopsentral-") as directory:
+            temporary = Path(directory).resolve()
+            launcher = temporary / "install-pi.sh"
+            stage = "slopsentral-download"
+            try:
+                status = subprocess.run(
+                    [str(plan.slopsentral.curl), "-fsSL", "--output", str(launcher), SLOPSENTRAL],
+                    env=env,
+                    stdout=sys.stderr,
+                    check=False,
+                ).returncode
+                if status == 0:
+                    stage = "slopsentral-install"
+                    scope = slopsentral_scope(plan.home)
+                    scope.mkdir(mode=0o700, exist_ok=True)
+                    status = subprocess.run(
+                        ["/bin/sh", str(launcher)],
+                        env={
+                            **env,
+                            "HOME": str(plan.home),
+                            "PI_CODING_AGENT_DIR": str(plan.home / ".pi/agent"),
+                        },
+                        cwd=scope,
+                        stdout=sys.stderr,
+                        check=False,
+                    ).returncode
+            except OSError:
+                status = 74
+            if status:
+                manifest["status"] = "package-failed"
+                manifest["failure"] = stage
     _ = receipt.write_bytes(encoded(manifest))
     return manifest, status
 
@@ -405,13 +479,20 @@ def main() -> int:
     _ = parser.add_argument("--apply", action="store_true")
     _ = parser.add_argument("--expected-plan")
     _ = parser.add_argument("--with-pi-subagents", action="store_true")
+    _ = parser.add_argument("--without-slopsentral", action="store_true")
     args = parser.parse_args(namespace=Arguments())
     if args.apply != (args.expected_plan is not None):
         parser.error("--apply and --expected-plan must appear together")
     env = {**git_environment(), "GIT_OPTIONAL_LOCKS": "0"}
     if shutil.which("git", path=env.get("PATH")) is None:
         raise Rejected("missing-dependency", "git", 69)
-    plan = build_plan(args.source.resolve(), Path.home().resolve(), args.with_pi_subagents, env)
+    plan = build_plan(
+        args.source.resolve(),
+        Path.home().resolve(),
+        args.with_pi_subagents,
+        env,
+        slopsentral=not args.without_slopsentral,
+    )
     if not args.apply:
         print(encoded(plan.report()).decode(), end="")
         return 0
@@ -424,7 +505,13 @@ def main() -> int:
         raise Rejected("symlink-state")
     with lock.open("a") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
-        current = build_plan(plan.source, plan.home, args.with_pi_subagents, env)
+        current = build_plan(
+            plan.source,
+            plan.home,
+            args.with_pi_subagents,
+            env,
+            slopsentral=not args.without_slopsentral,
+        )
         if current.identity != plan.identity:
             raise Rejected("stale-plan")
         report, status = apply_plan(current, state, env)
