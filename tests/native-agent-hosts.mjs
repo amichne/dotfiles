@@ -90,11 +90,15 @@ test('the Pi extensions pass strict native TypeScript declarations', t => {
 
 test('real validators reject bad prose, expose layout advisories, and cache unchanged inputs', t => {
   const f = fixture(t);
+  const gitLog = path.join(f.directory, 'unexpected-git');
+  fs.writeFileSync(path.join(f.home, '.local/bin/git'), '#!/bin/sh\nprintf invoked >> \"$GIT_INVOCATION_LOG\"\nexit 97\n', { mode: 0o755 });
+  f.env.GIT_INVOCATION_LOG = gitLog;
+  t.after(() => assert.equal(fs.existsSync(gitLog), false, 'agent checks and selected validators must not invoke Git'));
   assert.equal(fs.readFileSync(path.join(root, 'tests/fixtures/text-assessment-v1.schema.json'), 'utf8'),
     fs.readFileSync(path.join(slopsentral, 'source/skills/controlled-technical-writing/references/text-assessment.schema.json'), 'utf8'),
     'unit schema fixture must match the qualified owner exactly');
   fs.writeFileSync(path.join(f.cwd, '.gitignore'), 'Ignored*.kt\n');
-  f.check('begin', '--session', 'real-validator');
+  f.check('begin', '--session', 'real-validator', '--file', 'README.md', '--file', 'src/main/kotlin/orders/OrderCase0.kt');
   const packageDir = path.join(f.cwd, 'src/main/kotlin/orders'); fs.mkdirSync(packageDir, { recursive: true });
   for (let i = 0; i < 8; i++) fs.writeFileSync(path.join(packageDir, `OrderCase${i}.kt`), `class OrderCase${i}\n`);
   fs.writeFileSync(path.join(f.cwd, 'README.md'), 'You should leverage this revolutionary tool.\n');
@@ -120,7 +124,7 @@ test('real validators reject bad prose, expose layout advisories, and cache unch
   // An ignored ignore file cannot hide a failed, previously observed prose input.
   fs.appendFileSync(path.join(f.cwd, '.gitignore'), 'sub/.gitignore\n');
   fs.mkdirSync(path.join(f.cwd, 'sub'));
-  f.check('begin', '--session', 'ignored-ignore');
+  f.check('begin', '--session', 'ignored-ignore', '--file', 'sub/new.md');
   fs.writeFileSync(path.join(f.cwd, 'sub/new.md'), 'You should leverage this revolutionary tool.\n');
   assert.throws(() => f.check('handoff', '--session', 'ignored-ignore'));
   assert.equal(f.check('status', '--session', 'ignored-ignore').checks.prose.report.type, 'ASSESSED');
@@ -128,11 +132,11 @@ test('real validators reject bad prose, expose layout advisories, and cache unch
   assert.throws(() => f.check('handoff', '--session', 'ignored-ignore'));
   const contracted = f.check('status', '--session', 'ignored-ignore');
   assert.equal(contracted.status, 'failed');
-  assert.match(contracted.failure, /ignore-scope-changed/);
+  assert.equal(contracted.checks.prose.cached, true);
   const glossaryFile = path.join(f.cwd, 'GLOSSARY.md');
   const glossaryBytes = fs.readFileSync(glossaryFile);
   fs.unlinkSync(glossaryFile);
-  f.check('begin', '--session', 'missing-glossary');
+  f.check('begin', '--session', 'missing-glossary', '--file', 'README.md');
   fs.writeFileSync(path.join(f.cwd, 'README.md'), 'Read another file.\n');
   assert.throws(() => f.check('handoff', '--session', 'missing-glossary'));
   const incomplete = f.check('status', '--session', 'missing-glossary');
@@ -140,7 +144,7 @@ test('real validators reject bad prose, expose layout advisories, and cache unch
   assert.equal(incomplete.checks.prose.report.type, 'INCOMPLETE');
   assert.equal(incomplete.checks.prose.report.glossary.type, 'NOT_PROVIDED');
   fs.writeFileSync(glossaryFile, glossaryBytes);
-  f.check('begin', '--session', 'restored-glossary');
+  f.check('begin', '--session', 'restored-glossary', '--file', 'README.md');
   fs.writeFileSync(path.join(f.cwd, 'README.md'), 'Read the updated file.\n');
   const complete = f.check('handoff', '--session', 'restored-glossary');
   assert.equal(complete.status, 'passed');
@@ -188,6 +192,7 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   await session.bindExtensions({ mode: 'print', onError: error => assert.fail(error.message) });
   assert.equal(session.systemPrompt.split('# Engineering baseline B0').length - 1, 1);
   assert.match(session.systemPrompt, /Keep existing Pi append instructions/);
+  f.check('begin', '--session', session.sessionManager.getSessionId(), '--file', 'README.md');
   await session.prompt('Run one local canned response.');
   const entries = session.sessionManager.getEntries().filter(x => x.type === 'custom' && x.customType === 'engineering-check');
   assert.deepEqual(entries.map(x => x.data.phase), ['begin', 'turn', 'handoff']);
@@ -212,7 +217,7 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   await projectless.prompt('One projectless canned response.');
   const outsideEntries = projectless.sessionManager.getEntries().filter(x => x.type === 'custom' && x.customType === 'engineering-check');
   assert.deepEqual(outsideEntries.map(x => x.data.phase), ['begin', 'turn', 'handoff']);
-  assert.ok(outsideEntries.every(x => x.data.status === 'not-applicable' && x.data.reason === 'outside-repository' && fs.existsSync(x.data.receipt)));
+  assert.ok(outsideEntries.every(x => x.data.status === 'not-applicable' && x.data.reason === 'no-explicit-files' && fs.existsSync(x.data.receipt)));
   assert.equal(requests.length, 2, 'projectless Pi use must remain available without a repair loop');
   fs.mkdirSync(path.join(f.cwd, '.pi'));
   fs.writeFileSync(path.join(f.cwd, '.pi/APPEND_SYSTEM.md'), 'Project append.\n');
@@ -221,7 +226,7 @@ test('Pi 1.3.0 discovers B0 once and awaits native turn and settlement checks', 
   fs.writeFileSync(path.join(agentDir, 'AGENTS.override.md'), 'Explicit native override.\n');
   await loader.reload();
   assert.equal(loader.getAgentsFiles().agentsFiles.filter(x => x.content.includes('# Engineering baseline B0')).length, 0);
-  t.diagnostic('Actual Pi lifecycle with two in-process canned responses: failed repository checks and projectless not-applicable receipts; no hidden context entries or continuation.');
+  t.diagnostic('Actual Pi lifecycle with two in-process canned responses: failed explicit checks and unselected not-applicable receipts; no hidden context entries or continuation.');
 });
 
 async function nativeRpc(f, t) {
@@ -291,6 +296,10 @@ test('native migration keeps existing hook hashes and trust while new checks rem
 test('Codex 0.163.0 loads B0 once and hard-stops a failed native Stop check', async t => {
   const f = fixture(t);
   assert.match(execFileSync(codex, ['--version'], { env: f.env, encoding: 'utf8' }), /0\.163\.0/);
+  const hooksPath = path.join(f.env.CODEX_HOME, 'hooks.json');
+  const scopedHooks = JSON.parse(fs.readFileSync(hooksPath));
+  for (const group of Object.values(scopedHooks.hooks)) for (const item of group) for (const hook of item.hooks) hook.command += ' --file README.md';
+  fs.writeFileSync(hooksPath, JSON.stringify(scopedHooks));
   let count = 0; const requests = [];
   const server = http.createServer((request, response) => {
     if (request.method !== 'POST') { response.writeHead(426); response.end(); return; }
@@ -374,15 +383,17 @@ test('Codex 0.163.0 permits projectless use with native not-applicable receipts'
     const hook = hooks.find(x => x.eventName === event);
     assert.ok(hook, JSON.stringify(hooks));
     assert.equal(hook.status, 'completed', JSON.stringify(hook));
-    assert.ok(hook.entries.some(x => /agent-check: not-applicable; outside-repository; receipt=/.test(x.text)), JSON.stringify(hook));
+    assert.ok(hook.entries.some(x => /agent-check: not-applicable; no-explicit-files; receipt=/.test(x.text)), JSON.stringify(hook));
   }
   rpc.close();
   const sessions = path.join(f.env.XDG_STATE_HOME, 'agent-engineering/sessions');
   const receipts = fs.readdirSync(sessions).map(x => JSON.parse(fs.readFileSync(path.join(sessions, x, 'latest.json'))));
   assert.equal(receipts.length, 1);
   assert.equal(receipts[0].status, 'not-applicable');
-  assert.equal(receipts[0].reason, 'outside-repository');
+  assert.equal(receipts[0].reason, 'no-explicit-files');
   assert.ok(!fs.existsSync(path.join(path.dirname(receipts[0].receipt), 'session.json')), 'projectless use cannot fabricate a repository baseline');
-  assert.throws(() => execFileSync(path.join(f.home, '.local/bin/agent-check'), ['handoff', '--repo', outside, '--session', started.thread.id], { cwd: outside, env: f.env, encoding: 'utf8' }), error => error.status === 1 && JSON.parse(error.stdout).failure === 'outside-repository');
-  t.diagnostic('Actual trusted native SessionStart and Stop completed with not-applicable receipts; one loopback canned response and no repository proof. Explicit handoff still failed outside Git.');
+  const empty = JSON.parse(execFileSync(path.join(f.home, '.local/bin/agent-check'), ['handoff', '--repo', outside, '--session', started.thread.id], { cwd: outside, env: f.env, encoding: 'utf8' }));
+  assert.equal(empty.status, 'not-applicable');
+  assert.equal(empty.reason, 'no-explicit-files');
+  t.diagnostic('Actual trusted native SessionStart and Stop completed with not-applicable receipts; one loopback canned response and no repository proof. Explicit handoff reports no scope without a failure.');
 });

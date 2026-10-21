@@ -10,7 +10,7 @@
 # url = "https://pypi.org/simple"
 # default = true
 # ///
-"""Run existing local validators on files changed since a native session started."""
+"""Run local validators on explicit files without repository discovery or snapshots."""
 
 from __future__ import annotations
 
@@ -55,10 +55,6 @@ class Rejected(Exception):
     """An explicit precondition or effect failure; never a passing check."""
 
 
-class OutsideRepository(Rejected):
-    """Native checks do not apply to a projectless working directory."""
-
-
 class SchemaValidator(Protocol):
     # jsonschema's public validate API accepts an arbitrary Python instance.
     # The pinned stubs leave that method variadic; keep that boundary local.
@@ -88,20 +84,6 @@ def read_object(path: Path) -> dict[str, object]:
     return object_value(json.loads(path.read_bytes()))
 
 
-def string_map(value: object) -> dict[str, str]:
-    data = object_value(value)
-    if any(not isinstance(item, str) for item in data.values()):
-        raise Rejected("invalid-snapshot")
-    if any(
-        Path(name).is_absolute()
-        or ".." in Path(name).parts
-        or Path(name).suffix.lower() not in SUFFIXES
-        for name in data
-    ):
-        raise Rejected("invalid-snapshot-path")
-    return cast(dict[str, str], data)
-
-
 def atomic_write(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
@@ -120,29 +102,11 @@ def state_root() -> Path:
     return base / "agent-engineering"
 
 
-def git(cwd: Path, *arguments: str) -> bytes:
-    environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-    # The public HOME checkout uses a separate bare Git directory.
-    prefix = ["git", "-C", str(cwd)]
-    if cwd == Path.home().resolve() and (cwd / ".dotfiles.git").is_dir():
-        prefix += [f"--git-dir={cwd / '.dotfiles.git'}", f"--work-tree={cwd}"]
-    result = subprocess.run(
-        [*prefix, *arguments], capture_output=True, env=environment, timeout=20, check=False
-    )
-    if result.returncode:
-        raise Rejected("git-failed")
-    return result.stdout
-
-
-def repository(cwd: Path) -> Path:
-    cwd = cwd.resolve(strict=True)
-    if not cwd.is_dir():
+def working_directory(cwd: Path) -> Path:
+    directory = cwd.resolve(strict=True)
+    if not directory.is_dir():
         raise Rejected("invalid-working-directory")
-    if not any((parent / ".git").exists() for parent in (cwd, *cwd.parents)) and not (
-        cwd == Path.home().resolve() and (cwd / ".dotfiles.git").is_dir()
-    ):
-        raise OutsideRepository("outside-repository")
-    return Path(os.fsdecode(git(cwd, "rev-parse", "--show-toplevel")).strip()).resolve()
+    return directory
 
 
 def file_hash(path: Path) -> str:
@@ -150,43 +114,69 @@ def file_hash(path: Path) -> str:
         return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
-def snapshot(repo: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    inventory = git(repo, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
-    for raw in inventory.split(b"\0"):
-        if not raw:
-            continue
-        name = os.fsdecode(raw)
-        if Path(name).suffix.lower() not in SUFFIXES:
-            continue
-        path = repo / name
-        if not path.resolve().is_relative_to(repo) or path.is_symlink():
-            raise Rejected("unsafe-source-path")
-        if path.is_file() and path.stat().st_size > LIMIT:
-            raise Rejected("oversized-input")
-        values[name] = file_hash(path) if path.is_file() else "deleted"
-    return values
+@dataclass(frozen=True)
+class FileScope:
+    root: Path
+    names: tuple[str, ...]
+
+    @classmethod
+    def parse(cls, root: Path, values: list[str]) -> FileScope:
+        names: set[str] = set()
+        for value in values:
+            path = Path(value)
+            if path.is_absolute():
+                if not path.is_relative_to(root):
+                    raise Rejected("outside-file-scope")
+                path = path.relative_to(root)
+            if (
+                not path.parts
+                or ".." in path.parts
+                or {".git", ".dotfiles.git"}.intersection(path.parts)
+                or path.suffix not in SUFFIXES
+            ):
+                raise Rejected("unsupported-source-path")
+            names.add(path.as_posix())
+        return cls(root, tuple(sorted(names)))
+
+    def fingerprints(self) -> dict[str, str | None]:
+        values: dict[str, str | None] = {}
+        for name in self.names:
+            path = self.root / name
+            for part in (path, *path.parents):
+                if part.is_symlink():
+                    raise Rejected("unsafe-source-path")
+                if part == self.root:
+                    break
+            if path.exists():
+                if not path.is_file():
+                    raise Rejected("non-file-source")
+                if path.stat().st_size > LIMIT:
+                    raise Rejected("oversized-input")
+                values[name] = file_hash(path)
+            else:
+                values[name] = None
+        return values
 
 
-def scope_sources(repo: Path, names: set[str]) -> dict[str, str]:
-    # Read effective ancestor sources directly, even when Git ignores the ignore file.
-    # Remember absent sources too: adding an ignore file is a scope change.
-    paths: set[Path] = set()
-    for name in names:
-        for parent in (repo / name).parents:
-            if not parent.is_relative_to(repo):
-                break
-            paths.add(parent / ".gitignore")
-    paths.add(repo / ".gitignore")
-    exclude = Path(os.fsdecode(git(repo, "rev-parse", "--git-path", "info/exclude")).strip())
-    paths.add(exclude if exclude.is_absolute() else repo / exclude)
-    return {str(path): file_hash(path) if path.is_file() else "absent" for path in sorted(paths)}
-
-
-def changed(before: dict[str, str], after: dict[str, str]) -> tuple[str, ...]:
-    return tuple(
-        sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
-    )
+def select_files(repo: Path, directory: Path, requested: list[str]) -> FileScope:
+    target = directory / "selection.json"
+    previous: list[str] = []
+    if target.exists():
+        state = read_object(target)
+        if state.get("root") != str(repo):
+            raise Rejected("session-workspace-mismatch")
+        raw = state.get("files")
+        if not isinstance(raw, list):
+            raise Rejected("invalid-file-selection")
+        for item in cast(list[object], raw):
+            if not isinstance(item, str):
+                raise Rejected("invalid-file-selection")
+            previous.append(item)
+    scope = FileScope.parse(repo, [*previous, *requested])
+    _ = scope.fingerprints()
+    # Keep explicit obligations before validators run. Later native events reuse this scope.
+    atomic_write(target, {"root": str(repo), "files": list(scope.names)})
+    return scope
 
 
 @dataclass(frozen=True)
@@ -421,24 +411,18 @@ def glossary_input(repo: Path) -> tuple[Path, str] | None:
     return None
 
 
-def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
-    state = read_object(directory / "session.json")
-    if state.get("repo") != str(repo):
-        raise Rejected("session-repository-mismatch")
-    before = string_map(state.get("baseline"))
-    observed = string_map(state.get("observed"))
-    after = snapshot(repo)
-    scope = scope_sources(repo, set(observed) | set(after))
-    previous_scope = object_value(state.get("scope"))
-    if any(scope.get(name) != value for name, value in previous_scope.items()) or any(
-        name not in after and (repo / name).exists() for name in observed
-    ):
-        raise Rejected("ignore-scope-changed; inspect explicit file scope before handoff")
-    # Persist obligations before effects: failure, retry, or cancellation cannot erase them.
-    atomic_write(
-        directory / "session.json", {**state, "observed": {**observed, **after}, "scope": scope}
-    )
-    selected = changed(before, after)
+def check(scope: FileScope, directory: Path, retry: bool) -> dict[str, object]:
+    repo = scope.root
+    after = scope.fingerprints()
+    selected = scope.names
+    if not selected:
+        report: dict[str, object] = {
+            "status": "not-applicable",
+            "reason": "no-explicit-files",
+            "receipt": str(directory / "latest.json"),
+        }
+        atomic_write(directory / "latest.json", report)
+        return report
     results: dict[str, object] = {}
     tools: Tools | None = None
     for kind in ("kotlin", "prose"):
@@ -466,7 +450,7 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                 glossary_input(repo) if kind == "prose" and tools.prose_version() == 1 else None
             )
             # Package topology is an input to the layout heuristic. It reads names,
-            # not Kotlin bodies. All session edits remain selected after a commit.
+            # not Kotlin bodies. Explicit selections stay scoped across later events.
             topology = layout_topology(repo, names) if kind == "kotlin" else []
             key = digest(
                 encoded(
@@ -487,6 +471,12 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                 if kind == "kotlin":
                     result = invoke(kotlin_arguments(tools, repo, names), kind, repo, tools, {})
                 else:
+                    inputs: dict[str, str] = {}
+                    for name in names:
+                        fingerprint = after[name]
+                        if fingerprint is None:
+                            raise Rejected("input-changed-before-check")
+                        inputs[str(repo / name)] = fingerprint
                     result = invoke(
                         [
                             sys.executable,
@@ -499,14 +489,13 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
                         kind,
                         repo,
                         tools,
-                        {str(repo / name): after[name] for name in names},
+                        inputs,
                         glossary,
                     )
             except (Rejected, OSError, ValueError, subprocess.SubprocessError) as error:
                 result = Result(Status.FAILED, {"failure": str(error)[:300]})
             if (
-                snapshot(repo) != after
-                or scope_sources(repo, set(observed) | set(after)) != scope
+                scope.fingerprints() != after
                 or tools.signature(kind) != signature
                 or (kind == "kotlin" and layout_topology(repo, names) != topology)
                 or (
@@ -552,7 +541,7 @@ def check(repo: Path, directory: Path, retry: bool) -> dict[str, object]:
         if advisory
         else Status.PASSED
     )
-    report: dict[str, object] = {
+    report = {
         "status": status,
         "checks": results,
         "receipt": str(directory / "latest.json"),
@@ -575,23 +564,13 @@ def session_directory(repo: Path, session: str) -> Path:
     return state_root() / "sessions" / digest(encoded([str(repo), session]))
 
 
-def begin(repo: Path, directory: Path) -> dict[str, object]:
-    target = directory / "session.json"
-    if target.exists():
-        if read_object(target).get("repo") != str(repo):
-            raise Rejected("session-repository-mismatch")
-        return {"status": "existing-session", "receipt": str(target)}
-    initial = snapshot(repo)
-    atomic_write(
-        target,
-        {
-            "repo": str(repo),
-            "baseline": initial,
-            "observed": initial,
-            "scope": scope_sources(repo, set(initial)),
-        },
-    )
-    return {"status": "started", "receipt": str(target)}
+def begin(scope: FileScope, directory: Path) -> dict[str, object]:
+    return {
+        "status": "started" if scope.names else "not-applicable",
+        **({} if scope.names else {"reason": "no-explicit-files"}),
+        "files": list(scope.names),
+        "receipt": str(directory / "selection.json"),
+    }
 
 
 def codex_response(report: dict[str, object]) -> dict[str, object]:
@@ -645,11 +624,22 @@ def parser() -> argparse.ArgumentParser:
         _ = command.add_argument("--session", required=True)
         _ = command.add_argument("--retry", action="store_true")
         _ = command.add_argument(
+            "--file",
+            action="append",
+            default=[],
+            help="Explicit file path. Repeat to select more files.",
+        )
+        _ = command.add_argument(
             "--native",
             action="store_true",
-            help="Native lifecycle adapter: record projectless checks as not applicable.",
+            help="Native lifecycle adapter: report an empty explicit scope without a failure.",
         )
-    _ = commands.add_parser("codex", help="Read a native SessionStart or Stop event from stdin.")
+    codex = commands.add_parser(
+        "codex", help="Read a native SessionStart or Stop event from stdin."
+    )
+    _ = codex.add_argument(
+        "--file", action="append", default=[], help="Explicit native file scope."
+    )
     _ = commands.add_parser(
         "inspect", help="Show public B0 provenance and explicit validator selection."
     )
@@ -663,7 +653,14 @@ def main() -> int:
     native = codex or bool(getattr(args, "native", False))
     try:
         if args.self_test:
-            if changed({"a.md": "old"}, {"a.md": "new"}) != ("a.md",):
+            scope = FileScope.parse(Path("/workspace"), ["README.md", "README.md"])
+            if scope.names != ("README.md",):
+                raise Rejected("self-test-failed")
+            try:
+                _ = FileScope.parse(Path("/workspace"), ["../outside.md"])
+            except Rejected:
+                pass
+            else:
                 raise Rejected("self-test-failed")
             print('{"status":"passed"}')
             return 0
@@ -707,35 +704,23 @@ def main() -> int:
                 if command == "invalid" or not isinstance(cwd, str) or not isinstance(session, str):
                     raise Rejected("invalid-native-event")
                 working, session_id, retry = Path(cwd), session, False
+                requested: list[str] = args.file
             else:
                 working, session_id, retry = args.repo.resolve(), args.session, args.retry
-            try:
-                repo = repository(working)
-            except OutsideRepository:
-                if not native:
-                    raise
-                directory = session_directory(working.resolve(), session_id)
-                report = {
-                    "status": "not-applicable",
-                    "reason": "outside-repository",
-                    "receipt": str(directory / "latest.json"),
-                }
-                with session_lock(directory):
-                    atomic_write(directory / "latest.json", report)
-                print(json.dumps(codex_response(report) if codex else report, sort_keys=True))
-                return 0
+                requested = args.file
+            repo = working_directory(working)
             directory = session_directory(repo, session_id)
             with session_lock(directory):
                 try:
                     if command == "begin":
-                        report = begin(repo, directory)
+                        report = begin(select_files(repo, directory, requested), directory)
                     elif command == "status":
                         report = {
                             **read_object(directory / "latest.json"),
                             "freshness": "last-recorded; run handoff for current inputs",
                         }
                     else:
-                        report = check(repo, directory, retry)
+                        report = check(select_files(repo, directory, requested), directory, retry)
                 except (
                     Rejected,
                     OSError,

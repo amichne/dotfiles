@@ -98,8 +98,7 @@ def configure(home: Home) -> Path:
 
 def start(home: Home) -> None:
     _ = (home.path / "README.md").write_text("Base.\n")
-    initialize(home)
-    assert run(home, "begin", "--session", "fixture")[0] == 0
+    assert run(home, "begin", "--session", "fixture", "--file", "README.md")[0] == 0
 
 
 def test_changed_dirty_files_commits_and_cached_failure(home: Home) -> None:
@@ -109,9 +108,9 @@ def test_changed_dirty_files_commits_and_cached_failure(home: Home) -> None:
     owner = configure(home)
     assert run(home, "begin", "--session", "fixture")[0] == 0
     code, report = run(home, "turn", "--session", "fixture")
-    assert code == 0 and report["status"] == "no-changes"
+    assert code == 0 and report["status"] == "not-applicable"
     _ = (home.path / "README.md").write_text("Changed BAD prose.\n")
-    code, report = run(home, "turn", "--session", "fixture")
+    code, report = run(home, "turn", "--session", "fixture", "--file", "README.md")
     assert code == 1 and report["status"] == "failed"
     count = owner / "scripts/count"
     assert count.read_text() == "1"
@@ -211,14 +210,14 @@ def test_ignored_nested_ignore_cannot_discharge_failed_file(home: Home) -> None:
     nested = home.path / "sub"
     nested.mkdir()
     owner = configure(home)
-    assert run(home, "begin", "--session", "fixture")[0] == 0
+    assert run(home, "begin", "--session", "fixture", "--file", "sub/new.md")[0] == 0
     source = nested / "new.md"
     _ = source.write_text("BAD prose.\n")
     assert run(home, "handoff", "--session", "fixture")[0] == 1
     _ = (nested / ".gitignore").write_text("new.md\n")
     code, report = run(home, "handoff", "--session", "fixture")
     assert code == 1 and report["status"] == "failed", report
-    assert "scope" in str(report)
+    assert '"cached": true' in json.dumps(report)
     assert (owner / "scripts/count").read_text() == "1"
     _ = (nested / ".gitignore").write_text("")
     assert run(home, "handoff", "--session", "fixture")[0] == 1
@@ -228,7 +227,7 @@ def test_ignored_nested_ignore_cannot_discharge_failed_file(home: Home) -> None:
     assert run(home, "handoff", "--session", "fixture")[0] == 0
 
 
-def test_projectless_native_is_not_applicable_and_explicit_check_fails(home: Home) -> None:
+def test_native_events_without_explicit_files_are_not_applicable(home: Home) -> None:
     for event in ("SessionStart", "Stop"):
         code, report = run(
             home,
@@ -236,11 +235,11 @@ def test_projectless_native_is_not_applicable_and_explicit_check_fails(home: Hom
             event={"hook_event_name": event, "cwd": str(home.path), "session_id": "projectless"},
         )
         assert code == 0 and "continue" not in report, report
-        assert "not-applicable" in str(report) and "outside-repository" in str(report)
+        assert "not-applicable" in str(report) and "no-explicit-files" in str(report)
         assert "unavailable" not in str(report)
     for command in ("begin", "handoff"):
         code, report = run(home, command, "--session", "projectless")
-        assert code == 1 and report["status"] == "failed"
+        assert code == 0 and report["status"] == "not-applicable"
 
 
 @pytest.mark.parametrize(
@@ -270,7 +269,7 @@ def test_malformed_assessment_never_passes_or_reuses_success(home: Home, mutatio
     assert run(home, "turn", "--session", "fixture")[0] == 0
     other = home.path / "second.md"
     _ = other.write_text("More prose.\n")
-    assert home.run("/usr/bin/git", "add", "-f", "second.md").returncode == 0
+    assert run(home, "begin", "--session", "fixture", "--file", "second.md")[0] == 0
     documents: list[dict[str, object]] = [
         {
             "type": "DOCUMENT_ASSESSMENT",
@@ -361,14 +360,14 @@ def test_literal_paths_deletion_and_unrelated_scope(home: Home) -> None:
     _ = configure(home)
     name = "literal $(touch PWNED) ' document.md"
     _ = (home.path / name).write_text("Good prose.\n")
-    assert home.run("/usr/bin/git", "add", "-f", name).returncode == 0
+    assert run(home, "begin", "--session", "fixture", "--file", name)[0] == 0
     code, report = run(home, "turn", "--session", "fixture")
     assert code == 0, report
     assert not (home.path / "PWNED").exists()
     assert name in json.dumps(report)
     assert ".config/agent-engineering/B0.md" not in json.dumps(report)
     (home.path / name).unlink()
-    assert run(home, "handoff", "--session", "fixture")[1]["status"] == "no-changes"
+    assert run(home, "handoff", "--session", "fixture")[1]["status"] == "passed"
 
 
 def test_native_stop_failure_has_no_continuation_or_false_green(home: Home) -> None:
@@ -391,14 +390,13 @@ def test_native_stop_failure_has_no_continuation_or_false_green(home: Home) -> N
     assert run(home, "codex", event={})[1]["continue"] is False
 
 
-def test_unstarted_session_and_outside_symlink_fail(home: Home) -> None:
+def test_unstarted_session_needs_selection_and_outside_symlink_fails(home: Home) -> None:
     start(home)
-    assert run(home, "handoff", "--session", "other")[0] == 1
+    assert run(home, "handoff", "--session", "other")[1]["status"] == "not-applicable"
     outside = home.path.parent / "outside.md"
     _ = outside.write_text("Private.\n")
     (home.path / "escape.md").symlink_to(outside)
-    assert home.run("/usr/bin/git", "add", "-f", "escape.md").returncode == 0
-    assert run(home, "turn", "--session", "fixture")[0] == 1
+    assert run(home, "turn", "--session", "fixture", "--file", "escape.md")[0] == 1
     assert outside.read_text() == "Private.\n"
 
 
@@ -429,12 +427,13 @@ def test_input_change_during_check_cannot_cache_success(home: Home) -> None:
     assert list(sessions.glob("*/prose.json")) == []
 
 
-def test_changed_ignore_scope_does_not_expand_to_unrelated_prose(home: Home) -> None:
+def test_ignore_changes_do_not_expand_the_explicit_scope(home: Home) -> None:
     start(home)
+    _ = configure(home)
     _ = (home.path / "private.md").write_text("Private BAD prose.\n")
     _ = (home.path / ".gitignore").write_text("!.gitignore\n!private.md\n")
     code, report = run(home, "turn", "--session", "fixture")
-    assert code == 1 and "ignore-scope-changed" in str(report)
+    assert code == 0 and report["status"] == "passed", report
     assert "private.md" not in str(report)
 
 
@@ -442,7 +441,7 @@ def test_unsupported_kotlin_root_cannot_report_clean_layout(home: Home) -> None:
     start(home)
     _ = configure(home)
     _ = (home.path / "Scratch.kt").write_text("class Scratch\n")
-    assert home.run("/usr/bin/git", "add", "-f", "Scratch.kt").returncode == 0
+    assert run(home, "begin", "--session", "fixture", "--file", "Scratch.kt")[0] == 0
     code, report = run(home, "turn", "--session", "fixture")
     assert code == 1 and "unsupported-kotlin-source-root" in str(report)
 
@@ -454,7 +453,7 @@ def test_ignored_package_peer_names_invalidate_layout_cache(home: Home) -> None:
     package.mkdir(parents=True)
     source = package / "Changed.kt"
     _ = source.write_text("class Changed\n")
-    assert home.run("/usr/bin/git", "add", "-f", str(source)).returncode == 0
+    assert run(home, "begin", "--session", "fixture", "--file", str(source))[0] == 0
     first = run(home, "turn", "--session", "fixture")
     assert first[0] == 0 and '"cached": false' in json.dumps(first[1])
     assert '"cached": true' in json.dumps(run(home, "handoff", "--session", "fixture")[1])
@@ -465,13 +464,14 @@ def test_ignored_package_peer_names_invalidate_layout_cache(home: Home) -> None:
 
 def test_concurrent_check_rejects_without_resetting_session(home: Home) -> None:
     start(home)
+    _ = configure(home)
     _, report = run(home, "begin", "--session", "fixture")
     lock = Path(str(report["receipt"])).with_name("lock")
     with lock.open("a") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         code, report = run(home, "handoff", "--session", "fixture")
         assert code == 1 and report["status"] == "failed"
-    assert run(home, "handoff", "--session", "fixture")[1]["status"] == "no-changes"
+    assert run(home, "handoff", "--session", "fixture")[1]["status"] == "passed"
 
 
 def test_tool_permission_change_invalidates_receipt(home: Home) -> None:

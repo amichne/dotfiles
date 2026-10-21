@@ -103,16 +103,38 @@ The existing Kotlin layout findings remain advisory.
 ## Run explicit checks
 
 ```sh
-agent-check begin --repo /path/to/project --session review-1
-agent-check turn --repo /path/to/project --session review-1
-agent-check handoff --repo /path/to/project --session review-1
+agent-check turn --repo /path/to/project --session review-1 --file README.md
+agent-check handoff --repo /path/to/project --session review-1 --file src/main/kotlin/example/Thing.kt
 agent-check status --repo /path/to/project --session review-1
 ```
 
-Each session keeps its initial Git-visible scope and excludes unchanged dirty work.
-Later edits stay selected through commits. Hiding an observed file fails scope admission.
-Unchanged results, including failures, stay cached. Use `--retry` for an explicit rerun.
-The `status` command reads the last receipt; run handoff for current evidence.
-Outside Git, native events report `not-applicable`. Explicit checks still fail.
+Repeat `--file` to select more files.
+Each path must name a Kotlin or prose file inside the selected working directory.
+The command rejects symlinks, parent traversal, directories, and unsupported file types.
+A deleted Kotlin file still selects its surviving package peers and ancestors.
+The layout checker remains advisory.
 
-Read [testing](testing.md) for isolated HOME, real validator, and native host checks.
+The first explicit selection needs no `begin` command.
+Later calls keep that session's explicit selections.
+The adapter never discovers a repository, invokes Git, reads its index, or scans its file inventory.
+Commits and ignore rules do not change the selection.
+Files without an explicit selection remain outside assessment.
+The Kotlin heuristic still examines package names near a selected Kotlin file.
+The prose assessor still reads the selected repository glossary.
+
+Receipts bind selected file bytes, tool identity, glossary bytes, and Kotlin package names.
+An input change during assessment prevents a reusable success receipt.
+Unchanged results, including failures, stay cached.
+Use `--retry` for an explicit repeat.
+Concurrent calls fail without a scope reset.
+
+Native events reuse the explicit selection for the same working directory and session ID.
+Without a selection, they report `not-applicable` with `no-explicit-files`.
+That result supplies no assessment evidence.
+The Codex adapter also accepts repeated `--file` arguments in a reviewed hook command.
+The Pi adapter keeps its existing event contracts and registers no file-selection tool.
+Native adapters do not infer changed paths from shell commands or model text.
+
+Old Git snapshot files remain private historical data.
+The adapter uses `selection.json` and never reads the old session baseline.
+A fresh native session needs a new explicit selection.
