@@ -57,6 +57,7 @@ def test_repository_contains_only_current_source_owners() -> None:
     )
     roots = {Path(p).parts[0] for p in result.stdout.split("\0") if p and (ROOT / p).exists()}
     assert roots == {
+        ".agents",
         ".config",
         ".github",
         ".gitignore",

@@ -12,6 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_SOURCE = ("scripts", "tests", ".local/bin/keys")
 SHELL_SOURCE = (
+    ".agents/setup",
+    ".agents/resume",
     ".local/bin/df",
     ".local/bin/shell-prompt",
     "scripts/check.sh",

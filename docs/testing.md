@@ -87,6 +87,26 @@ node --test tests/pi-types.test.mjs
 
 Missing dependencies fail this command. They do not produce skipped coverage.
 
+## Amp orbs
+
+`.agents/setup` prepares a Debian orb checkout for `./scripts/check.sh` directly.
+It installs uv 0.12.9, Python 3.12.14, Node 26.0.0, Debian check tools,
+and locked Python development dependencies.
+Warm setup checks installed packages and synchronizes the lockfiles without reinstalling them.
+The tool paths also load in new non-interactive Bash login shells inside this checkout.
+
+Amp snapshots successful setup for reuse by fresh orbs.
+An exact snapshot skips setup; a stale snapshot reruns it against the updated checkout.
+`.agents/resume` does no work because this repository needs no services or authentication.
+Neither script installs HOME configuration or the personal mise toolbox.
+Setup refuses to run on macOS or from the installed HOME.
+No secrets, pre-clone script, pre-setup script, or supervised services are required.
+
+Run `./scripts/check.sh` in the orb to check the source without Docker.
+The Docker isolation tests require the disposable container gate instead.
+The separate Pi TypeScript test still needs the dependencies listed above.
+Setup changes become active for future orbs after they reach the project's default branch.
+
 ## Cloud use
 
 Select `amichne/dotfiles` as the environment's repository.

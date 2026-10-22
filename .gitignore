@@ -10,6 +10,9 @@
 !/zensical.toml
 !/containers/
 !/containers/Dockerfile
+!/.agents/
+!/.agents/setup
+!/.agents/resume
 !/.github/
 !/.github/workflows/
 !/.github/workflows/sandbox.yml

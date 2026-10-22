@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# No services or authentication are required. Dependencies live in the setup snapshot;
+# stale snapshots rerun setup, so waking an orb needs no installs or network access.
