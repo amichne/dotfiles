@@ -15,6 +15,7 @@ SHELL_SOURCE = (
     ".agents/setup",
     ".agents/resume",
     ".local/bin/df",
+    ".local/bin/git-recents",
     ".local/bin/shell-prompt",
     "scripts/check.sh",
 )
