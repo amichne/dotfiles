@@ -15,11 +15,8 @@ Keep configuration at its HOME-relative path. Do not create another runtime copy
 - `amichne/ayi` owns the separate AI commands and their installer.
 - `.pi` contains public Pi resources. Keep authentication and sessions private.
 - `.config/agent-engineering/B0.md` owns the global engineering baseline.
-  `agent-check install` owns private managed blocks and native consumer resources.
   Keep private instructions and hooks outside the tracked inventory.
-- `.config/agent-engineering/check.py` owns explicit file scopes and private check receipts.
-  Pass `--file` for each selected source. Keep Git outside the agent checks.
-  Slopsentral owns the reused validators and optional detailed skills.
+- Slopsentral owns the validators and optional detailed skills.
 
 Keep configuration data inert. Parse external values once into constrained values.
 Keep expected failures finite. Preserve native command failures.
