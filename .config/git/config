@@ -1,0 +1,4 @@
+[alias]
+    main = "!f() { if [ \"$#\" -ne 0 ]; then echo 'usage: git main' >&2; return 2; fi; git switch main && git pull --ff-only; }; f"
+    root = rev-parse --show-toplevel
+    large = "!f() { if [ \"$#\" -ne 0 ]; then echo 'usage: git large' >&2; return 2; fi; git update-index --test-untracked-cache && git config --local core.untrackedCache true && git config --local index.version 4 && git config --local fetch.writeCommitGraph true; }; f"

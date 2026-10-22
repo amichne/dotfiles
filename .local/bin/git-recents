@@ -1,0 +1,55 @@
+#!/bin/sh
+# description: Pick a recent local branch; --list prints names without switching.
+# usage: git recents [--list|--select]
+set -eu
+
+case "$#:$*" in
+    0:|1:--list|1:--select) ;;
+    *) printf '%s\n' 'usage: git recents [--list|--select]' >&2; exit 2 ;;
+esac
+
+git rev-parse --git-dir >/dev/null
+git rev-parse --verify HEAD >/dev/null
+# Read at most 1,000 HEAD events, not the repository's full commit history.
+# Only existing local branches are eligible; detached/deleted names are ignored.
+branches=$(git for-each-ref --sort=-committerdate --format='branch %(refname:lstrip=2)' refs/heads/)
+current=$(git symbolic-ref --quiet --short HEAD || :)
+history=$(git reflog show -n 1000 --format='log %gs' HEAD)
+recent=$(
+    printf '%s\n' "$branches" "visit $current" "$history" |
+        awk '
+            function emit(branch) {
+                if (exists[branch] && !seen[branch]++) print branch
+            }
+            /^branch / {
+                branch = substr($0, 8)
+                exists[branch] = 1
+                ordered[++count] = branch
+            }
+            /^visit / { emit(substr($0, 7)) }
+            /^log checkout: moving from / {
+                sub(/^log checkout: moving from /, "")
+                split($0, parts, " to ")
+                emit(parts[2])
+                emit(parts[1])
+            }
+            END { for (i = 1; i <= count; i++) emit(ordered[i]) }
+        '
+)
+if [ "${1-}" = --list ]; then
+    [ -z "$recent" ] || printf '%s\n' "$recent"
+    exit 0
+fi
+if [ -z "$recent" ]; then
+    printf '%s\n' 'git recents: no local branches' >&2
+    exit 1
+fi
+branch=$(printf '%s\n' "$recent" | fzf --no-sort --no-multi \
+    --prompt='Recent branch> ' \
+    --header='Recent visits first; Enter selects, Esc cancels' \
+    --preview='git log -8 --oneline --decorate --color=always refs/heads/{} --')
+if [ "${1-}" = --select ]; then
+    printf '%s\n' "$branch"
+else
+    git switch -- "$branch"
+fi

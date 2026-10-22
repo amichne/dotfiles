@@ -1,0 +1,8 @@
+# description: Enter the default-branch worktree and update it by fast-forward only.
+# usage: main
+emulate -L zsh
+if (( $# != 0 )); then
+    print -u2 -- 'usage: main'
+    return 2
+fi
+wt switch '^' && command git pull --ff-only

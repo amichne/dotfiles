@@ -73,7 +73,7 @@ zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 alias ls='eza --smart-group --group-directories-first --icons=auto'
 alias l='eza --smart-group --group-directories-first --icons=auto --all'
 alias zs='exec zsh -l'
-alias main='wt switch "^"'
+alias root='rr'
 _shell_keys() {
     zle -I
     command keys

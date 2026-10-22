@@ -1,0 +1,14 @@
+# description: Pick a recently visited branch and enter its worktree.
+# usage: recents [--list]
+emulate -L zsh
+if [[ $# == 1 && $1 == --list ]]; then
+    command git recents --list
+    return
+fi
+if (( $# != 0 )); then
+    print -u2 -- 'usage: recents [--list]'
+    return 2
+fi
+local branch
+branch=$(command git recents --select) || return
+wt switch "$branch"
