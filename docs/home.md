@@ -111,8 +111,6 @@ The file update remains in place.
 
 After installation, run `df setup plan`.
 Use `/reload` or start a fresh Pi session to load changed extensions.
-The [B0 installer](engineering-baseline.md) separately manages private native instructions and hooks.
-Its existing tool selections remain in place until an explicit B0 installation.
 
 Review `.config/mise/config.toml` before explicit tool installation.
 Read [configuration](configuration.md) for shell dependencies.

@@ -35,7 +35,6 @@ PRIVATE = frozenset(
         ".pi/agent/AGENTS.md",
         ".codex/AGENTS.md",
         ".codex/hooks.json",
-        ".pi/agent/extensions/engineering-checks.ts",
     }
 )
 PACKAGE = "npm:pi-subagents@0.79.0"

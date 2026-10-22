@@ -1,3 +1,0 @@
-#!/bin/sh
-set -eu
-exec uv run --locked --script "$HOME/.config/agent-engineering/check.py" "$@"
