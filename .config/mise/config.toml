@@ -11,7 +11,7 @@ pin = true
 starship = "1.26.0"
 atuin = "18.23.0"
 zoxide = "0.10.0"
-worktrunk = "0.53.0"
+worktrunk = "0.81.0"
 
 # Small toolbox for Developer Tools workflows.
 ripgrep = "15.2.0"
