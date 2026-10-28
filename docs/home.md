@@ -36,6 +36,41 @@ It reports missing files and dirty paths without a file replacement or index cha
 Its JSON form contains `repository`, `worktree`, `origin`, `missing`, and `status`.
 A missing file or unexpected repository causes a nonzero exit status.
 
+## Worktree inventory
+
+`df worktrees` reads registered worktrees from explicitly named repositories.
+It needs Git, uv, and Python, but it does not need the bare HOME repository.
+
+```sh
+df worktrees --repo /path/to/project --repo "/path/with spaces" --json
+```
+
+The command reports each path, HEAD, branch, lock, pruning marker, and working-tree state.
+It keeps every worktree, including clean worktrees.
+It does not prove that a worktree is inactive or that its changes reached another branch.
+A pruning marker does not authorize removal.
+The command does not fetch, prune, remove files, refresh indexes, or inspect process lists.
+It does not measure ignored output sizes.
+
+`.config/worktree-inventory.toml` limits one invocation to 128 worktrees and 30 seconds across all named repositories.
+The command accepts at most eight repositories.
+Use `--config FILE` for explicit limits from another TOML file.
+That file must contain only `max_worktrees` and `timeout_seconds`.
+The accepted ranges are 1–512 worktrees and 1–120 seconds.
+
+JSON output has `version`, `status`, `policy`, and `repositories`.
+Each repository keeps its known worktrees and reports its failure codes.
+A missing registered worktree has an unavailable working-tree state and stays in the inventory.
+A failed Git read or exhausted limit returns `incomplete` with exit status 1.
+Invalid arguments return exit status 64.
+Invalid configuration returns exit status 1 before Git runs, without a `policy` field.
+A complete report returns exit status 0.
+Without `--json`, the command prints the same fields as indented JSON.
+
+A report describes the state at inspection time.
+Concurrent edits can change that state after a read.
+Review ownership, source changes, delivery, and active use before a separate cleanup operation.
+
 ## Install or update HOME
 
 Install Git, uv 0.12.9 or later, and Python 3.12 or 3.13 first.

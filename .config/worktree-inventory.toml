@@ -1,0 +1,3 @@
+# Every worktree stays retained. These limits bound one read-only inventory.
+max_worktrees = 128
+timeout_seconds = 30
