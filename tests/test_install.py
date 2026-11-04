@@ -14,6 +14,15 @@ ORIGIN = "git@github.com:amichne/dotfiles.git"
 
 
 def git(home: Home, directory: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    if (directory / ".dotfiles.git").is_dir():
+        return home.run(
+            "/usr/bin/git",
+            "-C",
+            str(directory),
+            f"--git-dir={directory / '.dotfiles.git'}",
+            f"--work-tree={directory}",
+            *args,
+        )
     return home.run("/usr/bin/git", "-C", str(directory), *args)
 
 
@@ -81,6 +90,114 @@ def installed_git(home: Home, *args: str) -> subprocess.CompletedProcess[str]:
         f"--work-tree={home.path}",
         *args,
     )
+
+
+@pytest.fixture(params=["checkout", "native-home"])
+def transport_source(home: Home, source: Path, request: pytest.FixtureRequest) -> Path:
+    if request.param == "native-home":
+        (source / ".git").rename(source / ".dotfiles.git")
+        assert git(home, source, "config", "core.bare", "true").returncode == 0
+    return source
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_source_transport_installs_pinned_bytes_modes_and_no_private_content(
+    home: Home, transport_source: Path, existing: bool
+) -> None:
+    source = transport_source
+    if existing:
+        # Seed the older installed release independently of the installer under test.
+        metadata = source / (".dotfiles.git" if (source / ".dotfiles.git").exists() else ".git")
+        result = home.run(
+            "/usr/bin/git", "clone", "--bare", str(metadata), str(home.path / ".dotfiles.git")
+        )
+        assert result.returncode == 0, result.stderr
+        assert installed_git(home, "remote", "set-url", "origin", ORIGIN).returncode == 0
+        assert installed_git(home, "checkout").returncode == 0
+    command = source / ".local/bin/public-tool"
+    command.parent.mkdir(parents=True)
+    _ = command.write_bytes(b"#!/bin/sh\nprintf 'public\\n'\n")
+    command.chmod(0o755)
+    assert git(home, source, "add", "--force", ".local/bin/public-tool").returncode == 0
+    _ = (source / ".zshrc").write_bytes(b"advanced startup\n")
+    revision = commit(home, source, "Reviewed executable and startup")
+    private = source / ".private-token"
+    _ = private.write_text("synthetic secret never transferred\n")
+    destination_private = home.path / ".machine-local"
+    _ = destination_private.write_text("keep destination private\n")
+    report = plan(home, source)
+    assert report["source"] == str(source)
+    assert report["revision"] == revision
+    result = run(home, source, "--apply", "--expected-plan", str(report["planId"]))
+    assert result.returncode == 0, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt["revision"] == revision
+    assert installed_git(home, "rev-parse", "HEAD").stdout.strip() == revision
+    assert installed_git(home, "remote", "get-url", "origin").stdout.strip() == ORIGIN
+    for name, content, mode in (
+        (".zshrc", b"advanced startup\n", 0o644),
+        (".local/bin/public-tool", command.read_bytes(), 0o755),
+    ):
+        target = home.path / name
+        assert target.read_bytes() == content
+        assert target.stat().st_mode & 0o777 == mode
+    assert installed_git(home, "status", "--porcelain", "--untracked-files=no").stdout == ""
+    assert not (home.path / private.name).exists()
+    assert destination_private.read_text() == "keep destination private\n"
+    assert all(
+        b"synthetic secret never transferred" not in path.read_bytes()
+        for path in home.path.rglob("*")
+        if path.is_file()
+    )
+
+
+@pytest.mark.parametrize("existing", [False, True])
+@pytest.mark.parametrize("mutation", ["dirty", "committed", "conflict"])
+def test_source_transport_revalidates_before_writes(
+    home: Home, transport_source: Path, existing: bool, mutation: str
+) -> None:
+    source = transport_source
+    if existing:
+        result = apply(home, source)
+        assert result.returncode == 0, result.stderr
+        _ = (source / ".zshrc").write_text("next reviewed startup\n")
+        _ = commit(home, source, "Advance")
+    report = plan(home, source)
+    if mutation in {"dirty", "committed"}:
+        _ = (source / ".zshrc").write_text("source changed after planning\n")
+        if mutation == "committed":
+            _ = commit(home, source, "Later revision")
+        reason = "dirty-source" if mutation == "dirty" else "stale-plan"
+    else:
+        _ = (home.path / ".zshrc").write_text("local conflict\n")
+        reason = "dirty-home" if existing else "untracked-conflict"
+    metadata = home.path / ".dotfiles.git"
+    before = {
+        str(p.relative_to(metadata)): p.read_bytes() for p in metadata.rglob("*") if p.is_file()
+    }
+    result = run(home, source, "--apply", "--expected-plan", str(report["planId"]))
+    assert result.returncode != 0 and reason in result.stderr
+    after = {
+        str(p.relative_to(metadata)): p.read_bytes() for p in metadata.rglob("*") if p.is_file()
+    }
+    assert after == before
+    assert not (home.path / ".local/state/dotfiles-install").exists() or existing
+
+
+@pytest.mark.parametrize("kind", ["symlink", "dangling-symlink", "file", "non-bare"])
+def test_unsafe_native_source_metadata_is_rejected(home: Home, source: Path, kind: str) -> None:
+    metadata = source / ".dotfiles.git"
+    (source / ".git").rename(metadata)
+    if kind != "non-bare":
+        moved = source.parent / "external metadata"
+        metadata.rename(moved)
+        if kind == "file":
+            _ = metadata.write_text("not a repository\n")
+        else:
+            metadata.symlink_to(moved if kind == "symlink" else source.parent / "absent")
+    result = run(home, source)
+    assert result.returncode != 0 and "invalid-source-repository" in result.stderr
+    assert not (home.path / ".dotfiles.git").exists()
 
 
 def test_plan_is_read_only_and_apply_uses_one_bare_index(home: Home, source: Path) -> None:
