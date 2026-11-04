@@ -95,7 +95,7 @@ def installed_git(home: Home, *args: str) -> subprocess.CompletedProcess[str]:
 @pytest.fixture(params=["checkout", "native-home"])
 def transport_source(home: Home, source: Path, request: pytest.FixtureRequest) -> Path:
     if request.param == "native-home":
-        (source / ".git").rename(source / ".dotfiles.git")
+        _ = (source / ".git").rename(source / ".dotfiles.git")
         assert git(home, source, "config", "core.bare", "true").returncode == 0
     return source
 
@@ -123,15 +123,23 @@ def test_source_transport_installs_pinned_bytes_modes_and_no_private_content(
     revision = commit(home, source, "Reviewed executable and startup")
     private = source / ".private-token"
     _ = private.write_text("synthetic secret never transferred\n")
+    # A once-staged private file remains untracked and clean, but leaves a loose Git object.
+    assert git(home, source, "add", "--force", private.name).returncode == 0
+    assert git(home, source, "reset", "HEAD", "--", private.name).returncode == 0
+    private_oid = git(home, source, "hash-object", str(private)).stdout.strip()
+    assert git(home, source, "cat-file", "-e", private_oid).returncode == 0
     destination_private = home.path / ".machine-local"
     _ = destination_private.write_text("keep destination private\n")
     report = plan(home, source)
     assert report["source"] == str(source)
+    metadata = source / (".dotfiles.git" if (source / ".dotfiles.git").exists() else ".git")
+    assert report["sourceRepository"] == str(metadata)
     assert report["revision"] == revision
     result = run(home, source, "--apply", "--expected-plan", str(report["planId"]))
     assert result.returncode == 0, result.stderr
     receipt = json.loads(result.stdout)
     assert receipt["revision"] == revision
+    assert receipt["sourceRepository"] == str(metadata)
     assert installed_git(home, "rev-parse", "HEAD").stdout.strip() == revision
     assert installed_git(home, "remote", "get-url", "origin").stdout.strip() == ORIGIN
     for name, content, mode in (
@@ -143,6 +151,7 @@ def test_source_transport_installs_pinned_bytes_modes_and_no_private_content(
         assert target.stat().st_mode & 0o777 == mode
     assert installed_git(home, "status", "--porcelain", "--untracked-files=no").stdout == ""
     assert not (home.path / private.name).exists()
+    assert installed_git(home, "cat-file", "-e", private_oid).returncode != 0
     assert destination_private.read_text() == "keep destination private\n"
     assert all(
         b"synthetic secret never transferred" not in path.read_bytes()
@@ -152,7 +161,7 @@ def test_source_transport_installs_pinned_bytes_modes_and_no_private_content(
 
 
 @pytest.mark.parametrize("existing", [False, True])
-@pytest.mark.parametrize("mutation", ["dirty", "committed", "conflict"])
+@pytest.mark.parametrize("mutation", ["dirty", "committed", "conflict", "untracked"])
 def test_source_transport_revalidates_before_writes(
     home: Home, transport_source: Path, existing: bool, mutation: str
 ) -> None:
@@ -162,15 +171,26 @@ def test_source_transport_revalidates_before_writes(
         assert result.returncode == 0, result.stderr
         _ = (source / ".zshrc").write_text("next reviewed startup\n")
         _ = commit(home, source, "Advance")
+    if mutation == "untracked":
+        candidate = source / ".config/new-public-file"
+        candidate.parent.mkdir()
+        _ = candidate.write_text("public content\n")
+        assert git(home, source, "add", "--force", ".config/new-public-file").returncode == 0
+        _ = commit(home, source, "New public file")
     report = plan(home, source)
     if mutation in {"dirty", "committed"}:
         _ = (source / ".zshrc").write_text("source changed after planning\n")
         if mutation == "committed":
             _ = commit(home, source, "Later revision")
         reason = "dirty-source" if mutation == "dirty" else "stale-plan"
-    else:
+    elif mutation == "conflict":
         _ = (home.path / ".zshrc").write_text("local conflict\n")
         reason = "dirty-home" if existing else "untracked-conflict"
+    else:
+        conflict = home.path / ".config/new-public-file"
+        conflict.parent.mkdir()
+        _ = conflict.write_text("private conflict\n")
+        reason = "untracked-conflict"
     metadata = home.path / ".dotfiles.git"
     before = {
         str(p.relative_to(metadata)): p.read_bytes() for p in metadata.rglob("*") if p.is_file()
@@ -184,13 +204,74 @@ def test_source_transport_revalidates_before_writes(
     assert not (home.path / ".local/state/dotfiles-install").exists() or existing
 
 
+def test_source_transport_relocation_invalidates_plan(home: Home, transport_source: Path) -> None:
+    source = transport_source
+    report = plan(home, source)
+    native = source / ".dotfiles.git"
+    if native.exists():
+        assert git(home, source, "config", "core.bare", "false").returncode == 0
+        _ = native.rename(source / ".git")
+    else:
+        _ = (source / ".git").rename(native)
+        assert git(home, source, "config", "core.bare", "true").returncode == 0
+    result = run(home, source, "--apply", "--expected-plan", str(report["planId"]))
+    assert result.returncode != 0 and "stale-plan" in result.stderr
+    assert not (home.path / ".dotfiles.git").exists()
+
+
+def test_symlinked_checkout_metadata_is_rejected(home: Home, source: Path) -> None:
+    metadata = source / ".git"
+    outside = source.parent / "external checkout metadata"
+    _ = metadata.rename(outside)
+    metadata.symlink_to(outside, target_is_directory=True)
+    result = run(home, source)
+    assert result.returncode != 0 and "invalid-source-repository" in result.stderr
+    assert not (home.path / ".dotfiles.git").exists()
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_source_transport_movement_during_transfer_keeps_pinned_revision(
+    home: Home, transport_source: Path, existing: bool
+) -> None:
+    source = transport_source
+    if existing:
+        assert apply(home, source).returncode == 0
+        _ = (source / ".zshrc").write_text("reviewed update\n")
+        _ = commit(home, source, "Reviewed update")
+    revision = git(home, source, "rev-parse", "HEAD").stdout.strip()
+    content = (source / ".zshrc").read_bytes()
+    _ = (source / ".zshrc").write_text("later unreviewed revision\n")
+    later = commit(home, source, "Later commit")
+    assert git(home, source, "reset", "--hard", revision).returncode == 0
+    report = plan(home, source)
+    # Move source HEAD only when transport begins, after both CLI plan validations.
+    wrapper = home.tools / "git"
+    _ = wrapper.write_text(
+        '#!/bin/sh\nfor argument in "$@"; do\n'
+        '  case "$argument" in clone|fetch)\n'
+        '    /usr/bin/git --git-dir="$SOURCE_METADATA" update-ref HEAD "$LATER_REVISION" || exit $?\n'
+        '    break;;\n  esac\ndone\nexec /usr/bin/git "$@"\n'
+    )
+    wrapper.chmod(0o755)
+    home.env["SOURCE_METADATA"] = str(
+        source / (".dotfiles.git" if (source / ".dotfiles.git").exists() else ".git")
+    )
+    home.env["LATER_REVISION"] = later
+    result = run(home, source, "--apply", "--expected-plan", str(report["planId"]))
+    assert result.returncode == 0, result.stderr
+    assert git(home, source, "rev-parse", "HEAD").stdout.strip() == later
+    assert installed_git(home, "rev-parse", "HEAD").stdout.strip() == revision
+    assert (home.path / ".zshrc").read_bytes() == content
+    assert json.loads(result.stdout)["revision"] == revision
+
+
 @pytest.mark.parametrize("kind", ["symlink", "dangling-symlink", "file", "non-bare"])
 def test_unsafe_native_source_metadata_is_rejected(home: Home, source: Path, kind: str) -> None:
     metadata = source / ".dotfiles.git"
-    (source / ".git").rename(metadata)
+    _ = (source / ".git").rename(metadata)
     if kind != "non-bare":
         moved = source.parent / "external metadata"
-        metadata.rename(moved)
+        _ = metadata.rename(moved)
         if kind == "file":
             _ = metadata.write_text("not a repository\n")
         else:
