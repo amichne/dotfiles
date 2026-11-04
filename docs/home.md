@@ -76,7 +76,12 @@ Review ownership, source changes, delivery, and active use before a separate cle
 Install Git, uv 0.12.9 or later, and Python 3.12 or 3.13 first.
 The default setup also needs Pi 1.3.0, Node.js 22.19 or later, curl, and system tar.
 Use a reviewed, clean checkout of `amichne/dotfiles` as the source.
-The installer uses that checkout's committed `HEAD`.
+A native HOME worktree with a bare `.dotfiles.git` is also supported with `--source /path/to/source-home`.
+The installer checks tracked changes against the source worktree and transfers Git objects from its validated metadata directory.
+It never copies untracked source files.
+Git transport also excludes unreachable objects left by files that were staged and then unstaged.
+Committed history remains part of the reviewed source.
+The installer uses the source's committed `HEAD`.
 It applies the full revision, including public Pi resources.
 After the file update, it installs the latest stable Slopsentral release for Pi.
 The plan lists `slopsentral@latest` without a network request.
@@ -90,6 +95,8 @@ uv run --locked --script scripts/install.py
 ```
 
 The plan lists the commit, changed paths, private files to keep, and a `planId`.
+`source` identifies the worktree; `sourceRepository` identifies its Git transport directory.
+Both identities enter the plan ID and recovery receipt.
 It reads HOME without an index change, fetch, or file replacement.
 Examine the plan before application.
 Then copy its `planId` into this command:
@@ -98,7 +105,9 @@ Then copy its `planId` into this command:
 uv run --locked --script scripts/install.py --apply --expected-plan PLAN_ID
 ```
 
-A changed commit, index, branch, or file invalidates the plan.
+A changed source metadata path, commit, HOME index, HOME branch, or planned destination file invalidates the plan.
+The installer revalidates the plan under its application lock before Git writes.
+If source HEAD advances during transfer, application still selects the planned revision or fails without selecting a newer revision.
 The installer creates `~/.dotfiles.git` for a new HOME.
 For an existing installation, it accepts only a fast-forward update.
 It keeps the existing branch and origin.
