@@ -48,6 +48,30 @@ Preview and apply updates with:
 ./bin/dotfiles home apply
 ```
 
+## Update OpenCode configuration
+
+The `home/dot_config/opencode` source owns credential-free OpenCode settings,
+agent wrappers, workstyle guidance, TUI keybindings, and the Claude-Dracula
+theme. It references canonical skills in `~/code/slopsentral/source/skills`
+without copying their content. OpenCode auth, history, sessions, caches, and
+literal MCP credentials remain local.
+
+Preview, apply, and verify updates with:
+
+```sh
+./scripts/check.sh
+./bin/dotfiles home plan
+./bin/dotfiles home apply
+./scripts/check-opencode.sh
+```
+
+Set `CONTEXT7_API_KEY` through a local credential source when enabling the
+tracked Context7 server. If the legacy
+`~/.config/opencode/opencode.jsonc` exists, remove it only after
+`opencode debug config` shows every required provider and LSP setting from the
+tracked `opencode.json`. Quit and restart OpenCode after any configuration,
+agent, skill, plugin, or theme change; these files are not hot-reloaded.
+
 ## Add a configuration key
 
 1. Add one typed row to `config/schema.tsv`.

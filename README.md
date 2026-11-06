@@ -43,6 +43,12 @@ so restore those through a local credential source after applying on a new
 machine. The adapter also does not manage `gh/hosts.yml`, SSH keys, Git
 identity, or enterprise host state.
 
+The same adapter manages credential-free OpenCode configuration, a
+Claude-Dracula TUI, role-based subagents, and a curated set of canonical
+Slopsentral skills. The live setup expects Slopsentral at
+`~/code/slopsentral`; override `SLOPSENTRAL_ROOT` only when validating a
+different checkout.
+
 ## Commands
 
 ```text

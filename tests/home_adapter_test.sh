@@ -58,10 +58,39 @@ fi
 if [ ! -e "$HOME/.codex/auth.json" ] \
     && [ ! -e "$HOME/.codex/history.jsonl" ] \
     && [ ! -e "$HOME/.codex/browser/sessions" ] \
-    && [ ! -e "$HOME/.codex/automations/.run-jitter-salt" ]; then
+    && [ ! -e "$HOME/.codex/automations/.run-jitter-salt" ] \
+    && [ ! -e "$HOME/.config/opencode/auth.json" ] \
+    && [ ! -e "$HOME/.config/opencode/history.jsonl" ]; then
     test_pass "home apply excludes Codex credentials and runtime state"
 else
     test_fail "home apply excludes Codex credentials and runtime state" "a credential or runtime-state target was installed"
+fi
+
+if [ -f "$HOME/.config/opencode/opencode.json" ] \
+    && [ -f "$HOME/.config/opencode/tui.json" ] \
+    && [ -f "$HOME/.config/opencode/themes/claude-dracula.json" ] \
+    && [ -f "$HOME/.config/opencode/rules/workstyle.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/kotlin-review-captain.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/kotlin-type-safety-reviewer.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/kotlin-boundary-contract-reviewer.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/kotlin-package-cohesion-reviewer.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/delivery-engineer.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/agent-platform-author.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/code-knowledge-engineer.md" ] \
+    && [ -f "$HOME/.config/opencode/agents/intellij-plugin-engineer.md" ]; then
+    test_pass "home apply writes the OpenCode configuration set"
+else
+    test_fail "home apply writes the OpenCode configuration set" "one or more OpenCode targets are missing"
+fi
+
+opencode_tilde='~'
+if grep -qF '"subagent_depth": 2' "$HOME/.config/opencode/opencode.json" 2>/dev/null \
+    && grep -qF '"model": "openai/gpt-5.6-sol"' "$HOME/.config/opencode/opencode.json" \
+    && grep -qF "${opencode_tilde}/code/slopsentral/source/skills/intellij-plugin-delivery" "$HOME/.config/opencode/opencode.json" \
+    && ! grep -Eq 'ctx7sk-|sk-[A-Za-z0-9_-]{20,}' "$HOME/.config/opencode/opencode.json"; then
+    test_pass "managed OpenCode config is curated and credential-free"
+else
+    test_fail "managed OpenCode config is curated and credential-free" "composition or credential boundary is incorrect"
 fi
 
 if grep -qF '[marketplaces.ponytail]' "$HOME/.codex/config.toml" \
