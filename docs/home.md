@@ -6,7 +6,7 @@ The tracked files are the live files.
 | Path | Purpose |
 | --- | --- |
 | `~/.dotfiles.git` | Bare Git metadata and the HOME index |
-| `~/.zshrc`, `~/.zprofile` | Zsh startup |
+| `~/.zshenv`, `~/.zshrc`, `~/.zprofile` | Zsh startup |
 | `~/.config` | Tool configuration and the shell helpers |
 | `~/.local/bin` | Small command entry points |
 | `~/scripts/df.py` | Locked Python manager for the bare repository |
@@ -35,6 +35,43 @@ Use `/bin/df` for the system disk-space command.
 It reports missing files and dirty paths without a file replacement or index change.
 Its JSON form contains `repository`, `worktree`, `origin`, `missing`, and `status`.
 A missing file or unexpected repository causes a nonzero exit status.
+
+## Worktree location
+
+`~/.zshenv` owns `WORKTREE_ROOT`, which defaults to `$HOME/.worktrees`.
+It derives `WORKTRUNK_WORKTREE_PATH` as
+`$WORKTREE_ROOT/{{ remote_repo }}/{{ branch | sanitize }}`.
+Override `WORKTREE_ROOT` before starting Zsh to choose another root.
+The remote repository name avoids local clone names such as `gradle-build-diff` for `drift`.
+Branch slashes become hyphens. Existing migrated task suffixes can differ from branch names.
+
+Use Worktrunk for CLI-owned worktrees from Pi, Codex, Amp, or an IDE terminal:
+
+```sh
+wt switch --create feature/example
+```
+
+Worktrunk 0.81.0 reads `WORKTRUNK_WORKTREE_PATH` from the environment.
+`tests/test_home_source.py` checks default and overridden roots in a fresh Zsh process.
+Raw `git worktree add` still requires an explicit destination; Git has no shared root setting.
+`gh` does not apply this environment variable to arbitrary extensions.
+
+Shell-launched tools inherit these exports. Already running agents and IDEs do not.
+GUI launchers do not normally read `.zshenv`.
+For newly launched apps in the current macOS login session, export the derived values:
+
+```sh
+launchctl setenv WORKTREE_ROOT "$WORKTREE_ROOT"
+launchctl setenv WORKTRUNK_WORKTREE_PATH "$WORKTRUNK_WORKTREE_PATH"
+```
+
+Run these commands from a fresh Zsh shell after changing the root.
+These login-session values do not persist across logout and do not update running processes.
+An app must still use Worktrunk for this path template to apply.
+Codex Desktop, native Codex `--worktree`, and JetBrains-managed worktrees are separate owners;
+this setting does not establish their native layout or migrate their session records.
+Do not replace their managed directories with symlinks or move them behind the host's back.
+Use Worktrunk-created worktrees as existing projects when a native root setting is unavailable.
 
 ## Worktree inventory
 

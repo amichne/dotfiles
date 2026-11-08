@@ -5,9 +5,12 @@ The origin is `amichne/dotfiles`.
 Keep configuration at its HOME-relative path. Do not create another runtime copy.
 
 - `.gitignore` owns the default-deny public inventory.
-- `.zshrc` and `.zprofile` own shell startup.
+- `.zshenv` owns the shared worktree-root exports for shell-launched tools.
+- `.zshrc` and `.zprofile` own interactive and login shell startup.
 - `.config/zsh/functions` owns the autoloaded shell functions.
 - `.local/bin/keys` owns the shortcut browser.
+- `.config/mise/config.toml` owns tool pins, the Brew inventory, and setup tasks.
+  `.local/bin/setup-tools` owns preview and per-item best-effort installation.
 - `.config/shell-prompt` owns Git prompt context and its pure model.
 - `scripts/df.py` owns bare Git selection and read-only setup inspection.
 - `scripts/install.py` owns reviewed HOME installation, fast-forward updates, and the latest Slopsentral setup.

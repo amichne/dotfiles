@@ -70,6 +70,7 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
     selected = (
         ".gitignore",
         ".zshrc",
+        ".zshenv",
         ".zprofile",
         ".config",
         ".local",

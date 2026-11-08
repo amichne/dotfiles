@@ -10,7 +10,13 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PYTHON_SOURCE = ("scripts", "tests", ".local/bin/keys", ".local/bin/austincomplete")
+PYTHON_SOURCE = (
+    "scripts",
+    "tests",
+    ".local/bin/keys",
+    ".local/bin/setup-tools",
+    ".local/bin/austincomplete",
+)
 SHELL_SOURCE = (
     ".agents/setup",
     ".agents/resume",
@@ -52,6 +58,7 @@ def main() -> int:
         ["uv", "run", "--locked", "pyright"],
         ["uv", "run", "--locked", "pytest", "-q"],
         ["uv", "lock", "--check", "--script", ".local/bin/keys"],
+        ["uv", "lock", "--check", "--script", ".local/bin/setup-tools"],
         ["uv", "lock", "--check", "--script", ".local/bin/austincomplete"],
         ["uv", "lock", "--check", "--script", "scripts/df.py"],
         ["uv", "lock", "--check", "--script", "scripts/install.py"],
@@ -76,6 +83,7 @@ def main() -> int:
         ["zsh", "-n", str(path)]
         for path in [
             ROOT / ".zshrc",
+            ROOT / ".zshenv",
             ROOT / ".zprofile",
             *sorted((ROOT / ".config/zsh/functions").iterdir()),
         ]

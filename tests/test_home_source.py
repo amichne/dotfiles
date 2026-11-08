@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_home_source_contains_the_requested_public_files() -> None:
     for name in (
         ".zshrc",
+        ".zshenv",
         ".zprofile",
         ".config/git/config",
         ".config/zsh/functions/main",
@@ -77,6 +78,7 @@ def test_repository_contains_only_current_source_owners() -> None:
         ".pi",
         ".python-version",
         ".zprofile",
+        ".zshenv",
         ".zshrc",
         "README.md",
         "containers",
@@ -192,6 +194,30 @@ def test_login_shell_only_prepares_paths(home: Home) -> None:
     assert str(home.path / ".local/bin") in result.stdout.splitlines()
     assert str(home.path / ".local/share/mise/shims") in result.stdout.splitlines()
     assert not log.exists()
+
+
+def test_worktree_environment_uses_remote_repository_names(home: Home) -> None:
+    result = home.run(
+        "/bin/zsh", "-d", "-c", 'print -rl -- "$WORKTREE_ROOT" "$WORKTRUNK_WORKTREE_PATH"'
+    )
+    assert result.returncode == 0, result.stderr
+    root = str(home.path / ".worktrees")
+    assert result.stdout.splitlines() == [
+        root,
+        root + "/{{ remote_repo }}/{{ branch | sanitize }}",
+    ]
+
+
+def test_worktree_root_override_is_shared_with_worktrunk(home: Home) -> None:
+    home.env["WORKTREE_ROOT"] = str(home.path / "custom worktrees")
+    result = home.run(
+        "/bin/zsh", "-d", "-c", 'print -rl -- "$WORKTREE_ROOT" "$WORKTRUNK_WORKTREE_PATH"'
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        home.env["WORKTREE_ROOT"],
+        home.env["WORKTREE_ROOT"] + "/{{ remote_repo }}/{{ branch | sanitize }}",
+    ]
 
 
 def test_keys_runs_without_the_removed_toolbox(home: Home) -> None:

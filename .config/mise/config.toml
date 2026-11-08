@@ -5,6 +5,29 @@ auto_install = false
 not_found_auto_install = false
 not_found_system_fallback = false
 pin = true
+# Setup handles each install itself; never pre-install the entire tool list.
+task.run_auto_install = false
+
+[vars]
+# System dependencies only; keep mise-managed tools in [tools].
+# Whitespace-separated formula/cask names. Empty casks means no GUI app installs.
+setup_brew_formulae = """
+git neovim shellcheck zsh
+zsh-autosuggestions zsh-completions zsh-syntax-highlighting
+"""
+setup_brew_casks = ""
+
+[tasks."setup:plan"]
+description = "Preview the global tool inventory without installing anything"
+run = 'uv run --offline --locked --script "{{env.HOME}}/.local/bin/setup-tools"'
+
+[tasks.setup]
+description = "Install missing tools independently; report issues and continue"
+run = 'uv run --offline --locked --script "{{env.HOME}}/.local/bin/setup-tools" --apply'
+
+[tasks."setup:strict"]
+description = "Attempt every install; exit nonzero if setup is incomplete"
+run = 'uv run --offline --locked --script "{{env.HOME}}/.local/bin/setup-tools" --apply --strict'
 
 [tools]
 # Shell integrations, with one prompt owner.
