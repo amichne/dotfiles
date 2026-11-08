@@ -53,6 +53,9 @@ if [[ -d $_shell_functions ]]; then
     done
 fi
 unset _shell_functions _shell_function
+# Explicitly generated completions take precedence; startup never regenerates them.
+_shell_completion_dir="${XDG_CACHE_HOME:-$HOME/.cache}/austincomplete/zsh"
+fpath=("$_shell_completion_dir" $fpath)
 for _shell_share in /opt/homebrew/share /usr/local/share /home/linuxbrew/.linuxbrew/share /usr/share; do
     for _shell_dir in "$_shell_share/zsh/site-functions" "$_shell_share/zsh-completions"; do
         [[ ! -d $_shell_dir ]] || fpath+=("$_shell_dir")
@@ -103,10 +106,13 @@ _shell_activate() {
     fi
 }
 MISE_OFFLINE=1 _shell_activate mise activate zsh
-if (( $+commands[mise] )); then
+if (( $+commands[mise] )) && [[ ! -f $_shell_completion_dir/_mise ]]; then
     MISE_OFFLINE=1 _shell_activate mise completion zsh
 fi
-_shell_activate atuin gen-completions --shell zsh
+if [[ ! -f $_shell_completion_dir/_atuin ]]; then
+    _shell_activate atuin gen-completions --shell zsh
+fi
+unset _shell_completion_dir
 _shell_activate zoxide init zsh
 _shell_activate wt config shell init zsh
 # fzf provides Ctrl-T files, Alt-C directories, and **<Tab> fuzzy completion.

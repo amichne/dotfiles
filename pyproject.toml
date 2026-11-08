@@ -26,7 +26,7 @@ default = true
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
-include = ["scripts", "tests", ".local/bin/keys"]
+include = ["scripts", "tests", ".local/bin/keys", ".local/bin/austincomplete"]
 exclude = ["**/.venv"]
 reportMatchNotExhaustive = "error"
 reportUnnecessaryTypeIgnoreComment = "error"
@@ -37,7 +37,7 @@ reportPrivateUsage = "error"
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-include = ["*.py", "keys"]
+include = ["*.py", "keys", "austincomplete"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S", "RUF"]

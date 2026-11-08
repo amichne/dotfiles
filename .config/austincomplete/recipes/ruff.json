@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "kind": "generator",
+  "argv": [
+    "ruff",
+    "generate-shell-completion",
+    "zsh"
+  ]
+}

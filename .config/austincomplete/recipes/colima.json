@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "kind": "generator",
+  "argv": [
+    "colima",
+    "completion",
+    "zsh"
+  ]
+}

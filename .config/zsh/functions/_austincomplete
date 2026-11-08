@@ -1,0 +1,14 @@
+#compdef austincomplete
+local -a callers
+local directory="${XDG_CONFIG_HOME:-$HOME/.config}/austincomplete/recipes"
+callers=("$directory"/*.json(N:t:r))
+if (( CURRENT == 2 )); then
+    local -a actions=('add:Save a completion and optional generator' 'update:Replay saved generators' 'list:List registered callers')
+    _describe 'action' actions
+else
+    case $words[2] in
+        update) _arguments '--all[Update every saved generator]' '1:caller:compadd -a callers' ;;
+        add) _arguments '--stdin[Read piped output and remember the generator after --]' '1:caller:_command_names' '*:generator:_command_names' ;;
+        list) _arguments '--json[Emit a JSON array]' ;;
+    esac
+fi

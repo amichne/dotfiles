@@ -1,0 +1,21 @@
+# Parent-shell adapter only; persistence and generator execution live in Python.
+emulate -L zsh
+local action=${1:-list} result
+command austincomplete "$@"
+result=$?
+# A partial --all update may still have refreshed successful entries.
+[[ $action == add || $action == update ]] || return "$result"
+local directory="${XDG_CACHE_HOME:-$HOME/.cache}/austincomplete/zsh" file
+[[ -d $directory ]] || return "$result"
+typeset -gU fpath
+fpath=("$directory" $fpath)
+for file in "$directory"/_*(.N); do
+    # Discard a previously loaded body so autoload reads the replacement.
+    (( ! $+functions[${file:t}] )) || unfunction -- "${file:t}"
+done
+autoload -Uz compinit
+if ! compinit -i -D; then
+    print -u2 -- 'austincomplete: shell-refresh-failed; run zs to retry'
+    return 1
+fi
+return "$result"

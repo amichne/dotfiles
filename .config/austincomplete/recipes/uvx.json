@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "kind": "generator",
+  "argv": [
+    "uvx",
+    "--generate-shell-completion",
+    "zsh"
+  ]
+}

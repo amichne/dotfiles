@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "kind": "generator",
+  "argv": [
+    "atuin",
+    "gen-completions",
+    "--shell",
+    "zsh"
+  ]
+}
