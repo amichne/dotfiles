@@ -20,6 +20,9 @@
 !/.config/
 !/.config/atuin/
 !/.config/atuin/config.toml
+!/.config/austincomplete/
+!/.config/austincomplete/recipes/
+!/.config/austincomplete/recipes/*.json
 !/.config/git/
 !/.config/git/config
 !/.config/mise/
@@ -42,6 +45,8 @@
 
 !/.local/
 !/.local/bin/
+!/.local/bin/austincomplete
+!/.local/bin/austincomplete.lock
 !/.local/bin/df
 !/.local/bin/git-recents
 !/.local/bin/keys

@@ -10,7 +10,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PYTHON_SOURCE = ("scripts", "tests", ".local/bin/keys")
+PYTHON_SOURCE = ("scripts", "tests", ".local/bin/keys", ".local/bin/austincomplete")
 SHELL_SOURCE = (
     ".agents/setup",
     ".agents/resume",
@@ -52,6 +52,7 @@ def main() -> int:
         ["uv", "run", "--locked", "pyright"],
         ["uv", "run", "--locked", "pytest", "-q"],
         ["uv", "lock", "--check", "--script", ".local/bin/keys"],
+        ["uv", "lock", "--check", "--script", ".local/bin/austincomplete"],
         ["uv", "lock", "--check", "--script", "scripts/df.py"],
         ["uv", "lock", "--check", "--script", "scripts/install.py"],
         ["uv", "lock", "--check", "--script", "scripts/sandbox.py"],

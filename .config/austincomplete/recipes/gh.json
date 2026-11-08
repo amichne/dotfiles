@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "kind": "generator",
+  "argv": [
+    "gh",
+    "completion",
+    "--shell",
+    "zsh"
+  ]
+}

@@ -28,6 +28,7 @@ def test_home_source_contains_the_requested_public_files() -> None:
     assert {p.name for p in (ROOT / ".config").iterdir()} == {
         "agent-engineering",
         "atuin",
+        "austincomplete",
         "git",
         "mise",
         "nvim",
