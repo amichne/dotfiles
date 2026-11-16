@@ -48,7 +48,7 @@ def setup(tmp_path: Path) -> tuple[Path, dict[str, str]]:
             "    sys.exit(0 if args[-1] == 'git' else 1)\n"
             "if os.environ.get('CANCEL') == name:\n"
             "    os.kill(os.getpid(), signal.SIGTERM)\n"
-            "if os.environ.get('SLOW') == name:\n"
+            "if os.environ.get('SLOW_TARGET') == args[-1]:\n"
             "    time.sleep(30)\n"
             "if args[-1] == 'node@26.0.0':\n"
             "    print('x' * int(os.environ.get('NOISY', '0')), file=sys.stderr)\n"
@@ -216,7 +216,7 @@ def test_interrupting_the_runner_stops_before_the_next_item(
     setup: tuple[Path, dict[str, str]], number: int
 ) -> None:
     config, env = setup
-    env["SLOW"] = "mise"
+    env["SLOW_TARGET"] = "node@26.0.0"
     process = subprocess.Popen(
         [sys.executable, str(SCRIPT), "--config", str(config), "--json", "--apply"],
         cwd=config.parent,
@@ -243,13 +243,16 @@ def test_interrupting_the_runner_stops_before_the_next_item(
 
 
 def test_timeout_is_bounded_and_later_items_still_run(setup: tuple[Path, dict[str, str]]) -> None:
-    setup[1]["SLOW"] = "mise"
-    result = invoke(setup, "--apply", "--timeout", "0.1")
+    setup[1]["SLOW_TARGET"] = "node@26.0.0"
+    result = invoke(setup, "--apply", "--provider", "mise", "--timeout", "2")
     assert result.returncode == 0
     report = json.loads(result.stdout)
     assert report["status"] == "partial"
-    assert [item["outcome"] for item in report["items"]][-2:] == ["timed-out", "timed-out"]
-    assert calls(setup[1])[-1] == ["mise", "install", "uv@0.12.9"]
+    assert [item["outcome"] for item in report["items"]] == ["timed-out", "ready"]
+    assert calls(setup[1]) == [
+        ["mise", "install", "node@26.0.0"],
+        ["mise", "install", "uv@0.12.9"],
+    ]
 
 
 @pytest.mark.parametrize("argument", ["--aply", "--apply=true", "--timeout=0", "--timeout=nan"])
