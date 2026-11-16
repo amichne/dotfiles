@@ -154,8 +154,42 @@ class SlopsentralSetup:
 
 
 @dataclass(frozen=True)
+class Source:
+    worktree: Path
+    repository: Path
+
+    def arguments(self) -> list[str]:
+        return [
+            "-C",
+            str(self.worktree),
+            f"--git-dir={self.repository}",
+            f"--work-tree={self.worktree}",
+        ]
+
+
+def open_source(worktree: Path, env: dict[str, str]) -> Source:
+    metadata = worktree / ".dotfiles.git"
+    if metadata.exists() or metadata.is_symlink():
+        opened = open_home(worktree, env)
+        if isinstance(opened, Failure):
+            raise Rejected("invalid-source-repository", opened.reason)
+        metadata = opened.metadata
+    else:
+        if (worktree / ".git").is_symlink():
+            raise Rejected("invalid-source-repository", "unsafe-metadata")
+        discovery = ["-C", str(worktree)]
+        root = Path(os.fsdecode(git(env, discovery, "rev-parse", "--show-toplevel")).strip())
+        if root.resolve() != worktree:
+            raise Rejected("not-source-root")
+        metadata = Path(os.fsdecode(git(env, discovery, "rev-parse", "--absolute-git-dir")).strip())
+    if not metadata.is_dir() or metadata.is_symlink() or metadata.resolve() != metadata:
+        raise Rejected("invalid-source-repository", "unsafe-metadata")
+    return Source(worktree, metadata)
+
+
+@dataclass(frozen=True)
 class Plan:
-    source: Path
+    source: Source
     home: Path
     origin: str
     revision: str
@@ -180,7 +214,8 @@ class Plan:
             "status": "planned",
             "planId": self.identity,
             "action": action,
-            "source": str(self.source),
+            "source": str(self.source.worktree),
+            "sourceRepository": str(self.source.repository),
             "home": str(self.home),
             "revision": self.revision,
             "previousRevision": self.previous.revision if self.previous else None,
@@ -196,17 +231,8 @@ class Plan:
 def build_plan(
     source: Path, home: Path, packages: bool, env: dict[str, str], slopsentral: bool = True
 ) -> Plan:
-    source_git = ["-C", str(source)]
-    if (source / ".dotfiles.git").exists():
-        opened = open_home(source, env)
-        if isinstance(opened, Failure):
-            raise Rejected("invalid-source-repository", opened.reason)
-        source_git = ["-C", str(source), f"--git-dir={opened.metadata}", f"--work-tree={source}"]
-    elif (
-        Path(os.fsdecode(git(env, source_git, "rev-parse", "--show-toplevel")).strip()).resolve()
-        != source
-    ):
-        raise Rejected("not-source-root")
+    selected = open_source(source, env)
+    source_git = selected.arguments()
     origin = os.fsdecode(git(env, source_git, "remote", "get-url", "origin")).strip()
     if origin not in ORIGINS:
         raise Rejected("unexpected-source-origin")
@@ -275,6 +301,7 @@ def build_plan(
             setup = SlopsentralSetup(selected_pi, Path(curl).resolve())
     facts = {
         "source": str(source),
+        "sourceRepository": str(selected.repository),
         "home": str(home),
         "origin": origin,
         "revision": revision,
@@ -297,7 +324,7 @@ def build_plan(
     if setup:
         _ = slopsentral_scope(home)
     return Plan(
-        source,
+        selected,
         home,
         origin,
         revision,
@@ -366,8 +393,9 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
                     "clone",
                     "--bare",
                     "--single-branch",
-                    "--no-hardlinks",
-                    str(plan.source),
+                    # Local object-store copies can include unreachable private blobs.
+                    "--no-local",
+                    str(plan.source.repository),
                     str(temporary),
                 )
                 _ = git(env, [f"--git-dir={temporary}"], "remote", "set-url", "origin", plan.origin)
@@ -388,7 +416,7 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
                 "fetch",
                 "--no-tags",
                 "--no-write-fetch-head",
-                str(plan.source),
+                str(plan.source.repository),
                 plan.revision,
             )
             _ = git(
@@ -505,7 +533,7 @@ def main() -> int:
     with lock.open("a") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
         current = build_plan(
-            plan.source,
+            plan.source.worktree,
             plan.home,
             args.with_pi_subagents,
             env,
