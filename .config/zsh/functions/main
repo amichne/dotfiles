@@ -1,8 +1,27 @@
-# description: Enter the default-branch worktree and update it by fast-forward only.
+# description: Enter the main worktree, stash changes, pull origin main, and restore changes.
 # usage: main
 emulate -L zsh
 if (( $# != 0 )); then
     print -u2 -- 'usage: main'
     return 2
 fi
-wt switch '^' && command git pull --ff-only
+wt switch main || return $?
+local changes stash_oid pull_status=0
+changes=$(command git status --porcelain) || return $?
+if [[ -n "$changes" ]]; then
+    command git stash push --include-untracked -m 'main: preserve worktree changes' || return $?
+    stash_oid=$(command git rev-parse refs/stash) || return $?
+fi
+command git pull --ff-only origin main || pull_status=$?
+if [[ -n "$stash_oid" ]]; then
+    if ! command git stash apply --index "$stash_oid"; then
+        print -u2 -- "main: restore failed; changes remain in stash $stash_oid"
+        return 1
+    fi
+    if [[ $(command git rev-parse refs/stash) == "$stash_oid" ]]; then
+        command git stash drop 'stash@{0}' || return $?
+    else
+        print -u2 -- "main: changes restored; stash $stash_oid remains because the stash list changed"
+    fi
+fi
+return "$pull_status"
