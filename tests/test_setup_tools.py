@@ -83,6 +83,32 @@ def calls(env: dict[str, str]) -> list[list[str]]:
     return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
 
+def test_committed_inventory_accepts_exact_version_tables(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--config", str(ROOT / ".config/mise/config.toml"), "--json"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout
+    report = json.loads(result.stdout)
+    assert any(row["target"] == "mise:kotlin@2.4.21" for row in report["items"])
+
+
+@pytest.mark.parametrize(
+    "value",
+    ['{version="latest"}', '{version="1.2.3", bin_path=4}', '{version="1.2.3", unknown="x"}'],
+)
+def test_invalid_version_tables_reject_before_effects(
+    setup: tuple[Path, dict[str, str]], value: str
+) -> None:
+    config, env = setup
+    _ = config.write_text(CONFIG.replace('"26.0.0"', value))
+    assert invoke(setup, "--apply").returncode == 2
+    assert calls(env) == []
+
+
 def test_plan_is_offline_and_never_invokes_a_provider(setup: tuple[Path, dict[str, str]]) -> None:
     result = invoke(setup)
     assert result.returncode == 0, result.stderr

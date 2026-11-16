@@ -76,6 +76,7 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
         ".local",
         ".pi",
         "scripts/df.py",
+        "scripts/doctor.py",
         "scripts/df.py.lock",
         "scripts/worktree_inventory.py",
     )

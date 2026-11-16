@@ -22,8 +22,6 @@ from enum import StrEnum
 from pathlib import Path
 from typing import assert_never
 
-import worktree_inventory
-
 ORIGINS = frozenset(
     {
         "git@github.com:amichne/dotfiles.git",
@@ -40,6 +38,7 @@ REQUIRED = (
     ".local/bin/keys.lock",
     ".local/bin/shell-prompt",
     "scripts/df.py",
+    "scripts/doctor.py",
     "scripts/df.py.lock",
     "scripts/worktree_inventory.py",
     ".config/worktree-inventory.toml",
@@ -47,6 +46,7 @@ REQUIRED = (
 USAGE = """Usage: df status [args] | diff [args] | add PATH... | commit [args]
        df git <git arguments> | setup plan [--json]
        df worktrees --repo PATH [--repo PATH ...] [--config FILE] [--json]
+       df doctor [--json]
 Worktree inventory reads named repositories. Other operations use ~/.dotfiles.git.
 """
 
@@ -210,6 +210,20 @@ def plan(repository: _BareHome, env: dict[str, str], operation: _Plan) -> int:
 
 
 def main(argv: list[str]) -> int:
+    sys.dont_write_bytecode = True
+    import doctor
+    import worktree_inventory
+
+    if argv in (["doctor"], ["doctor", "--json"]):
+        home = Path.home().resolve()
+        env = git_environment()
+        opened = open_home(home, env)
+        identity = (
+            doctor.Result("repository", "failed", opened.reason, "df setup plan")
+            if isinstance(opened, Failure)
+            else doctor.Result("repository", "passed", opened.origin, "")
+        )
+        return doctor.run(home, env, identity, "--json" in argv)
     if argv and argv[0] == "worktrees":
         request = worktree_inventory.parse(
             argv[1:], Path(__file__).resolve().parents[1] / ".config/worktree-inventory.toml"

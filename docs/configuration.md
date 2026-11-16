@@ -156,3 +156,31 @@ The helper needs Node and Git. The refresh operation also needs authenticated `g
 `~/.pi/agent` holds Pi configuration, public instructions, agents, prompts, and LSP settings.
 Use [Pi setup](pi.md) for the public inventory and Kast registration.
 The separate [Ayi repository](https://github.com/amichne/ayi) owns the AI registry and its optional installed links.
+
+## Examine the installation
+
+Run `df doctor` for a human-readable report or `df doctor --json` for one JSON object.
+The command returns 0 when every probe passes and 1 when a probe fails.
+Invalid command arguments return 64.
+Each item contains `name`, `outcome`, `detail`, and `repair`.
+The report uses `healthy` or `unhealthy` for its overall status.
+Item outcomes are `passed`, `failed`, `unavailable`, `timed-out`, and `invalid-data`.
+
+The doctor examines the bare repository identity before other probes.
+It reuses the setup inventory and compares each installed mise pin with the selected installation.
+It also examines Brew packages, shell dependencies, Zsh syntax, registered completion caches, and Pi executables.
+A Neovim process reads the existing editor configuration and reports its version and server executables.
+That process disables plugins, initialization, swap files, and ShaDa.
+
+The doctor does not install tools, regenerate completions, or apply repairs.
+It does not load private shell files or start language servers.
+Shell syntax does not prove interactive startup.
+Executable presence does not prove editor attachment or semantic queries.
+Mise selection does not prove that PATH selects the same executable.
+Use `nvim '+checkhealth editor'` for the existing editor diagnostics.
+Each subprocess has a ten-second limit and a 64 KiB output limit.
+
+Setup accepts exact version strings and tables with `version`, `asset_pattern`, and `bin_path`.
+Table values must be nonempty strings, and `version` must contain an exact pin.
+Unsupported table options fail before provider commands.
+The selected mise configuration keeps the table options during installation.

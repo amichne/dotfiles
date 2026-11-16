@@ -104,6 +104,12 @@ def read_inventory(
     for tool, version in tools.items():
         if not isinstance(tool, str) or NAME.fullmatch(tool) is None:
             return ConfigFailure("invalid-config", "Invalid mise tool name")
+        if is_table(version):
+            if set(version) - {"version", "asset_pattern", "bin_path"} or any(
+                not isinstance(value, str) or not value for value in version.values()
+            ):
+                return ConfigFailure("invalid-config", f"tools.{tool} has unsupported options")
+            version = version.get("version")
         if not isinstance(version, str) or VERSION.fullmatch(version) is None:
             return ConfigFailure("invalid-config", f"tools.{tool} needs one exact version pin")
         targets.append(_Target("mise", f"{tool}@{version}"))
