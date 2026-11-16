@@ -55,7 +55,7 @@ STARTERS = (
     Shortcut("shell", "Up / Down", "Search history using the prefix already typed"),
     Shortcut("shell", "Right arrow", "Accept a history suggestion at the end of the line"),
     Shortcut("shell", "Ctrl-X ?", "Open this shortcut browser"),
-    Shortcut("shell", "main", "Enter the default-branch worktree"),
+    Shortcut("shell", "main", "Enter the main worktree and restore changes after pull"),
     Shortcut("shell", "rr", "Enter the current repository root"),
     Shortcut("yazi", "F1 / ~", "Show full contextual help"),
     Shortcut("yazi", "s", "Search filenames with fd"),

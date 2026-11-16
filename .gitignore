@@ -3,6 +3,7 @@
 !/.gitignore
 !/.python-version
 !/.zshrc
+!/.zshenv
 !/.zprofile
 !/README.md
 !/pyproject.toml
@@ -51,6 +52,8 @@
 !/.local/bin/git-recents
 !/.local/bin/keys
 !/.local/bin/keys.lock
+!/.local/bin/setup-tools
+!/.local/bin/setup-tools.lock
 !/.local/bin/shell-prompt
 
 !/.pi/
