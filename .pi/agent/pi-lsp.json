@@ -12,11 +12,6 @@
     "biome": {
       "command": ["biome", "lsp-proxy"],
       "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".json", ".jsonc", ".css"]
-    },
-    "kotlin-lsp": {
-      "command": ["kotlin-lsp", "--stdio"],
-      "extensions": [".kt", ".kts"],
-      "skipDirectories": [".gradle", "build"]
     }
   }
 }
