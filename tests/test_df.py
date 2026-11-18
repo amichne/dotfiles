@@ -122,9 +122,13 @@ def test_df_passes_literal_paths_and_native_failures(home: Home) -> None:
     assert command(home, "git", "show", "missing-ref").returncode == expected != 0
 
 
-def test_df_launcher_uses_home_source(home: Home) -> None:
+def test_dotfiles_launcher_uses_home_source(home: Home) -> None:
     initialize(home)
-    result = home.run(str(home.path / ".local/bin/df"), "setup", "plan", "--json")
+    assert not (home.path / ".local/bin/df").exists()
+    help_result = home.run(str(home.path / ".local/bin/dotfiles"), "--help")
+    assert help_result.returncode == 0, help_result.stderr
+    assert help_result.stdout.startswith("Usage: dotfiles ")
+    result = home.run(str(home.path / ".local/bin/dotfiles"), "setup", "plan", "--json")
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["worktree"] == str(home.path)
 

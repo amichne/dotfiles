@@ -388,7 +388,7 @@ def test_full_public_snapshot_installs_runnable_home_commands(
     _ = commit(home, source, "Full public source")
     result = apply(home, source)
     assert result.returncode == 0, result.stderr
-    result = home.run(str(home.path / ".local/bin/df"), "setup", "plan", "--json")
+    result = home.run(str(home.path / ".local/bin/dotfiles"), "setup", "plan", "--json")
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["missing"] == []
     assert json.loads(result.stdout)["status"] == ""

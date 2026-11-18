@@ -238,7 +238,12 @@ def run(home: Path, env: dict[str, str], identity: Result, structured: bool) -> 
             for name in (".zshenv", ".zprofile", ".zshrc"):
                 if not (home / name).is_file():
                     results.append(
-                        Result(f"shell:{name}", "failed", "Startup file is absent", "df setup plan")
+                        Result(
+                            f"shell:{name}",
+                            "failed",
+                            "Startup file is absent",
+                            "dotfiles setup plan",
+                        )
                     )
             # Pi uses its native HOME path, independently of XDG configuration.
             config = home / ".pi/agent/pi-lsp.json"
@@ -298,7 +303,7 @@ def run(home: Path, env: dict[str, str], identity: Result, structured: bool) -> 
             )
         )
     else:
-        print(f"df doctor: {status}")
+        print(f"dotfiles doctor: {status}")
         for row in results:
             print(f"{row.outcome}: {row.name}: {row.detail}")
             if row.repair:

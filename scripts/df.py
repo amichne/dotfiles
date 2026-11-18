@@ -33,7 +33,7 @@ ORIGINS = frozenset(
 REQUIRED = (
     ".zshrc",
     ".zprofile",
-    ".local/bin/df",
+    ".local/bin/dotfiles",
     ".local/bin/keys",
     ".local/bin/keys.lock",
     ".local/bin/shell-prompt",
@@ -43,10 +43,10 @@ REQUIRED = (
     "scripts/worktree_inventory.py",
     ".config/worktree-inventory.toml",
 )
-USAGE = """Usage: df status [args] | diff [args] | add PATH... | commit [args]
-       df git <git arguments> | setup plan [--json]
-       df worktrees --repo PATH [--repo PATH ...] [--config FILE] [--json]
-       df doctor [--json]
+USAGE = """Usage: dotfiles status [args] | diff [args] | add PATH... | commit [args]
+       dotfiles git <git arguments> | setup plan [--json]
+       dotfiles worktrees --repo PATH [--repo PATH ...] [--config FILE] [--json]
+       dotfiles doctor [--json]
 Worktree inventory reads named repositories. Other operations use ~/.dotfiles.git.
 """
 
@@ -219,7 +219,7 @@ def main(argv: list[str]) -> int:
         env = git_environment()
         opened = open_home(home, env)
         identity = (
-            doctor.Result("repository", "failed", opened.reason, "df setup plan")
+            doctor.Result("repository", "failed", opened.reason, "dotfiles setup plan")
             if isinstance(opened, Failure)
             else doctor.Result("repository", "passed", opened.origin, "")
         )
@@ -229,13 +229,13 @@ def main(argv: list[str]) -> int:
             argv[1:], Path(__file__).resolve().parents[1] / ".config/worktree-inventory.toml"
         )
         if isinstance(request, worktree_inventory.Rejected):
-            print(f"df: {request.code}", file=sys.stderr)
+            print(f"dotfiles: {request.code}", file=sys.stderr)
             return 64
         return worktree_inventory.run(request, git_environment())
     home = Path.home().resolve()
     operation = parse(argv, home)
     if isinstance(operation, Failure):
-        print(f"df: {operation.reason}", file=sys.stderr)
+        print(f"dotfiles: {operation.reason}", file=sys.stderr)
         return 64
     if isinstance(operation, _Help):
         print(USAGE, end="")
@@ -243,7 +243,7 @@ def main(argv: list[str]) -> int:
     env = git_environment()
     opened = open_home(home, env)
     if isinstance(opened, Failure):
-        print(f"df: {opened.reason}", file=sys.stderr)
+        print(f"dotfiles: {opened.reason}", file=sys.stderr)
         return 65
     match operation:
         case _Plan():
@@ -260,7 +260,7 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main(sys.argv[1:]))
     except OSError as error:
-        print(f"df: io-failed: {error.strerror}", file=sys.stderr)
+        print(f"dotfiles: io-failed: {error.strerror}", file=sys.stderr)
         raise SystemExit(74) from error
     except KeyboardInterrupt:
         raise SystemExit(130) from None
