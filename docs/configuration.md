@@ -159,7 +159,7 @@ The separate [Ayi repository](https://github.com/amichne/ayi) owns the AI regist
 
 ## Examine the installation
 
-Run `df doctor` for a human-readable report or `df doctor --json` for one JSON object.
+Run `dotfiles doctor` for a human-readable report or `dotfiles doctor --json` for one JSON object.
 The command returns 0 when every probe passes and 1 when a probe fails.
 Invalid command arguments return 64.
 Each item contains `name`, `outcome`, `detail`, and `repair`.

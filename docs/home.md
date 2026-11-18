@@ -15,23 +15,23 @@ The tracked files are the live files.
 ## Daily use
 
 ```sh
-df status
-df diff
-df add .config/starship.toml
-df diff --cached
-df commit -m "Adjust prompt"
-df git log --oneline
-df setup plan --json
+dotfiles status
+dotfiles diff
+dotfiles add .config/starship.toml
+dotfiles diff --cached
+dotfiles commit -m "Adjust prompt"
+dotfiles git log --oneline
+dotfiles setup plan --json
 ```
 
-`df add` stages only its named paths with literal Git path handling.
+`dotfiles add` stages only its named paths with literal Git path handling.
 It rejects HOME itself, the Git metadata directory, and paths outside HOME.
-`df commit` does not add files. Git keeps its configured identity, hooks, and signing behavior.
-Use `df git` for explicit native Git operations.
+`dotfiles commit` does not add files. Git keeps its configured identity, hooks, and signing behavior.
+Use `dotfiles git` for explicit native Git operations.
 Those arguments keep their native effects.
-Use `/bin/df` for the system disk-space command.
+Use `df` for the system disk-space command.
 
-`df setup plan` reads the repository identity, necessary files, and tracked changes.
+`dotfiles setup plan` reads the repository identity, necessary files, and tracked changes.
 It reports missing files and dirty paths without a file replacement or index change.
 Its JSON form contains `repository`, `worktree`, `origin`, `missing`, and `status`.
 A missing file or unexpected repository causes a nonzero exit status.
@@ -75,11 +75,11 @@ Use Worktrunk-created worktrees as existing projects when a native root setting 
 
 ## Worktree inventory
 
-`df worktrees` reads registered worktrees from explicitly named repositories.
+`dotfiles worktrees` reads registered worktrees from explicitly named repositories.
 It needs Git, uv, and Python, but it does not need the bare HOME repository.
 
 ```sh
-df worktrees --repo /path/to/project --repo "/path/with spaces" --json
+dotfiles worktrees --repo /path/to/project --repo "/path/with spaces" --json
 ```
 
 The command reports each path, HEAD, branch, lock, pruning marker, and working-tree state.
@@ -190,7 +190,7 @@ The package command can access the network.
 A package failure preserves its exit status and reports `package-failed`.
 The file update remains in place.
 
-After installation, run `df setup plan`.
+After installation, run `dotfiles setup plan`.
 Use `/reload` or start a fresh Pi session to load changed extensions.
 
 Review `.config/mise/config.toml` before explicit tool installation.

@@ -10,23 +10,23 @@ The source contains:
 - `.config/` for Atuin, mise, Neovim, Starship, Yazi, and the shell helpers.
 - `.local/bin/keys` and `.local/bin/shell-prompt` for shortcuts and Git prompt context.
 - `.pi/agent/` for public Pi resources and the `/deepen` prompt rewrite command.
-- `scripts/df.py` and `.local/bin/df` for selected HOME files in Git.
+- `scripts/df.py` and `.local/bin/dotfiles` for selected HOME files in Git.
 - `scripts/install.py` for reviewed installation and updates with private recovery copies.
 
-Use `df` for the bare repository:
+Use `dotfiles` for the bare repository:
 
 ```sh
-df status
-df diff
-df add .config/starship.toml
-df diff --cached
-df commit -m "Adjust prompt"
-df git log --oneline
-df setup plan
+dotfiles status
+dotfiles diff
+dotfiles add .config/starship.toml
+dotfiles diff --cached
+dotfiles commit -m "Adjust prompt"
+dotfiles git log --oneline
+dotfiles setup plan
 ```
 
-`df add` needs named paths. It rejects HOME itself, Git metadata, and paths outside HOME.
-`df git` passes explicit arguments to native Git.
+`dotfiles add` needs named paths. It rejects HOME itself, Git metadata, and paths outside HOME.
+`dotfiles git` passes explicit arguments to native Git.
 Git controls commit identity, hooks, and signatures.
 Ordinary `git` keeps its normal behavior in project directories.
 

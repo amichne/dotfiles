@@ -55,7 +55,7 @@ def test_doctor_healthy_is_read_only(home: Home) -> None:
     prepare(home)
     before = snapshot(home.path)
     result = subprocess.run(
-        ["df", "doctor", "--json"],
+        ["dotfiles", "doctor", "--json"],
         cwd=home.path.parent,
         env={**home.env, "PATH": f"{home.path / '.local/bin'}:{home.env['PATH']}"},
         capture_output=True,

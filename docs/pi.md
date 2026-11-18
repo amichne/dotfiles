@@ -24,13 +24,13 @@ Existing private instructions and settings remain in place.
 | `prompts/*.md` | Reusable prompts |
 | `pi-lsp.json` | Settings for language servers |
 
-Use `df` to review and commit changes to these files:
+Use `dotfiles` to review and commit changes to these files:
 
 ```sh
-df diff -- .pi/agent
-df add .config/agent-engineering/B0.md
-df diff --cached
-df commit -m "docs: refine Pi instructions"
+dotfiles diff -- .pi/agent
+dotfiles add .config/agent-engineering/B0.md
+dotfiles diff --cached
+dotfiles commit -m "docs: refine Pi instructions"
 ```
 
 ## Rewrite a prompt
