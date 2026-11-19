@@ -1,0 +1,4 @@
+# description: Stage and commit changes with Worktrunk.
+# usage: commit [wt step commit options]
+emulate -L zsh
+wt step commit "$@"
