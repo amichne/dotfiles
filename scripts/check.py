@@ -16,6 +16,7 @@ PYTHON_SOURCE = (
     ".local/bin/keys",
     ".local/bin/setup-tools",
     ".local/bin/austincomplete",
+    ".local/bin/worktrunk-commit-message",
 )
 SHELL_SOURCE = (
     ".agents/setup",
@@ -60,6 +61,7 @@ def main() -> int:
         ["uv", "lock", "--check", "--script", ".local/bin/keys"],
         ["uv", "lock", "--check", "--script", ".local/bin/setup-tools"],
         ["uv", "lock", "--check", "--script", ".local/bin/austincomplete"],
+        ["uv", "lock", "--check", "--script", ".local/bin/worktrunk-commit-message"],
         ["uv", "lock", "--check", "--script", "scripts/df.py"],
         ["uv", "lock", "--check", "--script", "scripts/install.py"],
         ["uv", "lock", "--check", "--script", "scripts/sandbox.py"],
