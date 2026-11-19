@@ -55,6 +55,8 @@
 !/.local/bin/setup-tools
 !/.local/bin/setup-tools.lock
 !/.local/bin/shell-prompt
+!/.local/bin/worktrunk-commit-message
+!/.local/bin/worktrunk-commit-message.lock
 
 !/.pi/
 !/.pi/agent/

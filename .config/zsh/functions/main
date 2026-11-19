@@ -5,7 +5,7 @@ if (( $# != 0 )); then
     print -u2 -- 'usage: main'
     return 2
 fi
-wt switch main || return $?
+wt switch main || command git switch main || return $?
 local changes stash_oid pull_status=0
 changes=$(command git status --porcelain) || return $?
 if [[ -n "$changes" ]]; then

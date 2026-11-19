@@ -1,0 +1,38 @@
+#!/usr/bin/env -S uv run --locked --script
+# /// script
+# requires-python = ">=3.12,<3.14"
+# dependencies = []
+#
+# [[tool.uv.index]]
+# name = "pypi"
+# url = "https://pypi.org/simple"
+# default = true
+# ///
+import sys
+
+
+def main() -> int:
+    message = sys.stdin.read().strip()
+    if message and message != "null":
+        print(message)
+        return 0
+
+    try:
+        with (
+            open("/dev/tty", encoding="utf-8") as terminal,
+            open("/dev/tty", "w", encoding="utf-8") as prompt,
+        ):
+            print("Commit message: ", end="", file=prompt, flush=True)
+            message = terminal.readline().strip()
+    except OSError:
+        print("commit: no terminal for a manual message", file=sys.stderr)
+        return 1
+    if not message or message == "null":
+        print("commit: no message entered", file=sys.stderr)
+        return 1
+    print(message)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
