@@ -1,0 +1,205 @@
+# HOME setup
+
+`amichne/dotfiles` uses HOME as its worktree and `~/.dotfiles.git` for Git metadata.
+The tracked files are the live files.
+
+| Path | Purpose |
+| --- | --- |
+| `~/.dotfiles.git` | Bare Git metadata and the HOME index |
+| `~/.zshenv`, `~/.zshrc`, `~/.zprofile` | Zsh startup |
+| `~/.config` | Tool configuration and the shell helpers |
+| `~/.local/bin` | Small command entry points |
+| `~/.dotfiles/scripts/df.py` | Locked Python manager for the bare repository |
+| `~/.pi/agent` | Pi configuration and public resources |
+
+## Daily use
+
+```sh
+dotfiles status
+dotfiles diff
+dotfiles add .config/starship.toml
+dotfiles diff --cached
+dotfiles commit -m "Adjust prompt"
+dotfiles git log --oneline
+dotfiles setup plan --json
+```
+
+`dotfiles add` stages only its named paths with literal Git path handling.
+It rejects HOME itself, the Git metadata directory, and paths outside HOME.
+`dotfiles commit` does not add files. Git keeps its configured identity, hooks, and signing behavior.
+Use `dotfiles git` for explicit native Git operations.
+Those arguments keep their native effects.
+Use `df` for the system disk-space command.
+
+`dotfiles setup plan` reads the repository identity, necessary files, and tracked changes.
+It reports missing files and dirty paths without a file replacement or index change.
+Its JSON form contains `repository`, `worktree`, `origin`, `missing`, and `status`.
+A missing file or unexpected repository causes a nonzero exit status.
+
+## Worktree location
+
+`~/.zshenv` owns `WORKTREE_ROOT`, which defaults to `$HOME/.worktrees`.
+It derives `WORKTRUNK_WORKTREE_PATH` as
+`$WORKTREE_ROOT/{{ remote_repo }}/{{ branch | sanitize }}`.
+Override `WORKTREE_ROOT` before starting Zsh to choose another root.
+The remote repository name avoids local clone names such as `gradle-build-diff` for `drift`.
+Branch slashes become hyphens. Existing migrated task suffixes can differ from branch names.
+
+Use Worktrunk for CLI-owned worktrees from Pi, Codex, Amp, or an IDE terminal:
+
+```sh
+wt switch --create feature/example
+```
+
+Worktrunk 0.81.0 reads `WORKTRUNK_WORKTREE_PATH` from the environment.
+`.dotfiles/tests/test_home_source.py` checks default and overridden roots in a fresh Zsh process.
+Raw `git worktree add` still requires an explicit destination; Git has no shared root setting.
+`gh` does not apply this environment variable to arbitrary extensions.
+
+Shell-launched tools inherit these exports. Already running agents and IDEs do not.
+GUI launchers do not normally read `.zshenv`.
+For newly launched apps in the current macOS login session, export the derived values:
+
+```sh
+launchctl setenv WORKTREE_ROOT "$WORKTREE_ROOT"
+launchctl setenv WORKTRUNK_WORKTREE_PATH "$WORKTRUNK_WORKTREE_PATH"
+```
+
+Run these commands from a fresh Zsh shell after changing the root.
+These login-session values do not persist across logout and do not update running processes.
+An app must still use Worktrunk for this path template to apply.
+Codex Desktop, native Codex `--worktree`, and JetBrains-managed worktrees are separate owners;
+this setting does not establish their native layout or migrate their session records.
+Do not replace their managed directories with symlinks or move them behind the host's back.
+Use Worktrunk-created worktrees as existing projects when a native root setting is unavailable.
+
+## Worktree inventory
+
+`dotfiles worktrees` reads registered worktrees from explicitly named repositories.
+It needs Git, uv, and Python, but it does not need the bare HOME repository.
+
+```sh
+dotfiles worktrees --repo /path/to/project --repo "/path/with spaces" --json
+```
+
+The command reports each path, HEAD, branch, lock, pruning marker, and working-tree state.
+It keeps every worktree, including clean worktrees.
+It does not prove that a worktree is inactive or that its changes reached another branch.
+A pruning marker does not authorize removal.
+The command does not fetch, prune, remove files, refresh indexes, or inspect process lists.
+It does not measure ignored output sizes.
+
+`.config/worktree-inventory.toml` limits one invocation to 128 worktrees and 30 seconds across all named repositories.
+The command accepts at most eight repositories.
+Use `--config FILE` for explicit limits from another TOML file.
+That file must contain only `max_worktrees` and `timeout_seconds`.
+The accepted ranges are 1–512 worktrees and 1–120 seconds.
+
+JSON output has `version`, `status`, `policy`, and `repositories`.
+Each repository keeps its known worktrees and reports its failure codes.
+A missing registered worktree has an unavailable working-tree state and stays in the inventory.
+A failed Git read or exhausted limit returns `incomplete` with exit status 1.
+Invalid arguments return exit status 64.
+Invalid configuration returns exit status 1 before Git runs, without a `policy` field.
+A complete report returns exit status 0.
+Without `--json`, the command prints the same fields as indented JSON.
+
+A report describes the state at inspection time.
+Concurrent edits can change that state after a read.
+Review ownership, source changes, delivery, and active use before a separate cleanup operation.
+
+## Install or update HOME
+
+Install Git, uv 0.12.9 or later, and Python 3.12 or 3.13 first.
+The default setup also needs Pi 1.3.0, Node.js 22.19 or later, curl, and system tar.
+Use a reviewed, clean checkout of `amichne/dotfiles` as the source.
+A native HOME worktree with a bare `.dotfiles.git` is also supported with `--source /path/to/source-home`.
+The installer checks tracked changes against the source worktree and transfers Git objects from its validated metadata directory.
+It never copies untracked source files.
+Git transport also excludes unreachable objects left by files that were staged and then unstaged.
+Committed history remains part of the reviewed source.
+The installer uses the source's committed `HEAD`.
+It applies the full revision, including public Pi resources.
+After the file update, it installs the latest stable Slopsentral release for Pi.
+The plan lists `slopsentral@latest` without a network request.
+The application resolves the release through Slopsentral's published installer.
+Each application selects the current release, including applications without file changes.
+
+From the reviewed checkout, get the JSON plan:
+
+```sh
+uv run --locked --script .dotfiles/scripts/install.py
+```
+
+The plan lists the commit, changed paths, private files to keep, and a `planId`.
+`source` identifies the worktree; `sourceRepository` identifies its Git transport directory.
+Both identities enter the plan ID and recovery receipt.
+It reads HOME without an index change, fetch, or file replacement.
+Examine the plan before application.
+Then copy its `planId` into this command:
+
+```sh
+uv run --locked --script .dotfiles/scripts/install.py --apply --expected-plan PLAN_ID
+```
+
+A changed source metadata path, commit, HOME index, HOME branch, or planned destination file invalidates the plan.
+The installer revalidates the plan under its application lock before Git writes.
+If source HEAD advances during transfer, application still selects the planned revision or fails without selecting a newer revision.
+The installer creates `~/.dotfiles.git` for a new HOME.
+For an existing installation, it accepts only a fast-forward update.
+It keeps the existing branch and origin.
+The HOME files remain the runtime files.
+
+Dirty source files, dirty HOME files, divergent history, conflicting untracked files, and symlinks stop the plan.
+Ignored files receive the same protection as other untracked files.
+An untracked file with identical bytes and executable permission can become tracked without a conflict.
+Resolve each conflict in a separate reviewed change.
+The installer does not force a checkout or merge divergent commits.
+
+Before a Git write, the installer copies changed preimages under `~/.local/state/dotfiles-install`.
+Its private receipt records the source revision, previous revision, and recovery directory.
+Each recovery directory contains a `files` tree with the original bytes and modes.
+Formerly tracked native instructions, including Pi's `APPEND_SYSTEM.md`, remain as private files after their removal from the public inventory.
+The retired root `AGENTS.md` is removed, with its original bytes in the recovery directory.
+`~/AGENTS.md` is the user-scoped guidance; its home dotfiles section gates itself, so it does not apply to unrelated projects beneath HOME.
+An interrupted update can leave partial state.
+Use its receipt and preimages to examine that state before another application.
+Git failures preserve their exit status and name the failed command stage.
+
+To skip Slopsentral, add `--without-slopsentral` to both the plan and application commands.
+This option also removes the Pi, Node.js, curl, and tar prerequisites when no other package option needs them.
+
+Slopsentral owns its native resources, release admission, and private recovery records.
+The installer uses the [latest release launcher](https://github.com/amichne/slopsentral/releases/latest/download/install-pi.sh).
+It uses `~/.local/state/dotfiles-install/slopsentral` as a stable scope for native recovery.
+HOME does not become a project scope.
+A download or setup failure preserves its exit status and reports `package-failed` with the failed stage.
+The file update remains in place.
+Use a fresh plan before another application.
+
+To include the pinned delegation package, add `--with-pi-subagents` to both commands:
+
+```sh
+uv run --locked --script .dotfiles/scripts/install.py --with-pi-subagents
+uv run --locked --script .dotfiles/scripts/install.py --with-pi-subagents --apply --expected-plan PLAN_ID
+```
+
+This option needs an installed `pi` command.
+After the file update, it runs `pi install npm:pi-subagents@0.79.0` for `~/.pi/agent`.
+The package command can access the network.
+A package failure preserves its exit status and reports `package-failed`.
+The file update remains in place.
+
+After installation, run `dotfiles setup plan`.
+Use `/reload` or start a fresh Pi session to load changed extensions.
+
+Review `.config/mise/config.toml` before explicit tool installation.
+Read [configuration](configuration.md) for shell dependencies.
+Use [Pi setup](pi.md) to register Kast at `~/.pi/agent`.
+Read [Ayi commands](ayi-commands.md) for optional links.
+Ayi commands live in a separate [Ayi checkout](https://github.com/amichne/ayi).
+Generated commands use that checkout's Git index.
+
+Keep credentials, Pi authentication, sessions, caches, and machine overrides outside the public inventory.
+The default-deny `.gitignore` lists the public source paths.
+The repository supplies no Git identity or SSH signing key.

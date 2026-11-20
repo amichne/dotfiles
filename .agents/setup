@@ -58,10 +58,10 @@ printf '==> Toolchains ready (%ss)\n' "$((SECONDS - started))"
 
 printf '==> Python 3.12.14 and locked development dependencies\n'
 uv python install 3.12.14
-uv sync --locked --python 3.12.14
+uv sync --locked --project .dotfiles --python 3.12.14
 # Check native libraries and prepare Pyright before the snapshot is published.
 node --version
-uv run --locked pyright --version
+uv run --locked --project .dotfiles pyright --version
 
 # Amp and services start in new login shells. No installs or network access on activation.
 marker='# dotfiles orb toolchain'
