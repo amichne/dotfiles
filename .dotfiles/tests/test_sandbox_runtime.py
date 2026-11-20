@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+ROOT = Path(__file__).resolve().parents[2]
 pytestmark = pytest.mark.skipif(
     os.environ.get("DOTFILES_SANDBOX") != "1", reason="needs the disposable Docker container"
 )
@@ -38,8 +39,8 @@ def test_container_has_no_outbound_route() -> None:
 
 
 def test_container_source_uses_a_fresh_local_index() -> None:
-    result = subprocess.run(["git", "remote"], capture_output=True, text=True, check=True)
+    result = subprocess.run(["git", "remote"], cwd=ROOT, capture_output=True, text=True, check=True)
     assert result.stdout == ""
-    assert not Path(".dotfiles.git").exists()
-    assert Path(".git/index").is_file()
+    assert not (ROOT / ".dotfiles.git").exists()
+    assert (ROOT / ".git/index").is_file()
     assert Path("/work/src").stat().st_uid == 10001
