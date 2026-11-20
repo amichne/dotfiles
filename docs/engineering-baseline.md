@@ -15,7 +15,7 @@ Native instruction loading needs its own evidence.
 For software work, read Slopsentral's
 [global instructions](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/public/reference/global-instructions.mdx)
 first, then use its
-[task catalog](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/public/reference/catalog.mdx)
+[task catalog](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/source/CATALOG.md)
 to select the procedure before the action it governs. Read detailed references
 when their conditions apply. Reuse verified reads at a consistent revision and
 reconsider the selection when the intended action changes.

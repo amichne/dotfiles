@@ -9,7 +9,7 @@ and validators. File presence alone does not activate guidance in a harness.
 | Intended action | Read before acting |
 | --- | --- |
 | Produce or revise original prose | [Writing](writing.md); preserve requested formats and literal text |
-| Design, change, or review software | Slopsentral [global instructions](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/public/reference/global-instructions.mdx), then its [task catalog](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/public/reference/catalog.mdx) |
+| Design, change, or review software | Slopsentral [global instructions](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/public/reference/global-instructions.mdx), then its [task catalog](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/source/CATALOG.md) |
 | Prepare dotfiles source changes or change installed HOME configuration | [Repository instructions](../../docs/repository-instructions.md), in addition to the applicable shared procedure |
 
 Global instructions take precedence over other development guidance. Select the
