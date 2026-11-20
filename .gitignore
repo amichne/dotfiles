@@ -5,18 +5,14 @@
 !/.zshrc
 !/.zshenv
 !/.zprofile
-!/README.md
-!/pyproject.toml
-!/uv.lock
-!/zensical.toml
-!/containers/
-!/containers/Dockerfile
+!/AGENTS.md
 !/.agents/
 !/.agents/setup
 !/.agents/resume
 !/.github/
 !/.github/workflows/
 !/.github/workflows/sandbox.yml
+!/.github/README.md
 
 !/.config/
 !/.config/atuin/
@@ -40,10 +36,6 @@
 !/.config/zsh/functions/*
 !/.config/shell-prompt/
 !/.config/shell-prompt/*.mjs
-!/.config/agent-engineering/
-!/.config/agent-engineering/B0.md
-!/.config/agent-engineering/writing.md
-!/.config/agent-engineering/catalog.md
 
 
 !/.local/
@@ -77,18 +69,30 @@
 !/.pi/agent/prompts/
 !/.pi/agent/prompts/*.md
 
-!/docs/
-!/docs/*.md
-!/scripts/
-!/scripts/*.py
-!/scripts/*.py.lock
-!/scripts/check.sh
-!/tests/
-!/tests/*.py
-!/tests/*.mjs
+# Repository support stays under .dotfiles/, never the HOME root.
+!/.dotfiles/
+!/.dotfiles/repository.md
+!/.dotfiles/writing.md
+!/.dotfiles/pyproject.toml
+!/.dotfiles/uv.lock
+!/.dotfiles/zensical.toml
+!/.dotfiles/containers/
+!/.dotfiles/containers/Dockerfile
+!/.dotfiles/docs/
+!/.dotfiles/docs/*.md
+!/.dotfiles/scripts/
+!/.dotfiles/scripts/*.py
+!/.dotfiles/scripts/*.py.lock
+!/.dotfiles/scripts/check.sh
+!/.dotfiles/tests/
+!/.dotfiles/tests/*.py
+!/.dotfiles/tests/*.mjs
+# Private controlled-English rules stay local.
+/.dotfiles/controlled-english.md
 
 # Generated state stays outside the source inventory.
 **/.venv/
+/.dotfiles/site/
 **/__pycache__/
 **/.pytest_cache/
 **/.ruff_cache/
