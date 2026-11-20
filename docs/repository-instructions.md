@@ -1,8 +1,14 @@
 # Repository instructions
 
-HOME is the installed worktree. `~/.dotfiles.git` holds its sole Git index.
-The origin is `amichne/dotfiles`.
+For the installed configuration, HOME is the worktree and `~/.dotfiles.git`
+holds its sole Git index. Verify the actual Git directory, worktree, origin,
+revision, and scoped status before editing it; the expected origin is
+`amichne/dotfiles`.
 Keep configuration at its HOME-relative path. Do not create another runtime copy.
+
+For source review or patch preparation, use the verified source checkout or
+snapshot. A missing installed HOME owner does not block that work. Claim native
+installation only after inspecting the actual destination and its producer.
 
 - `.gitignore` owns the default-deny public inventory.
 - `.zshenv` owns the shared worktree-root exports for shell-launched tools.
@@ -17,7 +23,9 @@ Keep configuration at its HOME-relative path. Do not create another runtime copy
   Keep its plans read-only and its recovery copies private.
 - `amichne/ayi` owns the separate AI commands and their installer.
 - `.pi` contains public Pi resources. Keep authentication and sessions private.
-- `.config/agent-engineering/B0.md` owns the global engineering baseline.
+- `.config/agent-engineering` owns distributed personal guidance and its routing.
+  Its catalog selects personal guidance and the shared task catalog.
+  `B0.md` is an optional summary; Slopsentral owns development standards.
   Keep private instructions and hooks outside the tracked inventory.
 - Slopsentral owns the validators and optional detailed skills.
 

@@ -42,6 +42,8 @@
 !/.config/shell-prompt/*.mjs
 !/.config/agent-engineering/
 !/.config/agent-engineering/B0.md
+!/.config/agent-engineering/writing.md
+!/.config/agent-engineering/catalog.md
 
 
 !/.local/

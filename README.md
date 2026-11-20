@@ -47,6 +47,9 @@ The [source instructions](docs/repository-instructions.md) define ownership and 
 Credentials, sessions, caches, and machine overrides stay outside the public inventory.
 The source does not contain a Git identity or SSH signing key.
 
-The short global [engineering baseline B0](.config/agent-engineering/B0.md) defines
-common rules. Read the [baseline guide](docs/engineering-baseline.md) for its scope.
-[Slopsentral](https://github.com/amichne/slopsentral) owns the detailed skills and validators.
+Use the [personal guidance catalog](.config/agent-engineering/catalog.md) for
+writing preferences and the shared task entry point. The optional
+[engineering baseline B0](.config/agent-engineering/B0.md) is a compact reminder.
+Read the [baseline guide](docs/engineering-baseline.md) for native integration.
+[Slopsentral](https://github.com/amichne/slopsentral) owns development standards,
+detailed procedures, and validators.
