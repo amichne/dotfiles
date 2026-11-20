@@ -29,6 +29,32 @@ SHELL_SOURCE = (
     ".dotfiles/scripts/check.sh",
 )
 
+# `node --check` parses .ts as JavaScript on some Node releases. Strip types with
+# Node's own API, then check the JavaScript syntax, so the result does not depend
+# on the installed Node version.
+TYPESCRIPT_CHECK = """
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
+const directory = mkdtempSync(path.join(os.tmpdir(), 'ts-check-'));
+let status = 0;
+for (const file of process.argv.slice(1)) {
+  const stripped = path.join(directory, path.basename(file) + '.mjs');
+  writeFileSync(stripped, stripTypeScriptTypes(readFileSync(file, 'utf8')));
+  const result = spawnSync(process.execPath, ['--check', stripped], { stdio: 'inherit' });
+  if (result.status) { console.error(`syntax check failed: ${file}`); status = result.status; }
+}
+rmSync(directory, { recursive: true, force: true });
+process.exit(status);
+"""
+TYPESCRIPT_SOURCE = (
+    ".pi/agent/extensions/deepen.ts",
+    ".pi/agent/extensions/ask-questions.ts",
+    ".pi/agent/lib/questions.ts",
+)
+
 
 def run(arguments: list[str], env: dict[str, str], cwd: Path = ROOT) -> int:
     print("==> " + " ".join(arguments), flush=True)
@@ -80,9 +106,14 @@ def main() -> int:
             ".dotfiles/tests/deepen.test.mjs",
             ".dotfiles/tests/questions.test.mjs",
         ],
-        ["node", "--check", ".pi/agent/extensions/deepen.ts"],
-        ["node", "--check", ".pi/agent/extensions/ask-questions.ts"],
-        ["node", "--check", ".pi/agent/lib/questions.ts"],
+        [
+            "node",
+            "--no-warnings",
+            "--input-type=module",
+            "-e",
+            TYPESCRIPT_CHECK,
+            *TYPESCRIPT_SOURCE,
+        ],
         ["node", "--check", ".config/shell-prompt/context.mjs"],
         ["node", "--check", ".config/shell-prompt/model.mjs"],
         ["shellcheck", "-S", "warning", *SHELL_SOURCE],
