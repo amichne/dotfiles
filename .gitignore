@@ -12,6 +12,7 @@
 !/.github/
 !/.github/workflows/
 !/.github/workflows/sandbox.yml
+!/.github/workflows/pages.yml
 !/.github/README.md
 
 !/.config/
