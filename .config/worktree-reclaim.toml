@@ -9,4 +9,4 @@ patch_root = "~/.worktrees/patches"
 base_ref = "origin/main"
 patch_changed = true
 # true also removes each reclaimed worktree after its work is saved.
-remove_worktrees = false
+remove_worktrees = true
