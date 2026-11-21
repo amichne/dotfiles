@@ -124,3 +124,22 @@ def test_same_named_worktrees_get_separate_patches(home: Home) -> None:
     patches = {str(found[str(path)]["patch"]) for path in checkouts}
     assert len(patches) == 2
     assert all(found[str(path)]["action"] == "removed-build" for path in checkouts)
+
+
+def test_repository_named_twice_lists_each_worktree_once(home: Home) -> None:
+    root = repository(home)
+    checkout = worktree(home, root, "child")
+    result = command(
+        home,
+        "reclaim",
+        "--repo",
+        str(root),
+        "--repo",
+        str(checkout),
+        "--config",
+        str(config(home)),
+        "--json",
+    )
+    assert result.returncode == 0, result.stderr
+    paths = [row["path"] for row in json.loads(result.stdout)["worktrees"]]
+    assert sorted(paths) == sorted({str(root), str(checkout)})

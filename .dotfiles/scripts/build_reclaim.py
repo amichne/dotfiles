@@ -358,12 +358,17 @@ def run(request: Request, env: dict[str, str]) -> int:
     cwd = Path.cwd().resolve()
     held = daemon_paths(settings.daemon_pattern)
     rows: list[Worktree] = []
+    seen: set[Path] = set()
     for repository in request.repositories:
         raw = git(repository, env, "worktree", "list", "--porcelain", "-z")
         if raw is None:
             rows.append(Worktree(repository, repository, Retain.GIT_FAILED))
             continue
         for index, (path, locked, prunable) in enumerate(registrations(raw)):
+            # Repositories named twice, or as worktrees of each other, list the same paths.
+            if path in seen:
+                continue
+            seen.add(path)
             if index == 0:
                 rows.append(Worktree(repository, path, Retain.MAIN))
             else:
