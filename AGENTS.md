@@ -23,6 +23,14 @@ authorized work without claiming compliance.
 - State each point once. Omit filler, narration of routine commands, and a closing recap.
 - Report each check as passed, failed, skipped, or not run.
 
+## Work
+
+- Change tracked files with the host's file-edit tool, not shell or Python
+  rewrites.
+- End a turn on pending CI, a build, or another process only when a background
+  task or monitor will resume you. Otherwise keep checking, or state what is
+  pending and that you are stopping.
+
 ## Personal repository delivery
 
 - Treat repositories under the GitHub account `amichne` as personal. Treat an
