@@ -12,6 +12,7 @@ runs at all, recent activity alone does not retain a worktree.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -299,7 +300,9 @@ def inspect(
 def save_patch(row: Worktree, settings: Settings, env: dict[str, str], stamp: str) -> Path | None:
     """Write commits beyond the base, uncommitted changes, and untracked files."""
     wt = row.path
-    destination = settings.patch_root / row.repository.name / wt.name / stamp
+    # Worktree names repeat across parents (e.g. <id>/kast), so key by path too.
+    key = f"{wt.name}-{hashlib.sha256(str(wt).encode()).hexdigest()[:8]}"
+    destination = settings.patch_root / row.repository.name / key / stamp
     commits = git(wt, env, "format-patch", "--binary", "--stdout", f"{settings.base_ref}..HEAD")
     tracked = git(wt, env, "diff", "--binary", "HEAD")
     untracked = git(wt, env, "ls-files", "-z", "--others", "--exclude-standard")
@@ -321,7 +324,10 @@ def save_patch(row: Worktree, settings: Settings, env: dict[str, str], stamp: st
         if added.returncode not in (0, 1):
             return None
         pieces.append(added.stdout)
-    destination.mkdir(parents=True, exist_ok=False)
+    try:
+        destination.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        return None
     _ = (destination / "commits.patch").write_bytes(commits)
     _ = (destination / "worktree.patch").write_bytes(b"".join(pieces))
     _ = (destination / "meta.json").write_text(
@@ -369,23 +375,29 @@ def run(request: Request, env: dict[str, str]) -> int:
     for row in rows:
         patch: Path | None = None
         action = "retain" if row.retained else "plan"
-        if request.apply and row.retained is None:
-            if row.needs_patch:
-                patch = save_patch(row, settings, env, stamp)
-                if patch is None:
-                    action = "patch-failed"
-            if action != "patch-failed":
-                if settings.remove_worktrees:
-                    # Work is saved in the catalog (or merged and clean), so force is safe.
-                    gone = git(row.repository, env, "worktree", "remove", "--force", str(row.path))
-                    action = "removed-worktree" if gone is not None else "remove-failed"
-                    if gone is not None:
-                        removed += sum(t.bytes for t in row.targets)
-                else:
-                    for target in row.targets:
-                        shutil.rmtree(target.path)
-                        removed += target.bytes
-                    action = "removed-build"
+        idle_without_output = not row.targets and not settings.remove_worktrees
+        if request.apply and row.retained is None and not idle_without_output:
+            try:
+                if row.needs_patch:
+                    patch = save_patch(row, settings, env, stamp)
+                    if patch is None:
+                        action = "patch-failed"
+                if action != "patch-failed":
+                    if settings.remove_worktrees:
+                        # Work is saved in the catalog (or merged and clean), so force is safe.
+                        gone = git(
+                            row.repository, env, "worktree", "remove", "--force", str(row.path)
+                        )
+                        action = "removed-worktree" if gone is not None else "remove-failed"
+                        if gone is not None:
+                            removed += sum(t.bytes for t in row.targets)
+                    else:
+                        for target in row.targets:
+                            shutil.rmtree(target.path)
+                            removed += target.bytes
+                        action = "removed-build"
+            except OSError:
+                action = "io-failed"
         results.append(
             {
                 "path": str(row.path),

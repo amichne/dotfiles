@@ -103,3 +103,24 @@ def test_invalid_config_and_missing_repository_are_rejected(home: Home) -> None:
     result = command(home, "reclaim", "--repo", str(root), "--config", str(bad))
     assert result.returncode == 64
     assert "invalid-config" in result.stderr
+
+
+def test_same_named_worktrees_get_separate_patches(home: Home) -> None:
+    root = repository(home)
+    _ = home.run("/usr/bin/git", "-C", str(root), "branch", "-M", "main")
+    checkouts: list[Path] = []
+    for parent in ("first", "second"):
+        path = home.path.parent / parent / "kast"
+        path.parent.mkdir()
+        result = home.run(
+            "/usr/bin/git", "-C", str(root), "worktree", "add", "-b", parent, str(path)
+        )
+        assert result.returncode == 0, result.stderr
+        _ = output(path)
+        _ = (path / "source.txt").write_text(f"{parent}\n")
+        checkouts.append(path)
+    report = reclaim(home, root, config(home), "--apply")
+    found = rows(report)
+    patches = {str(found[str(path)]["patch"]) for path in checkouts}
+    assert len(patches) == 2
+    assert all(found[str(path)]["action"] == "removed-build" for path in checkouts)
