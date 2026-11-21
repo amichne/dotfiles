@@ -1,0 +1,12 @@
+# Settings for `dotfiles reclaim`. CLI flags override these.
+# A worktree where a Gradle or Kotlin daemon holds files is always retained.
+# When daemons run, worktrees active within idle_days are also retained;
+# when none run, recent activity alone does not retain a worktree.
+idle_days = 3
+build_names = ["build", ".gradle", ".kotlin", "node_modules", "out"]
+# Uncommitted changes and commits not on base_ref are saved here first.
+patch_root = "~/.worktrees/patches"
+base_ref = "origin/main"
+patch_changed = true
+# true also removes each reclaimed worktree after its work is saved.
+remove_worktrees = false

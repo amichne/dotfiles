@@ -79,6 +79,7 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
         ".dotfiles/scripts/doctor.py",
         ".dotfiles/scripts/df.py.lock",
         ".dotfiles/scripts/worktree_inventory.py",
+        ".dotfiles/scripts/build_reclaim.py",
     )
     for name, content, mode in public_files:
         if any(name == prefix or name.startswith(prefix + "/") for prefix in selected):

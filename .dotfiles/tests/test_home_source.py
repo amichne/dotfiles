@@ -36,6 +36,7 @@ def test_home_source_contains_the_requested_public_files() -> None:
         "shell-prompt",
         "starship.toml",
         "worktree-inventory.toml",
+        "worktree-reclaim.toml",
         "yazi",
         "zsh",
     }
@@ -72,6 +73,7 @@ def test_repository_contains_only_current_source_owners() -> None:
         ".config",
         ".github",
         ".gitignore",
+        ".gradle",
         ".local",
         ".pi",
         ".python-version",

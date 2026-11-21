@@ -46,8 +46,11 @@ REQUIRED = (
 USAGE = """Usage: dotfiles status [args] | diff [args] | add PATH... | commit [args]
        dotfiles git <git arguments> | setup plan [--json]
        dotfiles worktrees --repo PATH [--repo PATH ...] [--config FILE] [--json]
+       dotfiles reclaim --repo PATH [--repo PATH ...] [--config FILE] [--idle-days N]
+                        [--remove-worktrees] [--apply] [--json]
        dotfiles doctor [--json]
-Worktree inventory reads named repositories. Other operations use ~/.dotfiles.git.
+Worktree inventory reads named repositories. Reclaim plans, and with --apply
+removes, build output in idle linked worktrees after saving unmerged work as patches. Other operations use ~/.dotfiles.git.
 """
 
 
@@ -211,6 +214,7 @@ def plan(repository: _BareHome, env: dict[str, str], operation: _Plan) -> int:
 
 def main(argv: list[str]) -> int:
     sys.dont_write_bytecode = True
+    import build_reclaim
     import doctor
     import worktree_inventory
 
@@ -232,6 +236,14 @@ def main(argv: list[str]) -> int:
             print(f"dotfiles: {request.code}", file=sys.stderr)
             return 64
         return worktree_inventory.run(request, git_environment())
+    if argv and argv[0] == "reclaim":
+        reclaim = build_reclaim.parse(
+            argv[1:], Path(__file__).resolve().parents[2] / ".config/worktree-reclaim.toml"
+        )
+        if isinstance(reclaim, build_reclaim.Rejected):
+            print(f"dotfiles: {reclaim.code}", file=sys.stderr)
+            return 64
+        return build_reclaim.run(reclaim, git_environment())
     home = Path.home().resolve()
     operation = parse(argv, home)
     if isinstance(operation, Failure):

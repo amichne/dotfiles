@@ -14,6 +14,9 @@
 !/.github/workflows/sandbox.yml
 !/.github/workflows/pages.yml
 !/.github/README.md
+!/.gradle/
+!/.gradle/init.d/
+!/.gradle/init.d/cache-retention.init.gradle.kts
 
 !/.config/
 !/.config/atuin/
@@ -28,6 +31,7 @@
 !/.config/nvim/
 !/.config/nvim/**
 !/.config/worktree-inventory.toml
+!/.config/worktree-reclaim.toml
 !/.config/prompt.json
 !/.config/starship.toml
 !/.config/yazi/
