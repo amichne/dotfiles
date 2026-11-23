@@ -1,0 +1,166 @@
+#!/usr/bin/env -S uv run --locked --script
+# /// script
+# requires-python = ">=3.12,<3.14"
+# dependencies = []
+#
+# [[tool.uv.index]]
+# name = "pypi"
+# url = "https://pypi.org/simple"
+# default = true
+# ///
+"""Read a Claude Code WorktreeCreate payload and print the new worktree's path.
+
+Worktrunk owns the path, project hooks, and approvals. This adapter only selects
+the base: the current remote default branch, as the `feature` function does.
+Worktrunk's own hook uses the local default branch, which can be stale.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import TypeGuard
+
+FETCH_TIMEOUT_SECONDS = 30
+TEMPLATE = "WORKTRUNK_WORKTREE_PATH"
+
+
+class Failure(Enum):
+    INVALID_PAYLOAD = "invalid-payload"
+    INVALID_NAME = "invalid-name"
+    MISSING_COMMAND = "missing-command"
+    SWITCH_FAILED = "switch-failed"
+    INVALID_RESULT = "invalid-result"
+
+
+@dataclass(frozen=True)
+class Request:
+    cwd: Path
+    name: str
+
+
+def is_mapping(value: object) -> TypeGuard[dict[object, object]]:
+    return isinstance(value, dict)
+
+
+def parse_object(text: str) -> dict[object, object] | None:
+    try:
+        value: object = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return value if is_mapping(value) else None
+
+
+def parse_request(text: str) -> Request | Failure:
+    payload = parse_object(text)
+    if payload is None or payload.get("hook_event_name") != "WorktreeCreate":
+        return Failure.INVALID_PAYLOAD
+    cwd, name = payload.get("cwd"), payload.get("name")
+    if not isinstance(cwd, str) or not isinstance(name, str) or not Path(cwd).is_dir():
+        return Failure.INVALID_PAYLOAD
+    request = Request(Path(cwd), name)
+    # Reject options and revision shorthand such as `-` and `@{-1}`.
+    if name.startswith("-") or git(request, "check-ref-format", f"refs/heads/{name}") is None:
+        return Failure.INVALID_NAME
+    return request
+
+
+def git(request: Request, *arguments: str) -> str | None:
+    result = subprocess.run(
+        ["git", "-C", str(request.cwd), *arguments],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def fetch(request: Request, branch: str) -> bool:
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(request.cwd),
+                "fetch",
+                "--quiet",
+                "origin",
+                f"+refs/heads/{branch}:refs/remotes/origin/{branch}",
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=sys.stderr,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+            timeout=FETCH_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return False
+    return result.returncode == 0
+
+
+def remote_base(request: Request) -> str | None:
+    """The fetched remote default commit, or None to use Worktrunk's default."""
+    prefix = "refs/remotes/origin/"
+    head = git(request, "symbolic-ref", "--quiet", f"{prefix}HEAD")
+    if head is None or not head.startswith(prefix):
+        print("claude-worktree: base=worktrunk-default reason=no-origin-head", file=sys.stderr)
+        return None
+    if not fetch(request, head.removeprefix(prefix)):
+        print("claude-worktree: base=last-fetched reason=fetch-failed", file=sys.stderr)
+    return git(request, "rev-parse", "--verify", "--quiet", f"{head}^{{commit}}")
+
+
+def switch_environment(request: Request) -> dict[str, str]:
+    # Worktrunk rejects `remote_repo` without a remote; use the directory name.
+    environment = dict(os.environ)
+    if TEMPLATE in environment and git(request, "remote", "get-url", "origin") is None:
+        environment[TEMPLATE] = environment[TEMPLATE].replace("{{ remote_repo }}", "{{ repo }}")
+    return environment
+
+
+def create(request: Request) -> Path | Failure:
+    arguments = ["wt", "switch", "--no-cd", "--format", "json"]
+    if git(request, "show-ref", "--verify", f"refs/heads/{request.name}") is None:
+        arguments.append("--create")
+        base = remote_base(request)
+        if base is not None:
+            arguments.extend(["--base", base])
+    result = subprocess.run(
+        [*arguments, request.name],
+        cwd=request.cwd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        env=switch_environment(request),
+        text=True,
+        check=False,
+    )
+    if result.returncode:
+        return Failure.SWITCH_FAILED
+    output = parse_object(result.stdout)
+    path = None if output is None else output.get("path")
+    if not isinstance(path, str) or not Path(path).is_absolute() or not Path(path).is_dir():
+        return Failure.INVALID_RESULT
+    return Path(path)
+
+
+def main() -> int:
+    try:
+        request = parse_request(sys.stdin.read())
+        outcome = request if isinstance(request, Failure) else create(request)
+    except FileNotFoundError:
+        outcome = Failure.MISSING_COMMAND
+    if isinstance(outcome, Failure):
+        print(f"claude-worktree: outcome={outcome.value}", file=sys.stderr)
+        return 1
+    print(outcome)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

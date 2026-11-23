@@ -18,6 +18,7 @@ PYTHON_SOURCE = (
     "../.local/bin/keys",
     "../.local/bin/setup-tools",
     "../.local/bin/austincomplete",
+    "../.local/bin/claude-worktree",
     "../.local/bin/worktrunk-commit-message",
 )
 SHELL_SOURCE = (
