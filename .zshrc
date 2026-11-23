@@ -84,6 +84,57 @@ _shell_keys() {
 }
 zle -N _shell_keys
 bindkey '^X?' _shell_keys
+
+_shell_open_url() {
+    if [[ $OSTYPE == darwin* ]]; then
+        command open "$1"
+    else
+        command xdg-open "$1"
+    fi
+}
+
+_shell_open_origin() {
+    local remote url
+    local -a match
+    local http='^(https?://)([^/@]+@)?([^/]+)(/.+)$'
+    local ssh='^ssh://([^/@]+@)?([^/:]+)(:[0-9]+)?/(.+)$'
+    local scp='^([^/@:]+@)?([[:alnum:]._-]+):([^:].*)$'
+    zle -I
+    remote=$(command git remote get-url origin) || return
+    if [[ $remote =~ $http ]]; then
+        url="${match[1]}${match[3]}${match[4]}"
+    elif [[ $remote =~ $ssh ]]; then
+        url="https://${match[2]}/${match[4]}"
+    elif [[ $remote != *://* && $remote =~ $scp ]]; then
+        url="https://${match[2]}/${match[3]#/}"
+    else
+        zle -M 'The origin has no web address.'
+        return 1
+    fi
+    url=${url%/}
+    _shell_open_url "${url%.git}"
+}
+
+_shell_open_pr() {
+    local url
+    zle -I
+    url=$(GH_PROMPT_DISABLED=1 command gh pr view --json state,url --jq 'select(.state == "OPEN").url') || return
+    if [[ -z $url ]]; then
+        zle -M 'No open pull request for this branch.'
+        return 1
+    fi
+    _shell_open_url "$url"
+}
+
+zle -N _shell_open_origin
+zle -N _shell_open_pr
+bindkey '^G' _shell_open_origin
+bindkey '^[[103;5u' _shell_open_origin
+bindkey '^[[27;5;103~' _shell_open_origin
+bindkey '^[[103;6u' _shell_open_pr
+bindkey '^[[71;6u' _shell_open_pr
+bindkey '^[[27;6;71~' _shell_open_pr
+bindkey '^[[27;6;103~' _shell_open_pr
 # Native prompt remains usable if an integration fails. Startup still returns
 # failure and reports the failed stage; another missing tool cannot hide ZLE.
 PROMPT='%F{cyan}%~%f %(?..%F{red}exit:%?%f)\n%# '
