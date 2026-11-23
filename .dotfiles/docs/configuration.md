@@ -140,6 +140,9 @@ The shell loads `f`, `rr`, and `y` from `.config/zsh/functions`.
 They search with ripgrep, enter the Git root, and return the selected Yazi directory.
 `zs` starts a fresh login shell. Ctrl-W deletes identifier parts and path parts.
 Ctrl-X ? opens `keys`. Ctrl-R uses Atuin history.
+Ctrl-G opens the current repository's `origin` in a browser.
+Ctrl-Shift-G opens the current branch's open GitHub pull request through the authenticated `gh` CLI.
+If both shortcuts open the repository, map Ctrl-Shift-G in your terminal to send Escape followed by `[103;6u`.
 Ctrl-T selects files with a bat preview.
 Set `FZF_CTRL_T_OPTS` in `.zshrc.local` to customize the file preview.
 

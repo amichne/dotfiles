@@ -48,6 +48,8 @@ class Failure:
 
 
 STARTERS = (
+    Shortcut("shell", "Ctrl-G", "Open the Git origin in a browser"),
+    Shortcut("shell", "Ctrl-Shift-G", "Open the current branch's GitHub pull request"),
     Shortcut("shell", "Ctrl-R", "Search Atuin history; select a command before executing"),
     Shortcut("shell", "Ctrl-T", "Select a filename into the command line"),
     Shortcut("shell", "Alt-C", "Select and enter a directory"),
