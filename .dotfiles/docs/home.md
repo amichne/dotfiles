@@ -73,6 +73,32 @@ this setting does not establish their native layout or migrate their session rec
 Do not replace their managed directories with symlinks or move them behind the host's back.
 Use Worktrunk-created worktrees as existing projects when a native root setting is unavailable.
 
+### Claude Code worktrees
+
+`claude-rc` starts Claude Remote Control in the current repository.
+Each session that Remote Control starts gets a new worktree, and no session uses the main checkout.
+Outside a Git worktree, it prints a notice and starts the native shared-directory mode.
+It passes `--continue`, `--session-id`, and `--spawn` to `claude remote-control` without a change.
+
+Claude Code's `WorktreeCreate` and `WorktreeRemove` hooks send its worktrees to Worktrunk.
+The private `~/.claude/settings.json` registers these commands:
+
+| Event | Command |
+| --- | --- |
+| `WorktreeCreate` | `"$HOME/.local/bin/claude-worktree"` |
+| `WorktreeRemove` | `wt config plugins claude hook` |
+
+The hooks apply to Remote Control, `claude --worktree`, and isolated subagents.
+They do not apply to worktrees that the Claude desktop app creates.
+`claude-worktree` fetches the remote default branch and starts the new branch there.
+If the fetch fails, it uses the last fetched commit and prints a notice.
+Without a remote, it uses the local repository name in the path.
+Worktrunk still runs project hooks and requires their approval.
+
+Worktrunk removes a clean worktree and keeps one with uncommitted changes.
+Claude Code does not remove a subagent worktree that these hooks created; remove it with `wt remove`.
+Claude Code does not read `.worktreeinclude` or `worktree.baseRef` when these hooks are present.
+
 ## Worktree inventory
 
 `dotfiles worktrees` reads registered worktrees from explicitly named repositories.

@@ -1,0 +1,19 @@
+# description: Start Claude Remote Control with a new worktree for each session.
+# usage: claude-rc [claude remote-control options]
+emulate -L zsh
+local argument
+# A reattached or explicitly spawned session keeps the caller's own mode.
+for argument in "$@"; do
+    case $argument in
+        -c|--continue|--session-id|--session-id=*|--spawn|--spawn=*|-h|--help)
+            command claude remote-control "$@"
+            return
+            ;;
+    esac
+done
+if [[ $(command git rev-parse --is-inside-work-tree 2>/dev/null) == true ]]; then
+    command claude remote-control --spawn worktree --no-create-session-in-dir "$@"
+else
+    print -u2 -- 'claude-rc: not in a Git worktree; sessions share this directory'
+    command claude remote-control "$@"
+fi
