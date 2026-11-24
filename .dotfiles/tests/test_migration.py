@@ -17,6 +17,8 @@ RETAINED = ".config/mise/config.toml"
 @pytest.fixture
 def legacy(home: Home, public_files: tuple[tuple[str, bytes, int], ...]) -> Installation:
     # Build a real legacy commit offline, then advance the ordinary checkout to the new installer.
+    # The shared HOME fixture includes current assets. The bare revision predates this theme.
+    (home.path / ".config/ghostty/themes/Neon Arcade").unlink()
     source = home.path / "dotfiles"
     source.mkdir()
     assert git(home, source, "init", "-q", "-b", "main").returncode == 0
