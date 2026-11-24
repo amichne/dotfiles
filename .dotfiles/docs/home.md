@@ -1,5 +1,98 @@
 # HOME setup
 
+## Install from an ordinary checkout
+
+This installer manages five destinations. It needs Git, uv 0.12.9 or later, and Python 3.12 or 3.13.
+The interactive shell also uses the tools and Zsh plugins listed in [configuration](configuration.md).
+Install those dependencies separately.
+
+From a checkout, run `./install.sh` to see the destination paths and exact blocks.
+For a new machine, download the bootstrap into an empty working directory.
+
+```sh
+curl -fsSLo install-dotfiles.sh https://raw.githubusercontent.com/amichne/dotfiles/main/install.sh
+/bin/sh install-dotfiles.sh --bootstrap
+```
+
+The remote bootstrap creates an ordinary checkout at `~/dotfiles` before it previews changes to startup files.
+An existing checkout must be clean, have the expected origin, and match the requested commit.
+For a pinned install, use the same full commit ID in the download URL and after `--bootstrap --commit`.
+Read the plan, then apply it with the printed ID.
+
+```sh
+~/dotfiles/install.sh --apply --expected-plan PLAN_ID
+```
+
+| Destination | What the installer adds |
+| --- | --- |
+| `.zshenv`, `.zprofile`, `.zshrc` in `${ZDOTDIR:-$HOME}` | One marked source block per file. Zsh selects the environment, login, and interactive phases. |
+| `git/config` in `${XDG_CONFIG_HOME:-$HOME/.config}` | A marked include for the shared aliases. Personal settings after the include take precedence. |
+| `starship.toml` in the same configuration directory | One link to the checkout. An occupied path stops installation before the installer writes a hook. |
+
+Shared blocks precede personal settings. The installer preserves an initial interpreter line in a startup file.
+Interactive Zsh reads `.zshrc.local` before it initializes tools. It searches personal functions before checkout functions.
+Use the same `ZDOTDIR` and `XDG_CONFIG_HOME` for preview, apply, and removal.
+Symlinked destination parents require a manual decision. For a bare HOME, use [the migration procedure](#migrate-a-bare-home).
+
+Keep the checkout at its installed path. Edit the public files there and use ordinary Git to review changes.
+Fresh shells and Git commands read checkout edits directly. An update to the checkout takes effect on the next read.
+Review incoming changes before advancing the checkout. The bootstrap never advances an existing checkout.
+
+To remove the layer, preview removal and apply its plan ID.
+
+```sh
+~/dotfiles/install.sh --uninstall
+~/dotfiles/install.sh --uninstall --apply --expected-plan PLAN_ID
+```
+
+Removal keeps personal text outside each block, preexisting empty files, and directories.
+An edited marker or replaced Starship link stops removal and identifies the conflicting path.
+Before a change, the installer saves original bytes and modes in a private recovery directory under `~/.local/state/dotfiles-install`.
+Its receipt maps each changed path to a numbered backup or its former link target.
+If an apply stops partway, inspect the receipt and run a fresh preview before retrying.
+
+## Migrate a bare HOME
+
+Migration accepts a clean bare installation on `main` at commit `cbe207a2585b05ebc9b738cb0574a98e3269fab8`.
+It needs the original layout with Zsh startup files in `$HOME` and tool configuration in `$HOME/.config`.
+Staged or unstaged changes to tracked HOME files and registered linked worktrees stop the migration.
+
+From an ordinary checkout that contains the migration command, preview the change.
+
+```sh
+./install.sh --migrate
+```
+
+To obtain the checkout at `~/dotfiles`, run the bootstrap with the migration flag.
+
+```sh
+curl -fsSLo install-dotfiles.sh https://raw.githubusercontent.com/amichne/dotfiles/main/install.sh
+/bin/sh install-dotfiles.sh --bootstrap --migrate
+```
+
+For a pinned installer, put `--commit INSTALLER_COMMIT` before `--migrate` and use that commit in the download URL.
+The installer commit selects the new checkout. The old bare HOME must still match `cbe207a`.
+Review the five destinations and archive path in the plan.
+If you used the bootstrap, change to `~/dotfiles`. From the checkout, apply the printed ID.
+
+```sh
+./install.sh --migrate --apply --expected-plan PLAN_ID
+```
+
+The recovery directory is `~/.local/state/dotfiles-install/bare-main`. Its `files/` tree holds the five originals at their HOME-relative paths.
+The installer replaces the three startup files with source blocks, the Git configuration with an include, and the Starship configuration with a link.
+It moves the bare metadata to `repository.git` in the recovery directory last.
+The remaining HOME files stay in place outside the layer. Manage checkout edits with ordinary Git.
+
+If migration stops partway, run `./install.sh --migrate` from the same checkout.
+The installer accepts each original file or its exact replacement. Inspect other changes at the reported paths.
+Review the new plan and apply its printed ID.
+
+Run `./install.sh` after migration. An empty `changes` list confirms that the five destinations match the checkout.
+Layered uninstall removes the five integrations and preserves the migration archive.
+
+## Full HOME layout
+
 `amichne/dotfiles` uses HOME as its worktree and `~/.dotfiles.git` for Git metadata.
 The tracked files are the live files.
 

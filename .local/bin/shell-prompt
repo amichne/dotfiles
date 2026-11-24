@@ -1,2 +1,6 @@
 #!/bin/sh
-exec node "${XDG_CONFIG_HOME:-$HOME/.config}/shell-prompt/context.mjs" "$@"
+context="${XDG_CONFIG_HOME:-$HOME/.config}/shell-prompt/context.mjs"
+if [ ! -f "$context" ]; then
+    context="${0%/*}/../../.config/shell-prompt/context.mjs"
+fi
+exec node "$context" "$@"

@@ -1,8 +1,24 @@
 # Dotfiles
 
-Shell, editor, prompt, and Pi setup for `amichne/dotfiles`.
-Each file uses its HOME-relative path.
-A bare repository at `~/.dotfiles.git` tracks HOME directly.
+Install the Zsh setup, Git aliases, and Starship theme from an ordinary checkout.
+Git, uv 0.12.9 or later, and Python 3.12 or 3.13 are needed.
+
+```sh
+curl -fsSLo install-dotfiles.sh https://raw.githubusercontent.com/amichne/dotfiles/main/install.sh
+/bin/sh install-dotfiles.sh --bootstrap
+```
+
+The bootstrap obtains the source in `~/dotfiles` and prints a plan.
+Review its five destinations. Apply the plan with its printed ID.
+
+```sh
+~/dotfiles/install.sh --apply --expected-plan PLAN_ID
+```
+
+For an existing development checkout, run `./install.sh` to preview the same installation.
+Read [layered setup](../.dotfiles/docs/home.md#install-from-an-ordinary-checkout) for local overrides, prerequisites, recovery, and removal.
+For a clean bare HOME on `main` at `cbe207a`, preview the [migration](../.dotfiles/docs/home.md#migrate-a-bare-home) with `./install.sh --migrate`.
+For full HOME updates, use the [bare installer](../.dotfiles/docs/home.md#install-or-update-home).
 
 The source contains:
 

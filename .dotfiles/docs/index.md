@@ -1,7 +1,7 @@
 # Dotfiles
 
-Dotfiles tracks selected files in HOME.
-`~/.dotfiles.git` holds the Git index and history.
+Install the shell, Git aliases, and Starship theme from an [ordinary checkout](home.md#install-from-an-ordinary-checkout).
+The full HOME setup uses `~/.dotfiles.git` for its Git index and history.
 
 - Read [HOME setup](home.md) for the layout and daily Git commands.
 - Read [configuration](configuration.md) for shell dependencies and public files.

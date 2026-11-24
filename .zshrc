@@ -4,7 +4,8 @@
 typeset -g _SHELL_CONFIG_RESULT=0
 
 typeset -U path fpath
-path=("$HOME/.local/bin" "${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims" $path /opt/homebrew/bin /usr/local/bin /home/linuxbrew/.linuxbrew/bin)
+_shell_source_root=${${(%):-%x}:A:h}
+path=("$HOME/.local/bin" "${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims" $path /opt/homebrew/bin /usr/local/bin /home/linuxbrew/.linuxbrew/bin "$_shell_source_root/.local/bin")
 
 # Machine-specific additions and preferences, before tool activation.
 if [[ -f ${ZDOTDIR:-$HOME}/.zshrc.local ]]; then
@@ -45,14 +46,16 @@ bindkey '^[[A' up-line-or-beginning-search
 bindkey '^[[B' down-line-or-beginning-search
 
 # Package-manager completion directories must be present before compinit.
-_shell_functions="${XDG_CONFIG_HOME:-$HOME/.config}/zsh/functions"
-if [[ -d $_shell_functions ]]; then
-    fpath=("$_shell_functions" $fpath)
+typeset -aU _shell_function_dirs
+_shell_function_dirs=("${XDG_CONFIG_HOME:-$HOME/.config}/zsh/functions")
+[[ $_shell_source_root == ${HOME:A} ]] || _shell_function_dirs+=("$_shell_source_root/.config/zsh/functions")
+fpath=("${_shell_function_dirs[@]}" $fpath)
+for _shell_functions in "${_shell_function_dirs[@]}"; do
     for _shell_function in "$_shell_functions"/*(.N); do
         [[ ${_shell_function:t} =~ '^[A-Za-z_][A-Za-z0-9_-]*$' ]] && autoload -Uz -- "${_shell_function:t}"
     done
-fi
-unset _shell_functions _shell_function
+done
+unset _shell_source_root _shell_function_dirs _shell_functions _shell_function
 # Explicitly generated completions take precedence; startup never regenerates them.
 _shell_completion_dir="${XDG_CACHE_HOME:-$HOME/.cache}/austincomplete/zsh"
 fpath=("$_shell_completion_dir" $fpath)
