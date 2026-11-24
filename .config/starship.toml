@@ -13,9 +13,14 @@ truncation_symbol = '…/'
 read_only = ' read-only'
 
 [custom.worktrunk]
-command = 'wt list statusline'
+command = '''
+config=$(realpath "${STARSHIP_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml}") &&
+  helper="${config%/*}/shell-prompt/context.mjs" &&
+  [ -r "$helper" ] && command -v node >/dev/null && exec node "$helper" statusline
+git symbolic-ref --quiet --short HEAD || git rev-parse --short HEAD
+'''
 require_repo = true
-when = 'command -v wt >/dev/null 2>&1'
+when = true
 shell = ['sh']
 format = '$output '
 

@@ -151,7 +151,11 @@ Set `FZF_CTRL_T_OPTS` in `.zshrc.local` to customize the file preview.
 Neovim needs version 0.12 or later.
 Its health report names missing language servers and editor dependencies.
 
-Starship runs `wt list statusline` in Git repositories. Worktrunk can refresh its CI cache over the network when the prompt renders. Starship omits the segment if the command exceeds the configured 1.2-second timeout.
+Starship shows the branch, upstream, sync state, file counts, worktree, and cached PR using local Git reads. If Git status is slow, it falls back to the branch or detached commit and marks the status unavailable. An incomplete untracked scan shows `?unknown`.
+
+The first prompt starts a background `wt list statusline --format=json` refresh. Later prompts can add working line counts, divergence and changed lines against the default branch, and the latest reported CI state. For example, `synced` describes the upstream, while `vs origin/main: ↑1 ↓61` describes a separate comparison. A bare `#` from Worktrunk only becomes a PR label if Worktrunk supplies a PR number.
+
+Worktrunk gets four seconds in the background. The prompt reuses a snapshot for the same checkout, branch, and commit across the current and previous 30-second intervals. Missing, invalid, or expired data leaves the local Git labels visible.
 
 The standalone `shell-prompt` command remains available for explicit queries.
 Starship and Worktrunk use the terminal's ANSI palette. In Rex, both follow the selected Rex theme.
