@@ -154,6 +154,7 @@ Its health report names missing language servers and editor dependencies.
 Starship runs `wt list statusline` in Git repositories. Worktrunk can refresh its CI cache over the network when the prompt renders. Starship omits the segment if the command exceeds the configured 1.2-second timeout.
 
 The standalone `shell-prompt` command remains available for explicit queries.
+Starship and Worktrunk use the terminal's ANSI palette. In Rex, both follow the selected Rex theme.
 `shell-prompt context --json` reports repository facts without a network request.
 `shell-prompt refresh-pr` explicitly refreshes PR data through GitHub CLI.
 The helper needs Node and Git. The refresh operation also needs authenticated `gh`.

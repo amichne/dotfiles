@@ -1,21 +1,12 @@
 # Starship owns prompt rendering.
 "$schema" = "https://starship.rs/config-schema.json"
-palette = "codex"
 format = '$directory${custom.worktrunk}$cmd_duration$status$line_break$character'
 add_newline = true
 command_timeout = 1200
 
-[palettes.codex]
-directory = "#3a83f7"
-git = "#bd93f9"
-muted = "#9296ad"
-success = "#50fa7b"
-error = "#ff5555"
-background = "#282a36"
-
 [directory]
 format = '[$path]($style)[$read_only]($read_only_style) '
-style = 'bold directory'
+style = 'bold blue'
 truncation_length = 3
 truncate_to_repo = false
 truncation_symbol = '…/'
@@ -30,13 +21,13 @@ format = '$output '
 
 [cmd_duration]
 min_time = 1500
-format = '[took $duration](muted) '
+format = '[took $duration](bright-black) '
 
 [status]
 disabled = false
-format = '[exit:$status](error) '
+format = '[exit:$status](red) '
 
 [character]
-success_symbol = '[\$](success)'
-error_symbol = '[\$](error)'
-vimcmd_symbol = '[❮](success)'
+success_symbol = '[\$](green)'
+error_symbol = '[\$](red)'
+vimcmd_symbol = '[❮](green)'

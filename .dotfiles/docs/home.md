@@ -131,4 +131,6 @@ Use Worktrunk-created worktrees as existing projects when a native root setting 
 ## Inspect worktrees
 
 Use `wt list` in a repository to see its worktrees. For scripts, use `wt -C /path/to/project list --format=json`.
-Use `dotfiles reclaim --repo /path/to/project` to preview cleanup. After migration, an older launcher can precede the checkout on PATH. Use `~/dotfiles/.local/bin/dotfiles` to select the checkout command.
+From a Git checkout, run `wt reclaim --repo /path/to/project` to preview cleanup.
+Zsh registers this Worktrunk user alias for the checkout's `dotfiles reclaim` command.
+It forwards arguments, including repeated `--repo` paths and an explicit `--apply`.
