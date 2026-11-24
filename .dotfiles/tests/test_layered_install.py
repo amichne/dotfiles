@@ -121,11 +121,17 @@ def test_empty_home_install_round_trip(installation: Installation) -> None:
     installation.apply()
     assert starship.is_symlink()
     assert starship.resolve() == installation.source / ".config/starship.toml"
+    config = home / ".config/ghostty/config.ghostty"
+    theme = config.parent / "themes/Neon Arcade"
+    assert theme.readlink() == installation.source / ".config/ghostty/themes/Neon Arcade"
+    assert config.read_text().splitlines()[1] == "theme = Neon Arcade"
     assert not (home / ".config").is_symlink()
     assert not (home / ".dotfiles.git").exists()
     assert installation.plan()["changes"] == []
     installation.apply("--uninstall")
     assert not starship.is_symlink()
+    assert not config.exists()
+    assert not theme.is_symlink()
     assert installation.plan("--uninstall")["changes"] == []
     for name in (".zshenv", ".zprofile", ".zshrc", ".config/git/config"):
         target = home / name
@@ -153,6 +159,9 @@ def test_layered_consumers_and_personal_files(installation: Installation) -> Non
     original_git = b"[alias]\n\troot = personal-root\n"
     _ = config_file.write_bytes(original_git)
     sibling = config / "git/ignore"
+    ghostty = config / "ghostty/config.ghostty"
+    ghostty.parent.mkdir()
+    _ = ghostty.write_text("font-size = 17\n")
     _ = sibling.write_bytes(b"*.personal\n")
     functions = config / "zsh/functions"
     functions.mkdir(parents=True)
@@ -198,6 +207,7 @@ def test_layered_consumers_and_personal_files(installation: Installation) -> Non
     for name in hooks:
         assert (zdotdir / name).stat().st_mode & 0o777 == 0o640
     assert config_file.read_bytes() == original_git
+    assert ghostty.read_text() == "font-size = 17\n"
     assert sibling.read_bytes() == b"*.personal\n"
 
 

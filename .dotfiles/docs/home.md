@@ -2,7 +2,7 @@
 
 ## Install from an ordinary checkout
 
-This installer manages five destinations. It needs Git, uv 0.12.9 or later, and Python 3.12 or 3.13.
+This installer needs Git, uv 0.12.9 or later, and Python 3.12 or 3.13.
 The interactive shell also uses the tools and Zsh plugins listed in [configuration](configuration.md).
 Install those dependencies separately.
 
@@ -28,6 +28,13 @@ Read the plan, then apply it with the printed ID.
 | `.zshenv`, `.zprofile`, `.zshrc` in `${ZDOTDIR:-$HOME}` | One marked source block per file. Zsh selects the environment, login, and interactive phases. |
 | `git/config` in `${XDG_CONFIG_HOME:-$HOME/.config}` | A marked include for the shared aliases. Personal settings after the include take precedence. |
 | `starship.toml` in the same configuration directory | One link to the checkout. An occupied path stops installation before the installer writes a hook. |
+| `ghostty/themes/Neon Arcade` in the same configuration directory | A link makes the checkout palette available by name in Ghostty. |
+| `ghostty/config.ghostty` in the same configuration directory | A marked block selects Neon Arcade from the checkout. |
+
+Ghostty reads the palette from `.config/ghostty/themes/Neon Arcade` in the checkout.
+Later personal theme or color settings can override it, including those in the macOS Application Support directory.
+For Rex on another Mac, choose **Import Theme File** and select the same file. Import it again after you edit the palette.
+Rex also includes Neon Arcade in its dark theme picker.
 
 Shared blocks precede personal settings. The installer preserves an initial interpreter line in a startup file.
 Interactive Zsh reads `.zshrc.local` before it initializes tools. It searches personal functions before checkout functions.
@@ -88,8 +95,8 @@ If migration stops partway, run `./install.sh --migrate` from the same checkout.
 The installer accepts each original file or its exact replacement. Inspect other changes at the reported paths.
 Review the new plan and apply its printed ID.
 
-Run `./install.sh` after migration. An empty `changes` list confirms that the five destinations match the checkout.
-Layered uninstall removes the five integrations and preserves the migration archive.
+After migration or an update from the five-destination installer, run `./install.sh` to preview the Ghostty theme link and block.
+Apply that plan to add the terminal theme. Layered uninstall preserves the migration archive.
 
 ## Worktree location
 

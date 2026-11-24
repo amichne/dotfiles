@@ -87,8 +87,26 @@ def test_migrate_preserves_other_files_and_archives_git(migration: Installation)
     )
     shell = home.run("/bin/zsh", "-dc", 'print -r -- "$WORKTREE_ROOT"')
     assert shell.returncode == 0 and shell.stdout.strip() == str(home.path / ".worktrees")
-    assert migration.plan()["changes"] == []
+    ghostty = home.path / ".config/ghostty/config.ghostty"
+    theme = migration.source / ".config/ghostty/themes/Neon Arcade"
+    assert migration.plan()["changes"] == [
+        {
+            "path": str(ghostty.parent / "themes/Neon Arcade"),
+            "operation": "link",
+            "source": str(theme),
+            "block": None,
+        },
+        {
+            "path": str(ghostty),
+            "operation": "block",
+            "source": str(theme),
+            "block": "# >>> amichne/dotfiles >>>\ntheme = Neon Arcade\n# <<< amichne/dotfiles <<<\n",
+        },
+    ]
+    migration.apply()
+    assert ghostty.is_file() and migration.plan()["changes"] == []
     migration.apply("--uninstall")
+    assert not ghostty.exists()
     assert not (home.path / ".config/starship.toml").is_symlink()
     assert private.read_text() == "export USER_SETTING=local\n"
     assert (home.path / RETAINED).read_bytes() == retained
@@ -133,7 +151,8 @@ sys.exit(install.main())
     assert hook.read_bytes() == edited and (home.path / ".dotfiles.git").is_dir()
     _ = hook.write_bytes(installed)
     migration.apply("--migrate")
-    assert migration.plan()["changes"] == []
+    migration.apply("--uninstall")
+    assert not (home.path / ".config/ghostty/config.ghostty").exists()
     assert not (home.path / ".dotfiles.git").exists()
 
 

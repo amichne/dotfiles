@@ -29,6 +29,7 @@ def test_home_source_contains_the_requested_public_files() -> None:
     assert {p.name for p in (ROOT / ".config").iterdir()} == {
         "atuin",
         "austincomplete",
+        "ghostty",
         "git",
         "mise",
         "nvim",
@@ -251,6 +252,7 @@ def test_public_inventory_ignores_private_and_generated_state(home: Home) -> Non
         ".pi/agent/sessions/example.jsonl",
         ".config/ayi/config.json",
         ".config/work/config.json",
+        ".config/ghostty/config.ghostty",
         ".zshrc.local",
         "ayi/drafts/task",
         ".local/state/tool/data",
@@ -266,6 +268,7 @@ def test_public_inventory_ignores_private_and_generated_state(home: Home) -> Non
     for path in (
         ".zshrc",
         ".config/starship.toml",
+        ".config/ghostty/themes/Neon Arcade",
         ".local/bin/keys",
         "AGENTS.md",
         ".dotfiles/writing.md",

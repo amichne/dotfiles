@@ -1,6 +1,6 @@
 # Dotfiles
 
-Install the Zsh setup, Git aliases, and Starship theme from an ordinary checkout.
+Install the Zsh setup, Git aliases, Starship prompt, and Neon Arcade terminal theme from an ordinary checkout.
 Git, uv 0.12.9 or later, and Python 3.12 or 3.13 are needed.
 
 ```sh
@@ -9,7 +9,7 @@ curl -fsSLo install-dotfiles.sh https://raw.githubusercontent.com/amichne/dotfil
 ```
 
 The bootstrap obtains the source in `~/dotfiles` and prints a plan.
-Review its five destinations. Apply the plan with its printed ID.
+Review the destinations. Apply the plan with its printed ID.
 
 ```sh
 ~/dotfiles/install.sh --apply --expected-plan PLAN_ID
