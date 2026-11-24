@@ -27,6 +27,10 @@
 !/.config/austincomplete/recipes/*.json
 !/.config/git/
 !/.config/git/config
+!/.config/ghostty/
+!/.config/ghostty/cursor-trail.glsl
+!/.config/ghostty/themes/
+!/.config/ghostty/themes/Neon Arcade
 !/.config/mise/
 !/.config/mise/config.toml
 !/.config/nvim/

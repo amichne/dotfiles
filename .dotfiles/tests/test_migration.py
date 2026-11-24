@@ -17,6 +17,8 @@ RETAINED = ".config/mise/config.toml"
 @pytest.fixture
 def legacy(home: Home, public_files: tuple[tuple[str, bytes, int], ...]) -> Installation:
     # Build a real legacy commit offline, then advance the ordinary checkout to the new installer.
+    # The shared HOME fixture includes current assets. The bare revision predates this theme.
+    (home.path / ".config/ghostty/themes/Neon Arcade").unlink()
     source = home.path / "dotfiles"
     source.mkdir()
     assert git(home, source, "init", "-q", "-b", "main").returncode == 0
@@ -87,8 +89,30 @@ def test_migrate_preserves_other_files_and_archives_git(migration: Installation)
     )
     shell = home.run("/bin/zsh", "-dc", 'print -r -- "$WORKTREE_ROOT"')
     assert shell.returncode == 0 and shell.stdout.strip() == str(home.path / ".worktrees")
-    assert migration.plan()["changes"] == []
+    ghostty = home.path / ".config/ghostty/config.ghostty"
+    theme = migration.source / ".config/ghostty/themes/Neon Arcade"
+    shader = migration.source / ".config/ghostty/cursor-trail.glsl"
+    assert migration.plan()["changes"] == [
+        {
+            "path": str(ghostty.parent / "themes/Neon Arcade"),
+            "operation": "link",
+            "source": str(theme),
+            "block": None,
+        },
+        {
+            "path": str(ghostty),
+            "operation": "block",
+            "source": str(shader),
+            "block": (
+                f"# >>> amichne/dotfiles >>>\ntheme = Neon Arcade\ncustom-shader = {shader}\n"
+                "# <<< amichne/dotfiles <<<\n"
+            ),
+        },
+    ]
+    migration.apply()
+    assert ghostty.is_file() and migration.plan()["changes"] == []
     migration.apply("--uninstall")
+    assert not ghostty.exists()
     assert not (home.path / ".config/starship.toml").is_symlink()
     assert private.read_text() == "export USER_SETTING=local\n"
     assert (home.path / RETAINED).read_bytes() == retained
@@ -133,7 +157,8 @@ sys.exit(install.main())
     assert hook.read_bytes() == edited and (home.path / ".dotfiles.git").is_dir()
     _ = hook.write_bytes(installed)
     migration.apply("--migrate")
-    assert migration.plan()["changes"] == []
+    migration.apply("--uninstall")
+    assert not (home.path / ".config/ghostty/config.ghostty").exists()
     assert not (home.path / ".dotfiles.git").exists()
 
 

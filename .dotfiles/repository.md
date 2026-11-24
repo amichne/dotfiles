@@ -1,6 +1,6 @@
 # Repository instructions
 
-Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installer connects five HOME destinations to the source. Run tests from the checkout with disposable HOME directories.
+Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installer connects HOME destinations to the source. Run tests from the checkout with disposable HOME directories.
 
 ## Owners
 
@@ -18,7 +18,7 @@ Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installe
   prompt context.
 - `.local/bin/dotfiles` runs worktree reclaim from the checkout.
 - Root `install.sh` starts the ordinary-checkout setup. The manifest in
-  `.dotfiles/scripts/layered.py` owns the three Zsh hooks, Git include, and Starship link.
+  `.dotfiles/scripts/layered.py` owns the three Zsh hooks, Git include, Starship link, and Ghostty theme selection.
 - `.dotfiles/scripts/install.py` previews and applies the layer and its removal.
   `migration.py` converts the supported legacy HOME revision.
 - `.pi` contains public Pi resources. `amichne/ayi` owns the AI commands.

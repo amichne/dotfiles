@@ -19,8 +19,8 @@ from layered import (
     check_parents,
     fingerprint,
     inspect,
-    manifest,
     ownership_record,
+    shell_manifest,
     write,
 )
 
@@ -142,7 +142,7 @@ def migrate(
             raise LayerConflict(f"migration already archived the repository at {archived}")
         pending = archive.exists()
         ledger = state / "layered.json"
-        entries = manifest(source, home)
+        entries = shell_manifest(source, home)
         paths = [str(entry.target) for entry in entries]
         owner = File(ownership_record(source, paths, paths), 0o600)
         installed = inspect(ledger)

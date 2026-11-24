@@ -1,4 +1,4 @@
-"""Manage the three Zsh startup files, Git include, and Starship link in one checkout."""
+"""Manage checkout-backed shell, Git, and terminal configuration."""
 
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ class Entry:
     source: Path
     target: Path
     block: bytes | None  # None denotes a symbolic link.
+    previous_block: bytes | None = None
 
 
 def configured_path(name: str, default: Path) -> Path:
@@ -37,7 +38,7 @@ def configured_path(name: str, default: Path) -> Path:
     return path
 
 
-def manifest(source: Path, home: Path) -> tuple[Entry, ...]:
+def shell_manifest(source: Path, home: Path) -> tuple[Entry, ...]:
     zd = configured_path("ZDOTDIR", home)
     config = configured_path("XDG_CONFIG_HOME", home / ".config")
     if any(ord(c) < 32 for c in str(source)):
@@ -59,6 +60,18 @@ def manifest(source: Path, home: Path) -> tuple[Entry, ...]:
     entries.append(Entry(aliases, config / "git/config", include))
     entries.append(Entry(source / ".config/starship.toml", config / "starship.toml", None))
     return tuple(entries)
+
+
+def ghostty_entries(source: Path, home: Path) -> tuple[Entry, Entry]:
+    directory = configured_path("XDG_CONFIG_HOME", home / ".config") / "ghostty"
+    theme = source / ".config/ghostty/themes/Neon Arcade"
+    shader = source / ".config/ghostty/cursor-trail.glsl"
+    selection = b"theme = Neon Arcade"
+    previous = b"\n".join([START, selection, END, b""])
+    block = b"\n".join([START, selection, b"custom-shader = " + os.fsencode(shader), END, b""])
+    return Entry(theme, directory / "themes" / theme.name, None), Entry(
+        shader, directory / "config.ghostty", block, previous
+    )
 
 
 @dataclass(frozen=True)
@@ -118,13 +131,15 @@ def desired(
     data = before.data if before else b""
     mode = before.mode if before else 0o600
     if START in data or END in data:
+        if owned and entry.previous_block is not None:
+            data = data.replace(entry.previous_block, entry.block, 1)
         if not owned or data.count(START) != 1 or data.count(END) != 1 or entry.block not in data:
             raise LayerConflict(f"unrecognized managed block: {entry.target}")
         offset = data.index(entry.block)
         if offset and data[offset - 1 : offset] != b"\n" and data[:offset] != b"\xef\xbb\xbf":
             raise LayerConflict(f"edited managed block: {entry.target}")
         if not uninstall:
-            return before
+            return File(data, mode)
         remainder = data.replace(entry.block, b"", 1)
         return None if created and not remainder else File(remainder, mode)
     if uninstall:
@@ -159,6 +174,7 @@ class Plan:
     identity: str
     revision: str
     ownership: bytes
+    previous: File | None
     changes: tuple[Change, ...]
 
 
@@ -169,9 +185,12 @@ def ownership_record(source: Path, paths: list[str], created: list[str]) -> byte
 def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: bool) -> Plan:
     if os.path.lexists(home / ".dotfiles.git"):
         raise LayerConflict("bare installation requires migration")
-    entries = manifest(source, home)
+    entries = shell_manifest(source, home)
     ledger = inspect(state / "layered.json")
-    paths = [str(e.target) for e in entries]
+    shell_paths = [str(e.target) for e in entries]
+    terminal = ghostty_entries(source, home)
+    paths = [*shell_paths, *(str(e.target) for e in terminal)]
+    owned_paths: list[str] = []
     initial: list[str] = []
     if isinstance(ledger, Link):
         raise LayerConflict(f"unexpected ownership link: {state}")
@@ -184,8 +203,18 @@ def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: 
             initial = [path for path in paths if path in created]
         except (ValueError, KeyError, TypeError) as error:
             raise LayerConflict(f"invalid ownership record: {state}") from error
+        for candidate in (shell_paths, paths):
+            if ledger.data == ownership_record(
+                source, candidate, [p for p in candidate if p in initial]
+            ):
+                owned_paths = candidate
+                break
+        else:
+            raise LayerConflict(f"checkout or destination differs from ownership record: {state}")
     snapshots: list[object] = []
     changes: list[Change] = []
+    if not uninstall or owned_paths == paths:
+        entries = (*entries, *terminal)
     for entry in entries:
         check_parents(entry.target, home)
         if entry.target.is_relative_to(source) or entry.target.is_relative_to(state):
@@ -194,19 +223,20 @@ def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: 
             raise LayerConflict(f"missing or linked checkout file: {entry.source}")
         before = inspect(entry.target)
         name = str(entry.target)
-        if not ledger and before is None:
+        owned = name in owned_paths
+        if not owned and before is None:
             initial.append(name)
         snapshots.append([name, fingerprint(before), digest(entry.source.read_bytes())])
-        if uninstall and not ledger:
+        if uninstall and not owned:
             continue
-        after = desired(entry, before, bool(ledger), name in initial, uninstall)
+        after = desired(entry, before, owned, name in initial, uninstall)
         if before != after:
             changes.append(Change(entry, before, after))
     ownership = ownership_record(source, paths, initial)
-    if ledger and ledger.data != ownership:
-        raise LayerConflict(f"checkout or destination differs from ownership record: {state}")
-    identity = digest(encoded([revision, digest(ownership), bool(ledger), uninstall, snapshots]))
-    return Plan(identity, revision, ownership, tuple(changes))
+    identity = digest(
+        encoded([revision, digest(ownership), fingerprint(ledger), uninstall, snapshots])
+    )
+    return Plan(identity, revision, ownership, ledger, tuple(changes))
 
 
 def write(path: Path, before: Contents, after: Contents, home: Path) -> None:
@@ -282,8 +312,8 @@ def layered_install(
                     _ = (backup / str(i)).write_bytes(before.data)
             _ = (backup / "receipt.json").write_bytes(encoded({**report, "preimages": preimages}))
             print(f"install: recovery-receipt:{backup / 'receipt.json'}", file=sys.stderr)
-            if not uninstall and not ledger.exists():
-                write(ledger, None, File(plan.ownership, 0o600), home)
+            if not uninstall and (not plan.previous or plan.previous.data != plan.ownership):
+                write(ledger, plan.previous, File(plan.ownership, 0o600), home)
             for change in plan.changes:
                 write(change.entry.target, change.before, change.after, home)
         if uninstall and ledger.exists():
