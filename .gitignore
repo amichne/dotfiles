@@ -76,6 +76,7 @@
 
 # Repository support stays under .dotfiles/, never the HOME root.
 !/.dotfiles/
+!/.dotfiles/AGENTS.md
 !/.dotfiles/repository.md
 !/.dotfiles/writing.md
 !/.dotfiles/pyproject.toml
