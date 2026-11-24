@@ -1,42 +1,38 @@
 # Starship owns prompt rendering.
-# Remote counts use local tracking refs; PR information is explicitly refreshed.
 "$schema" = "https://starship.rs/config-schema.json"
-palette = "codex"
-format = '$directory${custom.git_context}$cmd_duration$status$line_break$character'
+format = '$directory${custom.worktrunk}$cmd_duration$status$line_break$character'
 add_newline = true
 command_timeout = 1200
 
-[palettes.codex]
-directory = "#3a83f7"
-git = "#bd93f9"
-muted = "#9296ad"
-success = "#50fa7b"
-error = "#ff5555"
-background = "#282a36"
-
 [directory]
 format = '[$path]($style)[$read_only]($read_only_style) '
-style = 'bold directory'
+style = 'bold blue'
 truncation_length = 3
 truncate_to_repo = false
 truncation_symbol = '…/'
 read_only = ' read-only'
 
-[custom.git_context]
-command = 'shell-prompt context --ansi --settings eyJ2ZXJzaW9uIjoxLCJsaW5lcyI6MiwiZnJhbWUiOiJub25lIiwibWFya2VyIjoiJCIsInBhdGhEZXB0aCI6MywiYmxhbmtMaW5lIjp0cnVlLCJkdXJhdGlvbiI6dHJ1ZSwiZXhpdFN0YXR1cyI6dHJ1ZSwiZHVyYXRpb25NcyI6MTUwMCwiYnJhbmNoIjp0cnVlLCJyZW1vdGUiOnRydWUsInN5bmMiOnRydWUsImNoYW5nZXMiOnRydWUsImNsZWFuIjp0cnVlLCJ3b3JrdHJlZSI6dHJ1ZSwicHIiOnRydWUsImxhYmVscyI6ImNvbXBhY3QiLCJjb2xvcnMiOnsiZGlyZWN0b3J5IjoiIzNhODNmNyIsImdpdCI6IiNiZDkzZjkiLCJtdXRlZCI6IiM5Mjk2YWQiLCJzdWNjZXNzIjoiIzUwZmE3YiIsImVycm9yIjoiI2ZmNTU1NSIsImJhY2tncm91bmQiOiIjMjgyYTM2In19'
+[custom.worktrunk]
+command = '''
+config=$(realpath "${STARSHIP_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml}") &&
+  helper="${config%/*}/shell-prompt/context.mjs" &&
+  [ -r "$helper" ] && command -v node >/dev/null && exec node "$helper" statusline
+git symbolic-ref --quiet --short HEAD || git rev-parse --short HEAD
+'''
+require_repo = true
 when = true
 shell = ['sh']
 format = '$output '
 
 [cmd_duration]
 min_time = 1500
-format = '[took $duration](muted) '
+format = '[took $duration](bright-black) '
 
 [status]
 disabled = false
-format = '[exit:$status](error) '
+format = '[exit:$status](red) '
 
 [character]
-success_symbol = '[\$](success)'
-error_symbol = '[\$](error)'
-vimcmd_symbol = '[❮](success)'
+success_symbol = '[\$](green)'
+error_symbol = '[\$](red)'
+vimcmd_symbol = '[❮](green)'

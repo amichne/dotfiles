@@ -6,11 +6,12 @@ import {homedir} from 'node:os';
 import {createHash,randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {performance} from 'node:perf_hooks';
-import {defaults,validateSettings,parseStatus,parseUntracked,parseWorktrees,gitText,gitANSI} from './model.mjs';
+import {defaults,validateSettings,parseStatus,parseUntracked,parseWorktrees,gitText,gitANSI,gitParts,display} from './model.mjs';
+import {cachedWorktrunk, refreshWorktrunk} from './worktrunk.mjs';
 const exec=promisify(execFile);
 const cacheRoot=join(process.env.XDG_CACHE_HOME||join(homedir(),'.cache'),'config','pull-requests');
 const hash=s=>createHash('sha256').update(s).digest('hex');
-function git(args,cwd,stage,{absentAllowed=false}={}) {
+function readCommand(binary,args,cwd,stage,{absentAllowed=false,timeout=450}={}) {
   // A detached POSIX process group lets the deadline stop Git's helpers as well
   // as Git itself. Never expose stderr, arguments, or repository paths in evidence.
   return new Promise(resolveResult=>{
@@ -21,7 +22,7 @@ function git(args,cwd,stage,{absentAllowed=false}={}) {
         try {process.kill(-child.pid,'SIGKILL');} catch(e) {if(e.code!=='ESRCH') child.kill('SIGKILL');}
       }
     };
-    const child=spawn('git',args,{cwd,detached:true,stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0',LC_ALL:'C'}});
+    const child=spawn(binary,args,{cwd,detached:true,stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0',LC_ALL:'C'}});
     const evidence=result=>({stage,outcome:result,elapsedMs:Math.round(performance.now()-started)});
     const collect=(chunk,retain)=>{
       if(outcome!=='RUNNING') return;
@@ -44,9 +45,10 @@ function git(args,cwd,stage,{absentAllowed=false}={}) {
       if(absentAllowed && code===1) return resolveResult({kind:'complete',stdout:'',evidence:evidence('ABSENT')});
       resolveResult({kind:'unavailable',reason:'git-read-failed',evidence:evidence('FAILED')});
     });
-    const deadline=setTimeout(()=>{outcome='TIMED_OUT';stop();},450);
+    const deadline=setTimeout(()=>{outcome='TIMED_OUT';stop();},timeout);
   });
 }
+const git = (args, cwd, stage, options) => readCommand('git', args, cwd, stage, options);
 async function hasRepository(cwd) {
   if(process.env.GIT_DIR) return true;
   for(let d=resolve(cwd);;d=dirname(d)) {
@@ -62,27 +64,26 @@ async function readCache(key,oid) {
     return {...c,stale:Date.now()-c.checkedAt>15*60*1000||c.oid!==oid};
   } catch {return {kind:'unchecked'};}
 }
-export async function readRepository(cwd=process.cwd()) {
+export async function readRepository(cwd=process.cwd(), {partial=false}={}) {
   try {
     if(!await hasRepository(cwd)) return {kind:'outside'};
-    const [status,paths,worktrees,untrackedRead]=await Promise.all([
+    const [status,paths,worktrees,untrackedRead,origin]=await Promise.all([
       git(['status','--porcelain=v2','--branch','--show-stash','--untracked-files=no','--ignore-submodules=none','-z'],cwd,'status'),
       git(['rev-parse','--path-format=absolute','--show-toplevel','--git-common-dir'],cwd,'paths'),
       git(['worktree','list','--porcelain','-z'],cwd,'worktrees'),
-      git(['ls-files','--others','--exclude-standard','-z'],cwd,'untracked')
+      git(['ls-files','--others','--exclude-standard','-z'],cwd,'untracked'),
+      git(['config','--get','remote.origin.url'],cwd,'origin',{absentAllowed:true})
     ]);
-    const evidence=[status,paths,worktrees,untrackedRead].map(read=>read.evidence);
-    for(const read of [status,paths,worktrees]) if(read.kind!=='complete') return {kind:'unavailable',reason:read.reason,evidence};
+    const evidence=[status,paths,worktrees,untrackedRead,origin].map(read=>read.evidence);
+    const required = partial ? [status, paths] : [status, paths, worktrees, origin];
+    for(const read of required) if(read.kind!=='complete') return {kind:'unavailable',reason:read.reason,evidence};
     const parsed=parseStatus(status.stdout,'none'); if(parsed.kind!=='repository') return {...parsed,evidence};
     const untracked=untrackedRead.kind==='complete'?parseUntracked(untrackedRead.stdout):{kind:'unavailable',reason:untrackedRead.reason};
     const parts=paths.stdout.replace(/\n$/,'').split('\n');
     if(parts.length!==2) return {kind:'unavailable',reason:'unsupported-path',evidence};
     const [root,common]=parts;
-    const origin=await git(['config','--get','remote.origin.url'],cwd,'origin',{absentAllowed:true});
-    evidence.push(origin.evidence);
-    if(origin.kind!=='complete') return {kind:'unavailable',reason:origin.reason,evidence};
-    const key=hash(common+'\0'+(parsed.branch.name||parsed.branch.oid)+'\0'+origin.stdout);
-    return {...parsed,untracked,root,cacheKey:key,evidence,worktree:parseWorktrees(worktrees.stdout,root),pr:await readCache(key,parsed.branch.oid)};
+    const key=origin.kind==='complete' ? hash(common+'\0'+(parsed.branch.name||parsed.branch.oid)+'\0'+origin.stdout) : null;
+    return {...parsed,untracked,root,cacheKey:key,evidence,worktree:worktrees.kind==='complete'?parseWorktrees(worktrees.stdout,root):{kind:'unknown'},pr:key?await readCache(key,parsed.branch.oid):{kind:'unchecked'}};
   } catch {return {kind:'unavailable',reason:'git-read-failed'};}
 }
 export async function refreshPR(cwd=process.cwd()) {
@@ -107,6 +108,37 @@ export async function refreshPR(cwd=process.cwd()) {
 }
 async function main() {
   const [mode,...args]=process.argv.slice(2);
+  if (mode === 'refresh-worktrunk' && args.length === 3) {
+    await refreshWorktrunk(args[0], args[1], Number(args[2]), readCommand);
+    return;
+  }
+  if (mode === 'statusline' && !args.length) {
+    const g = await readRepository(process.cwd(), {partial:true});
+    if (g.kind === 'outside') return;
+    if (g.kind !== 'repository') {
+      const [branch, head] = await Promise.all([
+        git(['symbolic-ref', '--quiet', '--short', 'HEAD'], process.cwd(), 'branch', {timeout: 100}),
+        git(['rev-parse', '--short', 'HEAD'], process.cwd(), 'head', {timeout: 100}),
+      ]);
+      const identity = branch.stdout?.trim() || (head.stdout && `detached ${head.stdout.trim()}`);
+      console.log(identity ? `${display(identity)} · Git status unavailable` : 'Git status unavailable');
+      return;
+    }
+    const snapshot = await cachedWorktrunk(g);
+    const parts = gitParts({...defaults, labels: 'compact'}, g);
+    if (snapshot?.prNumber && (g.pr.kind === 'unchecked' || g.pr.kind === 'unavailable' || g.pr.stale)) {
+      parts.find(part => part.type === 'pr').text = `PR #${snapshot.prNumber}`;
+    }
+    const colors = {branch: '1;35', changes: '33', pr: '34'};
+    const labeled = parts.map(({type, text}) => `\x1b[${colors[type] ?? '37'}m${text}\x1b[0m`);
+    const trackedChanges = g.counts.staged || g.counts.modified || g.counts.conflicted;
+    if (snapshot?.working && (trackedChanges || g.untracked.count > 0)) {
+      labeled.push(`working lines ${display(snapshot.working)}`);
+    }
+    for (const label of snapshot?.labels ?? []) labeled.push(display(label));
+    console.log(labeled.join(' · '));
+    return;
+  }
   if(mode==='refresh-pr') {
     const result=await refreshPR();
     console.log(JSON.stringify(result)); process.exitCode=result.kind==='unavailable'?1:0; return;

@@ -1,17 +1,11 @@
 # Repository instructions
 
-For the installed configuration, HOME is the worktree and `~/.dotfiles.git`
-holds its sole Git index. Verify the actual Git directory, worktree, origin,
-revision, and tracked-only status before editing; the expected origin is
-`amichne/dotfiles`. Keep configuration at its HOME-relative path and do not
-create another runtime copy. For source review or patch preparation, use the
-verified source checkout; a missing installed HOME does not block that work.
+Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installer connects five HOME destinations to the source. Run tests from the checkout with disposable HOME directories.
 
 ## Owners
 
 - `AGENTS.md` owns the user-scoped instructions. `~/.codex/AGENTS.md` and
-  `~/.claude/CLAUDE.md` are private symlinks to `~/AGENTS.md`; keep its home
-  dotfiles section self-gating so it stays inert for unrelated work.
+  `~/.claude/CLAUDE.md` are private symlinks to `~/AGENTS.md`.
 - `.dotfiles/` owns support files: this guide, `writing.md`, the documentation
   site, scripts, tests, the container, and the Python project. Keep repository
   support out of the HOME root so tools and agents never walk HOME to find it.
@@ -22,13 +16,11 @@ verified source checkout; a missing installed HOME does not block that work.
   `.local/bin/setup-tools` owns preview and per-item installation.
 - `.local/bin/keys` owns the shortcut browser; `.config/shell-prompt` owns Git
   prompt context.
-- `.dotfiles/scripts/df.py` owns bare Git selection and read-only inspection;
-  `.local/bin/dotfiles` is its launcher.
+- `.local/bin/dotfiles` runs worktree reclaim from the checkout.
 - Root `install.sh` starts the ordinary-checkout setup. The manifest in
   `.dotfiles/scripts/layered.py` owns the three Zsh hooks, Git include, and Starship link.
-- `.dotfiles/scripts/install.py` owns reviewed HOME installation, fast-forward
-  updates, and the latest Slopsentral setup. Keep its plans read-only and its
-  recovery copies private.
+- `.dotfiles/scripts/install.py` previews and applies the layer and its removal.
+  `migration.py` converts the supported legacy HOME revision.
 - `.pi` contains public Pi resources. `amichne/ayi` owns the AI commands.
   Slopsentral owns development standards, validators, and skills.
 - Private instructions, hooks, credentials, sessions, and
@@ -36,13 +28,9 @@ verified source checkout; a missing installed HOME does not block that work.
 
 ## Change workflow
 
-1. Run tracked-only status (`dotfiles status`) and examine unmerged paths.
-   Do not scan HOME for untracked files; examine one only by its exact path.
-2. Preserve unrelated changes. Never stage all of HOME or unrelated edits in
-   `~/.zshrc`.
-3. Stage tracked changes with `dotfiles add <path>` and each new path explicitly;
-   a new path also needs its `.gitignore` allowlist entry.
-4. Examine the staged paths and the staged diff before committing.
+1. Examine `git status` and preserve unrelated changes.
+2. Stage each intended path. A new public path must match the inventory in `.gitignore`.
+3. Review the staged diff before committing.
 
 ## Rules
 

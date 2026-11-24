@@ -35,7 +35,6 @@ def test_home_source_contains_the_requested_public_files() -> None:
         "prompt.json",
         "shell-prompt",
         "starship.toml",
-        "worktree-inventory.toml",
         "worktree-reclaim.toml",
         "yazi",
         "zsh",
@@ -58,8 +57,6 @@ def test_home_source_contains_the_requested_public_files() -> None:
 
 def test_repository_contains_only_current_source_owners() -> None:
     git = ["git", "-C", str(ROOT)]
-    if (ROOT / ".dotfiles.git").is_dir():
-        git = ["git", f"--git-dir={ROOT / '.dotfiles.git'}", f"--work-tree={ROOT}"]
     result = subprocess.run(
         [*git, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         cwd=ROOT,
@@ -244,3 +241,34 @@ def test_prompt_launcher_uses_the_direct_source(home: Home) -> None:
     )
     assert result.returncode == 2
     assert "stage=settings outcome=invalid" in result.stderr
+
+
+def test_public_inventory_ignores_private_and_generated_state(home: Home) -> None:
+    assert home.run("git", "init", "--quiet").returncode == 0
+    for path in (
+        ".ssh/id_ed25519",
+        ".pi/agent/auth.json",
+        ".pi/agent/sessions/example.jsonl",
+        ".config/ayi/config.json",
+        ".config/work/config.json",
+        ".zshrc.local",
+        "ayi/drafts/task",
+        ".local/state/tool/data",
+        ".dotfiles.git/index",
+        ".codex/AGENTS.md",
+        ".codex/hooks.json",
+        ".pi/agent/AGENTS.md",
+        ".pi/agent/extensions/private.ts",
+        ".dotfiles/controlled-english.md",
+        "docs/stray.md",
+    ):
+        assert home.run("git", "check-ignore", path).returncode == 0, path
+    for path in (
+        ".zshrc",
+        ".config/starship.toml",
+        ".local/bin/keys",
+        "AGENTS.md",
+        ".dotfiles/writing.md",
+        ".dotfiles/repository.md",
+    ):
+        assert home.run("git", "check-ignore", path).returncode == 1, path

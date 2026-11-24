@@ -151,7 +151,16 @@ Set `FZF_CTRL_T_OPTS` in `.zshrc.local` to customize the file preview.
 Neovim needs version 0.12 or later.
 Its health report names missing language servers and editor dependencies.
 
-Starship uses `.config/starship.toml` and `shell-prompt` for local Git context.
+Starship shows the branch, upstream, sync state, file counts, worktree, and cached PR using local Git reads. If Git status is slow, it falls back to the branch or detached commit and marks the status unavailable. An incomplete untracked scan shows `?unknown`.
+
+`→ origin//` means the upstream on `origin` has the same name as the local branch. Other upstreams display their full name.
+
+The first prompt starts a background `wt list statusline --format=json` refresh. Later prompts can add working line counts, divergence and changed lines against the default branch, and the latest reported CI state. For example, `synced` describes the upstream, while `vs origin/main: ↑1 ↓61` describes a separate comparison. A bare `#` from Worktrunk only becomes a PR label if Worktrunk supplies a PR number.
+
+Worktrunk gets four seconds in the background. The prompt reuses a snapshot for the same checkout, branch, and commit across the current and previous 30-second intervals. Missing, invalid, or expired data leaves the local Git labels visible.
+
+The standalone `shell-prompt` command remains available for explicit queries.
+Starship and Worktrunk use the terminal's ANSI palette. In Rex, both follow the selected Rex theme.
 `shell-prompt context --json` reports repository facts without a network request.
 `shell-prompt refresh-pr` explicitly refreshes PR data through GitHub CLI.
 The helper needs Node and Git. The refresh operation also needs authenticated `gh`.
@@ -160,28 +169,7 @@ The helper needs Node and Git. The refresh operation also needs authenticated `g
 Use [Pi setup](pi.md) for the public inventory and Kast registration.
 The separate [Ayi repository](https://github.com/amichne/ayi) owns the AI registry and its optional installed links.
 
-## Examine the installation
-
-Run `dotfiles doctor` for a human-readable report or `dotfiles doctor --json` for one JSON object.
-The command returns 0 when every probe passes and 1 when a probe fails.
-Invalid command arguments return 64.
-Each item contains `name`, `outcome`, `detail`, and `repair`.
-The report uses `healthy` or `unhealthy` for its overall status.
-Item outcomes are `passed`, `failed`, `unavailable`, `timed-out`, and `invalid-data`.
-
-The doctor examines the bare repository identity before other probes.
-It reuses the setup inventory and compares each installed mise pin with the selected installation.
-It also examines Brew packages, shell dependencies, Zsh syntax, registered completion caches, and Pi executables.
-A Neovim process reads the existing editor configuration and reports its version and server executables.
-That process disables plugins, initialization, swap files, and ShaDa.
-
-The doctor does not install tools, regenerate completions, or apply repairs.
-It does not load private shell files or start language servers.
-Shell syntax does not prove interactive startup.
-Executable presence does not prove editor attachment or semantic queries.
-Mise selection does not prove that PATH selects the same executable.
-Use `nvim '+checkhealth editor'` for the existing editor diagnostics.
-Each subprocess has a ten-second limit and a 64 KiB output limit.
+Use `nvim '+checkhealth editor'` for editor diagnostics.
 
 Setup accepts exact version strings and tables with `version`, `asset_pattern`, and `bin_path`.
 Table values must be nonempty strings, and `version` must contain an exact pin.

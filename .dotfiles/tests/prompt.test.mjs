@@ -2,10 +2,12 @@ import test, {after} from 'node:test';
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {mkdtemp, writeFile, readFile, rm, mkdir} from 'node:fs/promises';
+import {mkdtemp, writeFile, readFile, realpath, rm, mkdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {performance} from 'node:perf_hooks';
+import {stripVTControlCharacters} from 'node:util';
+import {fileURLToPath} from 'node:url';
 import {
   defaults,
   gitANSI,
@@ -59,15 +61,72 @@ async function contextProcess(repo, env) {
   return JSON.parse(result.stdout);
 }
 
+const renderer = fileURLToPath(new URL('../../.config/shell-prompt/context.mjs', import.meta.url));
+async function statusline(repo, env) {
+  const result = await exec(process.execPath, [renderer, 'statusline'], {
+    cwd: repo, env: {...runtimeEnv, ...env}, timeout: 1200,
+  });
+  return stripVTControlCharacters(result.stdout.trimEnd());
+}
+
+test('a blocked Worktrunk cannot delay the local labels; a later redraw adds labeled facts', async t => {
+  const {root, repo, git} = await fixture(t);
+  const oid = (await git('rev-parse', 'HEAD')).stdout.trim();
+  const row = {
+    branch: 'fixture-main', head: {sha:oid},
+    worktree: {path:await realpath(repo), changes:{diff:{added:270, deleted:1}}},
+    default_branch: {ahead:1, behind:61, diff:{added:63, deleted:27}},
+    checks: {status:'failed', source:'branch', stale:false},
+  };
+  const env = {PATH:root + ':/usr/bin:/bin', XDG_CACHE_HOME:join(root, 'cache')};
+  await writeFile(join(root, 'report'), JSON.stringify({schema:2, repo:{default_branch:'main'}, items:[row]}));
+  await writeFile(join(root, 'wt'), [
+    '#!/bin/sh',
+    '[ "$*" = "--config-set list.json-schema=2 list statusline --format=json" ] || exit 64',
+    'while [ ! -f "$PWD/../release" ]; do sleep 0.05; done',
+    'cat "$PWD/../report"',
+  ].join('\n'), {mode:0o755});
+  await writeFile(join(repo, 'tracked'), 'changed\n');
+  const first = await statusline(repo, env);
+  assert.match(first, /^fixture-main · no upstream · !1 · PR not checked$/);
+  await writeFile(join(root, 'release'), '');
+  const deadline = performance.now() + 3500;
+  let warm;
+  do {
+    await new Promise(done => setTimeout(done, 40));
+    warm = await statusline(repo, env);
+  } while (!warm.includes('branch CI failed') && performance.now() < deadline);
+  assert.equal(warm, first + ' · working lines +270 -1 · vs main: ↑1 ↓61, +63 -27 lines · branch CI failed');
+  await git('restore', 'tracked');
+  const clean = await statusline(repo, env);
+  assert.match(clean, / · clean · /);
+  assert.doesNotMatch(clean, /working lines/);
+  await git('switch', '-c', 'same-commit-other-branch');
+  assert.doesNotMatch(await statusline(repo, env), /working lines|vs main|CI failed/);
+});
+
+test('a slow Git status keeps branch identity and never claims the worktree is clean', async t => {
+  const {root, repo} = await fixture(t);
+  await writeFile(join(root, 'git'), '#!/bin/sh\nif [ "$1" = status ]; then exec sleep 10; fi\nexec /usr/bin/git "$@"\n', {mode:0o755});
+  assert.equal(await statusline(repo, {PATH:root + ':/usr/bin:/bin'}), 'fixture-main · Git status unavailable');
+});
+
 test('Git context preserves remote, divergence, worktree, and pull request meaning', () => {
   assert.deepEqual(gitParts(defaults, repository).map(part => part.text), [
     'feature/prompt-editor',
-    '→ origin/feature/prompt-editor',
+    '→ origin//',
     '2 ahead / 1 behind',
     '1 staged 3 modified 1 stashed',
     'wt:feature-worktree / 3 total',
     'PR #42 → main',
   ]);
+});
+
+test('upstreams with another branch or remote keep their full name', () => {
+  for (const name of ['origin/main', 'origin/other/feature/prompt-editor', 'fork/feature/prompt-editor']) {
+    const g = {...repository, tracking: {...repository.tracking, name}};
+    assert.equal(gitParts(defaults, g).find(part => part.type === 'remote').text, `→ ${name}`);
+  }
 });
 
 test('terminal Git output carries the same semantic fields with bounded color escapes', () => {

@@ -31,7 +31,6 @@
 !/.config/mise/config.toml
 !/.config/nvim/
 !/.config/nvim/**
-!/.config/worktree-inventory.toml
 !/.config/worktree-reclaim.toml
 !/.config/prompt.json
 !/.config/starship.toml

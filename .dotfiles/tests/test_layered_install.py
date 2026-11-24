@@ -9,9 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from .conftest import Home
+from .conftest import ORIGIN, Home, commit, git
 from .test_home_source import prepare_integrations
-from .test_install import ORIGIN, commit, git
 
 
 @dataclass(frozen=True)
@@ -100,6 +99,17 @@ def installation(home: Home, public_files: tuple[tuple[str, bytes, int], ...]) -
     assert git(clean_home, source, "remote", "add", "origin", ORIGIN).returncode == 0
     _ = commit(clean_home, source, "Public source")
     return Installation(clean_home, source)
+
+
+def test_direct_installer_defaults_to_the_checkout_layer(installation: Installation) -> None:
+    script = installation.source / ".dotfiles/scripts/install.py"
+    home = installation.home
+    result = home.run("uv", "run", "--locked", "--script", str(script))
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == installation.plan()
+    for option in ("--with-pi-subagents", "--without-slopsentral"):
+        assert installation.run(option).returncode == 2
+    assert not (home.path / ".dotfiles.git").exists()
 
 
 def test_empty_home_install_round_trip(installation: Installation) -> None:

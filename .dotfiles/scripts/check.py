@@ -90,7 +90,7 @@ def main() -> int:
         ["uv", "run", "--locked", "pytest", "-q"],
         *(
             ["uv", "lock", "--check", "--script", name]
-            for name in (*PYTHON_SOURCE[2:], "scripts/df.py", "scripts/install.py")
+            for name in (*PYTHON_SOURCE[2:], "scripts/worktrees.py", "scripts/install.py")
         ),
         ["uv", "lock", "--check", "--script", "scripts/sandbox.py"],
         ["uv", "run", "--locked", "--script", "scripts/sandbox.py", "--self-test"],
@@ -161,8 +161,6 @@ def main() -> int:
     if status:
         return status
     git = ["git", "-C", str(ROOT)]
-    if (ROOT / ".dotfiles.git").is_dir():
-        git = ["git", f"--git-dir={ROOT / '.dotfiles.git'}", f"--work-tree={ROOT}"]
     status = run([*git, "diff", "--check"], env)
     if status:
         return status

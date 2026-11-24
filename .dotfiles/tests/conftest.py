@@ -63,8 +63,6 @@ class Home:
 
 @pytest.fixture
 def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Home:
-    if (ROOT / ".dotfiles.git").is_dir():
-        pytest.fail("Use a public source snapshot or development checkout, not the installed HOME")
     path = tmp_path / "home with spaces"
     path.mkdir()
     selected = (
@@ -75,11 +73,6 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
         ".config",
         ".local",
         ".pi",
-        ".dotfiles/scripts/df.py",
-        ".dotfiles/scripts/doctor.py",
-        ".dotfiles/scripts/df.py.lock",
-        ".dotfiles/scripts/worktree_inventory.py",
-        ".dotfiles/scripts/build_reclaim.py",
     )
     for name, content, mode in public_files:
         if any(name == prefix or name.startswith(prefix + "/") for prefix in selected):
@@ -112,3 +105,37 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
         "GIT_CONFIG_GLOBAL": os.devnull,
     }
     return Home(path, tools, env)
+
+
+ORIGIN = "git@github.com:amichne/dotfiles.git"
+
+
+def git(home: Home, directory: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    if (directory / ".dotfiles.git").is_dir():
+        return home.run(
+            "/usr/bin/git",
+            "-C",
+            str(directory),
+            f"--git-dir={directory / '.dotfiles.git'}",
+            f"--work-tree={directory}",
+            *args,
+        )
+    return home.run("/usr/bin/git", "-C", str(directory), *args)
+
+
+def commit(home: Home, source: Path, message: str) -> str:
+    assert git(home, source, "add", "--all").returncode == 0
+    result = git(
+        home,
+        source,
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        message,
+    )
+    assert result.returncode == 0, result.stderr
+    return git(home, source, "rev-parse", "HEAD").stdout.strip()

@@ -79,7 +79,10 @@ export function gitParts(s,g) {
   if(g.kind!=='repository') return [{type:'error',text:'Git unavailable'}];
   const result=[]; const add=(type,text)=>result.push({type,text}); const compact=s.labels==='compact';
   if(s.branch) add('branch',g.branch.kind==='detached'?`detached ${g.branch.oid.slice(0,7)}`:display(g.branch.name));
-  if(s.remote && g.tracking.kind!=='untracked') add('remote',`→ ${display(g.tracking.name)}`);
+  if(s.remote && g.tracking.kind!=='untracked') {
+    const sameOriginBranch = g.branch.kind === 'named' && g.tracking.name === `origin/${g.branch.name}`;
+    add('remote', `→ ${sameOriginBranch ? 'origin//' : display(g.tracking.name)}`);
+  }
   if(s.sync) {
     switch(g.tracking.kind) {
       case 'untracked': add('sync','no upstream'); break;

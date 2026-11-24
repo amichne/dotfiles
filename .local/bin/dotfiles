@@ -1,2 +1,2 @@
 #!/bin/sh
-exec uv run --locked --script "$HOME/.dotfiles/scripts/df.py" "$@"
+exec uv run --locked --script "${0%/*}/../../.dotfiles/scripts/worktrees.py" "$@"

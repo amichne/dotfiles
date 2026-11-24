@@ -113,20 +113,10 @@ def test_snapshot_excludes_ignored_files_even_when_git_tracks_them(
     assert index.read_bytes() == before
 
 
-def test_snapshot_supports_a_bare_home_without_its_metadata(source: Path, tmp_path: Path) -> None:
+def test_snapshot_rejects_a_legacy_home(source: Path, tmp_path: Path) -> None:
     shutil.rmtree(source / ".git")
-    metadata = source / ".dotfiles.git"
-    _ = subprocess.run(
-        ["git", "init", "--quiet", "--bare", str(metadata)], check=True, capture_output=True
-    )
-    _ = subprocess.run(
-        ["git", f"--git-dir={metadata}", f"--work-tree={source}", "add", ".gitignore", "public"],
-        cwd=source,
-        check=True,
-        capture_output=True,
-    )
+    _ = subprocess.run(["git", "init", "--bare", str(source / ".dotfiles.git")], check=True)
     output = tmp_path / "bare.tar"
     result = invoke(source, output)
-    assert result.returncode == 0, result.stderr
-    with tarfile.open(output) as bundle:
-        assert set(bundle.getnames()) == {"src/.gitignore", "src/public"}
+    assert result.returncode != 0 and "not-source-root" in result.stderr
+    assert not output.exists()
