@@ -114,12 +114,19 @@ test('a slow Git status keeps branch identity and never claims the worktree is c
 test('Git context preserves remote, divergence, worktree, and pull request meaning', () => {
   assert.deepEqual(gitParts(defaults, repository).map(part => part.text), [
     'feature/prompt-editor',
-    '→ origin/feature/prompt-editor',
+    '→ origin//',
     '2 ahead / 1 behind',
     '1 staged 3 modified 1 stashed',
     'wt:feature-worktree / 3 total',
     'PR #42 → main',
   ]);
+});
+
+test('upstreams with another branch or remote keep their full name', () => {
+  for (const name of ['origin/main', 'origin/other/feature/prompt-editor', 'fork/feature/prompt-editor']) {
+    const g = {...repository, tracking: {...repository.tracking, name}};
+    assert.equal(gitParts(defaults, g).find(part => part.type === 'remote').text, `→ ${name}`);
+  }
 });
 
 test('terminal Git output carries the same semantic fields with bounded color escapes', () => {
