@@ -9,7 +9,7 @@
 # url = "https://pypi.org/simple"
 # default = true
 # ///
-"""Inspect or reclaim worktrees in explicitly named repositories."""
+"""Reclaim worktrees in explicitly named repositories."""
 
 from __future__ import annotations
 
@@ -17,12 +17,10 @@ import sys
 from pathlib import Path
 
 import build_reclaim
-import worktree_inventory
 from git_environment import git_environment
 
-USAGE = """Usage: dotfiles worktrees --repo PATH [--repo PATH ...] [--config FILE] [--json]
-       dotfiles reclaim --repo PATH [--repo PATH ...] [--config FILE] [--idle-days N]
-                        [--remove-worktrees] [--apply] [--json]
+USAGE = """Usage: dotfiles reclaim --repo PATH [--repo PATH ...] [--config FILE] [--idle-days N]
+                 [--remove-worktrees] [--apply] [--json]
 """
 
 
@@ -30,14 +28,6 @@ def main(argv: list[str]) -> int:
     if argv in ([], ["--help"], ["-h"], ["help"]):
         print(USAGE, end="")
         return 0
-    if argv[0] == "worktrees":
-        request = worktree_inventory.parse(
-            argv[1:], Path(__file__).resolve().parents[2] / ".config/worktree-inventory.toml"
-        )
-        if isinstance(request, worktree_inventory.Rejected):
-            print(f"dotfiles: {request.code}", file=sys.stderr)
-            return 64
-        return worktree_inventory.run(request, git_environment())
     if argv[0] == "reclaim":
         reclaim = build_reclaim.parse(
             argv[1:], Path(__file__).resolve().parents[2] / ".config/worktree-reclaim.toml"

@@ -35,7 +35,6 @@ def test_home_source_contains_the_requested_public_files() -> None:
         "prompt.json",
         "shell-prompt",
         "starship.toml",
-        "worktree-inventory.toml",
         "worktree-reclaim.toml",
         "yazi",
         "zsh",

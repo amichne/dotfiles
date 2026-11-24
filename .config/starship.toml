@@ -1,8 +1,7 @@
 # Starship owns prompt rendering.
-# Remote counts use local tracking refs; PR information is explicitly refreshed.
 "$schema" = "https://starship.rs/config-schema.json"
 palette = "codex"
-format = '$directory${custom.git_context}$cmd_duration$status$line_break$character'
+format = '$directory${custom.worktrunk}$cmd_duration$status$line_break$character'
 add_newline = true
 command_timeout = 1200
 
@@ -22,9 +21,10 @@ truncate_to_repo = false
 truncation_symbol = '…/'
 read_only = ' read-only'
 
-[custom.git_context]
-command = 'shell-prompt context --ansi --settings eyJ2ZXJzaW9uIjoxLCJsaW5lcyI6MiwiZnJhbWUiOiJub25lIiwibWFya2VyIjoiJCIsInBhdGhEZXB0aCI6MywiYmxhbmtMaW5lIjp0cnVlLCJkdXJhdGlvbiI6dHJ1ZSwiZXhpdFN0YXR1cyI6dHJ1ZSwiZHVyYXRpb25NcyI6MTUwMCwiYnJhbmNoIjp0cnVlLCJyZW1vdGUiOnRydWUsInN5bmMiOnRydWUsImNoYW5nZXMiOnRydWUsImNsZWFuIjp0cnVlLCJ3b3JrdHJlZSI6dHJ1ZSwicHIiOnRydWUsImxhYmVscyI6ImNvbXBhY3QiLCJjb2xvcnMiOnsiZGlyZWN0b3J5IjoiIzNhODNmNyIsImdpdCI6IiNiZDkzZjkiLCJtdXRlZCI6IiM5Mjk2YWQiLCJzdWNjZXNzIjoiIzUwZmE3YiIsImVycm9yIjoiI2ZmNTU1NSIsImJhY2tncm91bmQiOiIjMjgyYTM2In19'
-when = true
+[custom.worktrunk]
+command = 'wt list statusline'
+require_repo = true
+when = 'command -v wt >/dev/null 2>&1'
 shell = ['sh']
 format = '$output '
 

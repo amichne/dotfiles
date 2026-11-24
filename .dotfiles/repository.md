@@ -16,7 +16,7 @@ Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installe
   `.local/bin/setup-tools` owns preview and per-item installation.
 - `.local/bin/keys` owns the shortcut browser; `.config/shell-prompt` owns Git
   prompt context.
-- `.local/bin/dotfiles` runs worktree inventory and reclaim from the checkout.
+- `.local/bin/dotfiles` runs worktree reclaim from the checkout.
 - Root `install.sh` starts the ordinary-checkout setup. The manifest in
   `.dotfiles/scripts/layered.py` owns the three Zsh hooks, Git include, and Starship link.
 - `.dotfiles/scripts/install.py` previews and applies the layer and its removal.

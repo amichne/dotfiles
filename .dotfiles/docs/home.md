@@ -128,37 +128,7 @@ this setting does not establish their native layout or migrate their session rec
 Do not replace their managed directories with symlinks or move them behind the host's back.
 Use Worktrunk-created worktrees as existing projects when a native root setting is unavailable.
 
-## Worktree inventory
+## Inspect worktrees
 
-`dotfiles worktrees` reads registered worktrees from explicitly named repositories.
-It needs Git, uv, and Python. After migration, a former `~/.local/bin/dotfiles` can precede the checkout on PATH. Use `~/dotfiles/.local/bin/dotfiles` to select the checkout command.
-
-```sh
-dotfiles worktrees --repo /path/to/project --repo "/path/with spaces" --json
-```
-
-The command reports each path, HEAD, branch, lock, pruning marker, and working-tree state.
-It keeps every worktree, including clean worktrees.
-It does not prove that a worktree is inactive or that its changes reached another branch.
-A pruning marker does not authorize removal.
-The command does not fetch, prune, remove files, refresh indexes, or inspect process lists.
-It does not measure ignored output sizes.
-
-`.config/worktree-inventory.toml` limits one invocation to 128 worktrees and 30 seconds across all named repositories.
-The command accepts at most eight repositories.
-Use `--config FILE` for explicit limits from another TOML file.
-That file must contain only `max_worktrees` and `timeout_seconds`.
-The accepted ranges are 1–512 worktrees and 1–120 seconds.
-
-JSON output has `version`, `status`, `policy`, and `repositories`.
-Each repository keeps its known worktrees and reports its failure codes.
-A missing registered worktree has an unavailable working-tree state and stays in the inventory.
-A failed Git read or exhausted limit returns `incomplete` with exit status 1.
-Invalid arguments return exit status 64.
-Invalid configuration returns exit status 1 before Git runs, without a `policy` field.
-A complete report returns exit status 0.
-Without `--json`, the command prints the same fields as indented JSON.
-
-A report describes the state at inspection time.
-Concurrent edits can change that state after a read.
-Review ownership, source changes, delivery, and active use before a separate cleanup operation.
+Use `wt list` in a repository to see its worktrees. For scripts, use `wt -C /path/to/project list --format=json`.
+Use `dotfiles reclaim --repo /path/to/project` to preview cleanup. After migration, an older launcher can precede the checkout on PATH. Use `~/dotfiles/.local/bin/dotfiles` to select the checkout command.

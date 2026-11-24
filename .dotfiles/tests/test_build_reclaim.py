@@ -2,14 +2,43 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import time
 from pathlib import Path
 
-from .conftest import Home
-from .test_worktree_inventory import command, repository, worktree
+from .conftest import ROOT, Home
 
 OLD = time.time() - 10 * 86400
 NO_DAEMON = "no-such-daemon-process-for-reclaim-tests"
+
+
+def command(home: Home, *args: str) -> subprocess.CompletedProcess[str]:
+    return home.run(str(ROOT / ".local/bin/dotfiles"), *args)
+
+
+def repository(home: Home) -> Path:
+    root = home.path.parent / "repository with spaces"
+    root.mkdir()
+    for args in (
+        ("init", "--quiet", str(root)),
+        ("-C", str(root), "config", "user.name", "Fixture"),
+        ("-C", str(root), "config", "user.email", "fixture@example.invalid"),
+    ):
+        result = home.run("/usr/bin/git", *args)
+        assert result.returncode == 0, result.stderr
+    _ = (root / "source.txt").write_text("original\n")
+    _ = (root / ".gitignore").write_text("build/\n")
+    for args in (("add", "."), ("commit", "--quiet", "-m", "Fixture")):
+        result = home.run("/usr/bin/git", "-C", str(root), *args)
+        assert result.returncode == 0, result.stderr
+    return root
+
+
+def worktree(home: Home, root: Path, name: str) -> Path:
+    path = home.path.parent / name
+    result = home.run("/usr/bin/git", "-C", str(root), "worktree", "add", "-b", name, str(path))
+    assert result.returncode == 0, result.stderr
+    return path
 
 
 def age(checkout: Path) -> None:
@@ -142,3 +171,9 @@ def test_repository_named_twice_lists_each_worktree_once(home: Home) -> None:
     assert result.returncode == 0, result.stderr
     paths = [row["path"] for row in json.loads(result.stdout)["worktrees"]]
     assert sorted(paths) == sorted({str(root), str(checkout)})
+
+
+def test_retired_commands_are_rejected(home: Home) -> None:
+    for name in ("status", "diff", "add", "commit", "git", "setup", "doctor", "worktrees"):
+        assert command(home, name).returncode == 64
+    assert not (home.path / ".dotfiles.git").exists()

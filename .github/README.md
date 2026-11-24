@@ -25,7 +25,7 @@ The source contains:
 - `.config/` for Atuin, mise, Neovim, Starship, Yazi, and the shell helpers.
 - `.local/bin/keys` and `.local/bin/shell-prompt` for shortcuts and Git prompt context.
 - `.pi/agent/` for public Pi resources and the `/deepen` prompt rewrite command.
-- `.local/bin/dotfiles` for worktree inventory and reclaim in explicitly named repositories.
+- `.local/bin/dotfiles` to reclaim worktrees in explicitly named repositories.
 
 Use ordinary Git in the checkout to review, stage, and commit changes.
 
