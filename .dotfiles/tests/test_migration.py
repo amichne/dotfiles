@@ -6,8 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from .conftest import Home
-from .test_install import ORIGIN, commit, git
+from .conftest import ORIGIN, Home, commit, git
 from .test_layered_install import Installation
 
 BASELINE = "cbe207a2585b05ebc9b738cb0574a98e3269fab8"

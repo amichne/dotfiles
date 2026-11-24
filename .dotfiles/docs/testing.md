@@ -55,8 +55,7 @@ tar -tf /tmp/dotfiles-source.tar
 ```
 
 The runner rejects an existing output file.
-Use `--source PATH` to select a different source root.
-That root can be a HOME with `.dotfiles.git`.
+Use `--source PATH` to select the root of another checkout.
 The snapshot contains source files alone.
 A new Git index inside the container supplies the gate's repository context.
 
@@ -152,7 +151,7 @@ Docker limits each container to two CPUs, 2 GiB of memory, and 256 processes.
 The runtime tests examine these protections, network isolation, and the fresh Git index.
 They skip outside the container.
 
-The gate checks the bare-HOME manager, shell startup, and prompt logic.
+The gate checks the checkout installer, migration, worktree commands, shell startup, and prompt logic.
 It also checks syntax, types, data files, and docs.
 Shell fixtures supply bounded substitutes for external integrations.
 This setup does not establish macOS behavior, real service access, or a complete interactive desktop session.

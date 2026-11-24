@@ -10,7 +10,6 @@ from collections.abc import Callable
 from contextlib import nullcontext
 from pathlib import Path
 
-from df import Failure, open_home
 from install_state import apply_lock, digest, encoded
 from layered import (
     Change,
@@ -27,6 +26,15 @@ from layered import (
 
 BASELINE = "cbe207a2585b05ebc9b738cb0574a98e3269fab8"
 
+ORIGINS = frozenset(
+    {
+        "git@github.com:amichne/dotfiles.git",
+        "https://github.com/amichne/dotfiles.git",
+        "https://github.com/amichne/dotfiles",
+        "ssh://git@github.com/amichne/dotfiles.git",
+    }
+)
+
 
 def verify_baseline(home: Path, env: dict[str, str], converted: dict[Path, Change]) -> str:
     # A local inspection must use the original objects and never fetch missing ones.
@@ -36,14 +44,13 @@ def verify_baseline(home: Path, env: dict[str, str], converted: dict[Path, Chang
         "GIT_NO_REPLACE_OBJECTS": "1",
         "GIT_ALLOW_PROTOCOL": "",
     }
-    opened = open_home(home, env)
-    if isinstance(opened, Failure):
-        raise LayerConflict(f"invalid bare installation: {opened.reason.value}")
-    metadata = opened.metadata
+    metadata = home / ".dotfiles.git"
+    if not metadata.is_dir() or metadata.is_symlink():
+        raise LayerConflict("missing bare installation")
 
     def git(*arguments: str) -> bytes:
         result = subprocess.run(
-            ["git", f"--git-dir={metadata}", f"--work-tree={home}", *arguments],
+            ["git", f"--git-dir={metadata}", *arguments],
             cwd=home,
             env=env,
             capture_output=True,
@@ -53,6 +60,11 @@ def verify_baseline(home: Path, env: dict[str, str], converted: dict[Path, Chang
             raise LayerConflict(f"cannot verify bare installation: git {arguments[0]}")
         return result.stdout
 
+    if git("rev-parse", "--is-bare-repository").strip() != b"true":
+        raise LayerConflict("expected a bare repository")
+    origin = os.fsdecode(git("remote", "get-url", "origin")).strip()
+    if origin not in ORIGINS:
+        raise LayerConflict("unexpected bare repository origin")
     if (
         git("symbolic-ref", "HEAD").strip() != b"refs/heads/main"
         or git("rev-parse", "HEAD").decode().strip() != BASELINE
@@ -106,7 +118,7 @@ def verify_baseline(home: Path, env: dict[str, str], converted: dict[Path, Chang
     location = metadata.stat()
     # The comparison above binds the staged entries. Git may refresh its stat
     # cache during ordinary inspection without changing any staged entry.
-    return digest(encoded([BASELINE, opened.origin, location.st_dev, location.st_ino]))
+    return digest(encoded([BASELINE, origin, location.st_dev, location.st_ino]))
 
 
 def migrate(

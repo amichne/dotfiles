@@ -6,8 +6,7 @@ import time
 from pathlib import Path
 
 from .conftest import Home
-from .test_df import command
-from .test_worktree_inventory import repository, worktree
+from .test_worktree_inventory import command, repository, worktree
 
 OLD = time.time() - 10 * 86400
 NO_DAEMON = "no-such-daemon-process-for-reclaim-tests"

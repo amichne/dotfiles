@@ -10,7 +10,7 @@
 # url = "https://pypi.org/simple"
 # default = true
 # ///
-"""Preview or apply the bare HOME setup or the ordinary-checkout shell layer."""
+"""Manage the shell layer from an ordinary checkout."""
 
 from __future__ import annotations
 
@@ -19,46 +19,21 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Literal
 
-from df import ORIGINS, Failure, git_environment, open_home
-from install_state import apply_lock, digest, encoded
+from git_environment import git_environment
+from install_state import encoded
 from layered import LayerConflict, layered_install
 from migration import migrate
 
-PRIVATE = frozenset(
-    {
-        ".pi/agent/APPEND_SYSTEM.md",
-        ".pi/agent/AGENTS.md",
-        ".codex/AGENTS.md",
-        ".codex/hooks.json",
-    }
-)
-PACKAGE = "npm:pi-subagents@0.79.0"
-SLOPSENTRAL = "https://github.com/amichne/slopsentral/releases/latest/download/install-pi.sh"
 Reason = Literal[
     "git-failed",
-    "unsupported-tree-entry",
-    "symlink-target",
-    "non-file-target",
     "invalid-source-repository",
     "not-source-root",
-    "unexpected-source-origin",
-    "dirty-source",
-    "empty-source",
-    "private-source-path",
-    "invalid-installed-repository",
-    "dirty-home",
-    "divergent-history",
-    "untracked-conflict",
     "missing-dependency",
     "symlink-state",
-    "non-directory-state",
-    "destination-changed",
-    "stale-plan",
 ]
 
 
@@ -72,13 +47,10 @@ class Rejected(Exception):
 
 class Arguments(argparse.Namespace):
     migrate: bool
-    layered: bool
     uninstall: bool
     source: Path
     apply: bool
     expected_plan: str | None
-    with_pi_subagents: bool
-    without_slopsentral: bool
 
 
 def git(environment: dict[str, str], prefix: list[str], *args: str) -> bytes:
@@ -92,60 +64,6 @@ def git(environment: dict[str, str], prefix: list[str], *args: str) -> bytes:
         # Git can print source or destination content in an error. Keep the stage and code only.
         raise Rejected("git-failed", args[0], result.returncode)
     return result.stdout
-
-
-@dataclass(frozen=True)
-class Entry:
-    mode: int
-    oid: str
-
-
-def tree(environment: dict[str, str], prefix: list[str], revision: str) -> dict[str, Entry]:
-    entries: dict[str, Entry] = {}
-    for record in git(environment, prefix, "ls-tree", "--full-tree", "-rz", revision).split(b"\0"):
-        if not record:
-            continue
-        fields, raw = record.split(b"\t", 1)
-        mode, kind, oid = fields.decode("ascii").split()
-        name = os.fsdecode(raw)
-        path = PurePosixPath(name)
-        if (
-            mode not in {"100644", "100755"}
-            or kind != "blob"
-            or path.is_absolute()
-            or ".." in path.parts
-            or {".git", ".dotfiles.git"}.intersection(path.parts)
-        ):
-            raise Rejected("unsupported-tree-entry")
-        entries[name] = Entry(0o755 if mode == "100755" else 0o644, oid)
-    return entries
-
-
-def regular_file(root: Path, name: str) -> tuple[bytes, int] | None:
-    path = root / name
-    for parent in (path, *path.parents):
-        if parent.is_symlink():
-            raise Rejected("symlink-target")
-        if parent == root:
-            break
-    if not path.exists():
-        return None
-    if not path.is_file():
-        raise Rejected("non-file-target")
-    return path.read_bytes(), path.stat().st_mode & 0o777
-
-
-@dataclass(frozen=True)
-class Installed:
-    revision: str
-    head: str
-    index_sha256: str | None
-
-
-@dataclass(frozen=True)
-class SlopsentralSetup:
-    pi: Path
-    curl: Path
 
 
 @dataclass(frozen=True)
@@ -163,177 +81,16 @@ class Source:
 
 
 def open_source(worktree: Path, env: dict[str, str]) -> Source:
-    metadata = worktree / ".dotfiles.git"
-    if metadata.exists() or metadata.is_symlink():
-        opened = open_home(worktree, env)
-        if isinstance(opened, Failure):
-            raise Rejected("invalid-source-repository", opened.reason)
-        metadata = opened.metadata
-    else:
-        if (worktree / ".git").is_symlink():
-            raise Rejected("invalid-source-repository", "unsafe-metadata")
-        discovery = ["-C", str(worktree)]
-        root = Path(os.fsdecode(git(env, discovery, "rev-parse", "--show-toplevel")).strip())
-        if root.resolve() != worktree:
-            raise Rejected("not-source-root")
-        metadata = Path(os.fsdecode(git(env, discovery, "rev-parse", "--absolute-git-dir")).strip())
+    if (worktree / ".git").is_symlink():
+        raise Rejected("invalid-source-repository", "unsafe-metadata")
+    discovery = ["-C", str(worktree)]
+    root = Path(os.fsdecode(git(env, discovery, "rev-parse", "--show-toplevel")).strip())
+    if root.resolve() != worktree:
+        raise Rejected("not-source-root")
+    metadata = Path(os.fsdecode(git(env, discovery, "rev-parse", "--absolute-git-dir")).strip())
     if not metadata.is_dir() or metadata.is_symlink() or metadata.resolve() != metadata:
         raise Rejected("invalid-source-repository", "unsafe-metadata")
     return Source(worktree, metadata)
-
-
-@dataclass(frozen=True)
-class Plan:
-    source: Source
-    home: Path
-    origin: str
-    revision: str
-    previous: Installed | None
-    changes: tuple[str, ...]
-    adopted: tuple[str, ...]
-    preserved: tuple[str, ...]
-    snapshots: dict[str, tuple[bytes, int] | None]
-    pi: Path | None
-    slopsentral: SlopsentralSetup | None
-    identity: str
-
-    def report(self) -> dict[str, object]:
-        action: Literal["install", "update", "unchanged"] = (
-            "install"
-            if self.previous is None
-            else "unchanged"
-            if self.previous.revision == self.revision
-            else "update"
-        )
-        return {
-            "status": "planned",
-            "planId": self.identity,
-            "action": action,
-            "source": str(self.source.worktree),
-            "sourceRepository": str(self.source.repository),
-            "home": str(self.home),
-            "revision": self.revision,
-            "previousRevision": self.previous.revision if self.previous else None,
-            "changes": self.changes,
-            "adoptedIdenticalFiles": self.adopted,
-            "preservedPrivateFiles": self.preserved,
-            "packages": (["slopsentral@latest"] if self.slopsentral else [])
-            + ([PACKAGE] if self.pi else []),
-            "slopsentralDirectory": str(slopsentral_scope(self.home)) if self.slopsentral else None,
-        }
-
-
-def build_plan(
-    source: Path, home: Path, packages: bool, env: dict[str, str], slopsentral: bool = True
-) -> Plan:
-    if os.path.lexists(state_path(home) / "layered.json"):
-        raise LayerConflict("uninstall the active checkout layer before a bare installation")
-    selected = open_source(source, env)
-    source_git = selected.arguments()
-    origin = os.fsdecode(git(env, source_git, "remote", "get-url", "origin")).strip()
-    if origin not in ORIGINS:
-        raise Rejected("unexpected-source-origin")
-    if git(env, source_git, "status", "--porcelain=v1", "--untracked-files=no"):
-        raise Rejected("dirty-source")
-    revision = git(env, source_git, "rev-parse", "HEAD").decode().strip()
-    entries = tree(env, source_git, revision)
-    if not entries:
-        raise Rejected("empty-source")
-    if PRIVATE.intersection(entries):
-        raise Rejected("private-source-path")
-    metadata = home / ".dotfiles.git"
-    previous: Installed | None = None
-    old: dict[str, Entry] = {}
-    if metadata.exists() or metadata.is_symlink():
-        opened = open_home(home, env)
-        if isinstance(opened, Failure):
-            raise Rejected("invalid-installed-repository", opened.reason)
-        target_git = ["-C", str(home), f"--git-dir={metadata}", f"--work-tree={home}"]
-        if git(env, target_git, "status", "--porcelain=v1", "--untracked-files=no"):
-            raise Rejected("dirty-home")
-        current = git(env, target_git, "rev-parse", "HEAD").decode().strip()
-        # No fetch or index write occurs during the plan.
-        ancestry = subprocess.run(
-            ["git", *source_git, "merge-base", "--is-ancestor", current, revision],
-            env=env,
-            capture_output=True,
-            check=False,
-        )
-        if ancestry.returncode:
-            raise Rejected("divergent-history")
-        old = tree(env, target_git, "HEAD")
-        index_data = regular_file(metadata, "index")
-        previous = Installed(
-            current,
-            (metadata / "HEAD").read_text(),
-            digest(index_data[0]) if index_data else None,
-        )
-    names = sorted(entries.keys() | old.keys())
-    snapshots = {name: regular_file(home, name) for name in names}
-    adopted: list[str] = []
-    for name in entries.keys() - old.keys():
-        item = snapshots[name]
-        if item is not None and (
-            item[0] != git(env, source_git, "cat-file", "blob", entries[name].oid)
-            or bool(item[1] & 0o100) != bool(entries[name].mode & 0o100)
-        ):
-            raise Rejected("untracked-conflict", name)
-        if item is not None:
-            adopted.append(name)
-    changes = tuple(name for name in names if old.get(name) != entries.get(name))
-    preserved = tuple(name for name in changes if name in PRIVATE and name not in entries)
-    pi: Path | None = None
-    setup: SlopsentralSetup | None = None
-    if packages or slopsentral:
-        binary = shutil.which("pi", path=env.get("PATH"))
-        if binary is None:
-            raise Rejected("missing-dependency", "pi", 69)
-        selected_pi = Path(binary).resolve()
-        if packages:
-            pi = selected_pi
-        if slopsentral:
-            curl = shutil.which("curl", path=env.get("PATH"))
-            if curl is None:
-                raise Rejected("missing-dependency", "curl", 69)
-            setup = SlopsentralSetup(selected_pi, Path(curl).resolve())
-    facts = {
-        "source": str(source),
-        "sourceRepository": str(selected.repository),
-        "home": str(home),
-        "origin": origin,
-        "revision": revision,
-        "previous": previous.revision if previous else None,
-        "head": previous.head if previous else None,
-        "index": previous.index_sha256 if previous else None,
-        "files": {
-            name: [digest(item[0]), item[1]] if item else None for name, item in snapshots.items()
-        },
-        "pi": [str(pi), digest(pi.read_bytes())] if pi else None,
-        "slopsentral": {
-            "source": SLOPSENTRAL,
-            "pi": [str(setup.pi), digest(setup.pi.read_bytes())],
-            "curl": [str(setup.curl), digest(setup.curl.read_bytes())],
-        }
-        if setup
-        else None,
-    }
-    _ = state_path(home)
-    if setup:
-        _ = slopsentral_scope(home)
-    return Plan(
-        selected,
-        home,
-        origin,
-        revision,
-        previous,
-        changes,
-        tuple(sorted(adopted)),
-        preserved,
-        snapshots,
-        pi,
-        setup,
-        digest(encoded(facts)),
-    )
 
 
 def state_path(home: Path) -> Path:
@@ -347,159 +104,9 @@ def state_path(home: Path) -> Path:
     return state
 
 
-def slopsentral_scope(home: Path) -> Path:
-    directory = state_path(home) / "slopsentral"
-    if directory.is_symlink():
-        raise Rejected("symlink-state")
-    if directory.exists() and not directory.is_dir():
-        raise Rejected("non-directory-state")
-    return directory
-
-
-def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, object], int]:
-    backup = Path(tempfile.mkdtemp(prefix="apply-", dir=state))
-    manifest: dict[str, object] = {
-        **plan.report(),
-        "status": "prepared",
-        "backup": str(backup),
-        "preimages": {
-            name: {"sha256": digest(item[0]), "mode": item[1]} if item else None
-            for name in plan.changes
-            for item in [plan.snapshots[name]]
-        },
-    }
-    receipt = backup / "receipt.json"
-    # Copy every changed preimage before the first Git write.
-    for name in plan.changes:
-        item = plan.snapshots[name]
-        if item is not None:
-            path = backup / "files" / name
-            path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-            _ = path.write_bytes(item[0])
-            path.chmod(item[1])
-    _ = receipt.write_bytes(encoded(manifest))
-    metadata = plan.home / ".dotfiles.git"
-    target_git = ["-C", str(plan.home), f"--git-dir={metadata}", f"--work-tree={plan.home}"]
-    try:
-        if plan.previous is None:
-            with tempfile.TemporaryDirectory(prefix="metadata-", dir=state) as directory:
-                temporary = Path(directory) / "repo.git"
-                _ = git(
-                    env,
-                    [],
-                    "clone",
-                    "--bare",
-                    "--single-branch",
-                    # Local object-store copies can include unreachable private blobs.
-                    "--no-local",
-                    str(plan.source.repository),
-                    str(temporary),
-                )
-                _ = git(env, [f"--git-dir={temporary}"], "remote", "set-url", "origin", plan.origin)
-                # Source movement never selects a different revision.
-                _ = git(env, [f"--git-dir={temporary}"], "update-ref", "HEAD", plan.revision)
-                if metadata.exists() or metadata.is_symlink():
-                    raise Rejected("destination-changed")
-                _ = temporary.rename(metadata)
-            _ = git(env, target_git, "read-tree", plan.revision)
-            for name in plan.changes:
-                if plan.snapshots[name] is None:
-                    # checkout-index refuses a file that appears after the plan.
-                    _ = git(env, target_git, "checkout-index", "--", name)
-        elif plan.previous.revision != plan.revision:
-            _ = git(
-                env,
-                target_git,
-                "fetch",
-                "--no-tags",
-                "--no-write-fetch-head",
-                str(plan.source.repository),
-                plan.revision,
-            )
-            _ = git(
-                env,
-                target_git,
-                "merge",
-                "--ff-only",
-                "--no-edit",
-                plan.revision,
-            )
-    except (Rejected, OSError):
-        manifest["status"] = "files-failed"
-        print(f"install: recovery-receipt:{receipt}", file=sys.stderr)
-        raise
-    finally:
-        # Formerly public native instructions become private without losing their contents.
-        for name in plan.preserved:
-            item = plan.snapshots[name]
-            if item is not None and not (plan.home / name).exists():
-                path = plan.home / name
-                path.parent.mkdir(parents=True, exist_ok=True)
-                with path.open("xb") as handle:
-                    _ = handle.write(item[0])
-                path.chmod(item[1])
-        _ = receipt.write_bytes(encoded(manifest))
-    manifest["status"] = "installed"
-    status = 0
-    if plan.pi is not None:
-        package_env = {
-            **env,
-            "HOME": str(plan.home),
-            "PI_CODING_AGENT_DIR": str(plan.home / ".pi/agent"),
-        }
-        try:
-            status = subprocess.run(
-                [str(plan.pi), "install", PACKAGE],
-                env=package_env,
-                cwd=plan.home,
-                stdout=sys.stderr,
-                check=False,
-            ).returncode
-        except OSError:
-            status = 74
-            manifest["failure"] = "pi-unavailable"
-        if status:
-            manifest["status"] = "package-failed"
-    if status == 0 and plan.slopsentral is not None:
-        # Native recovery binds one stable scope across later applications.
-        with tempfile.TemporaryDirectory(prefix="dotfiles-slopsentral-") as directory:
-            temporary = Path(directory).resolve()
-            launcher = temporary / "install-pi.sh"
-            stage = "slopsentral-download"
-            try:
-                status = subprocess.run(
-                    [str(plan.slopsentral.curl), "-fsSL", "--output", str(launcher), SLOPSENTRAL],
-                    env=env,
-                    stdout=sys.stderr,
-                    check=False,
-                ).returncode
-                if status == 0:
-                    stage = "slopsentral-install"
-                    scope = slopsentral_scope(plan.home)
-                    scope.mkdir(mode=0o700, exist_ok=True)
-                    status = subprocess.run(
-                        ["/bin/sh", str(launcher)],
-                        env={
-                            **env,
-                            "HOME": str(plan.home),
-                            "PI_CODING_AGENT_DIR": str(plan.home / ".pi/agent"),
-                        },
-                        cwd=scope,
-                        stdout=sys.stderr,
-                        check=False,
-                    ).returncode
-            except OSError:
-                status = 74
-            if status:
-                manifest["status"] = "package-failed"
-                manifest["failure"] = stage
-    _ = receipt.write_bytes(encoded(manifest))
-    return manifest, status
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    _ = parser.add_argument("--layered", action="store_true")
+    _ = parser.add_argument("--layered", action="store_true", help=argparse.SUPPRESS)
     action = parser.add_mutually_exclusive_group()
     _ = action.add_argument("--uninstall", action="store_true")
     _ = action.add_argument(
@@ -508,75 +115,35 @@ def main() -> int:
     _ = parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[2])
     _ = parser.add_argument("--apply", action="store_true")
     _ = parser.add_argument("--expected-plan")
-    _ = parser.add_argument("--with-pi-subagents", action="store_true")
-    _ = parser.add_argument("--without-slopsentral", action="store_true")
     args = parser.parse_args(namespace=Arguments())
     if args.apply != (args.expected_plan is not None):
         parser.error("--apply and --expected-plan must appear together")
-    if (args.migrate or args.uninstall) and not args.layered:
-        parser.error("--migrate and --uninstall require --layered")
-    if args.layered and (args.with_pi_subagents or args.without_slopsentral):
-        parser.error("the layered setup has no package options")
     env = {**git_environment(), "GIT_OPTIONAL_LOCKS": "0"}
     if shutil.which("git", path=env.get("PATH")) is None:
         raise Rejected("missing-dependency", "git", 69)
     home = Path.home().resolve()
-    if args.layered:
-        if not args.migrate and os.path.lexists(home / ".dotfiles.git"):
-            raise LayerConflict(
-                f"bare installation at {home / '.dotfiles.git'}; migration required"
-            )
-        source = open_source(args.source.resolve(), env)
-        if source.worktree == home or source.repository == source.worktree / ".dotfiles.git":
-            raise LayerConflict("an ordinary source checkout is required")
+    if not args.migrate and os.path.lexists(home / ".dotfiles.git"):
+        raise LayerConflict(f"bare installation at {home / '.dotfiles.git'}; migration required")
+    source = open_source(args.source.resolve(), env)
+    if source.worktree == home or os.path.lexists(source.worktree / ".dotfiles.git"):
+        raise LayerConflict("an ordinary source checkout is required")
 
-        def revision() -> str:
-            return git(env, source.arguments(), "rev-parse", "HEAD").decode().strip()
+    def revision() -> str:
+        return git(env, source.arguments(), "rev-parse", "HEAD").decode().strip()
 
-        if args.migrate:
-            report = migrate(
-                source.worktree, revision, home, state_path(home), env, args.expected_plan
-            )
-        else:
-            report = layered_install(
-                source.worktree,
-                revision,
-                home,
-                state_path(home),
-                args.uninstall,
-                args.expected_plan,
-            )
-        print(encoded(report).decode(), end="")
-        return 0
-    plan = build_plan(
-        args.source.resolve(),
-        Path.home().resolve(),
-        args.with_pi_subagents,
-        env,
-        slopsentral=not args.without_slopsentral,
-    )
-    if not args.apply:
-        print(encoded(plan.report()).decode(), end="")
-        return 0
-    if args.expected_plan != plan.identity:
-        raise Rejected("stale-plan")
-    state = state_path(plan.home)
-    lock = state / "apply.lock"
-    if lock.is_symlink():
-        raise Rejected("symlink-state")
-    with apply_lock(state):
-        current = build_plan(
-            plan.source.worktree,
-            plan.home,
-            args.with_pi_subagents,
-            env,
-            slopsentral=not args.without_slopsentral,
+    if args.migrate:
+        report = migrate(source.worktree, revision, home, state_path(home), env, args.expected_plan)
+    else:
+        report = layered_install(
+            source.worktree,
+            revision,
+            home,
+            state_path(home),
+            args.uninstall,
+            args.expected_plan,
         )
-        if current.identity != plan.identity:
-            raise Rejected("stale-plan")
-        report, status = apply_plan(current, state, env)
     print(encoded(report).decode(), end="")
-    return status
+    return 0
 
 
 if __name__ == "__main__":

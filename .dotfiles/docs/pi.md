@@ -4,11 +4,7 @@ This setup uses `~/.pi/agent` as the Pi directory.
 Dotfiles tracks public Pi resources there.
 Pi keeps authentication and session data private.
 
-Use the [HOME installer](home.md#install-or-update-home) to apply these resources from a reviewed revision.
-The installer includes the latest stable Slopsentral release by default.
-Add `--without-slopsentral` to omit that setup.
-Add `--with-pi-subagents` to include the pinned delegation package.
-Existing private instructions and settings remain in place.
+The checkout contains the public files under `.pi/agent/`. Manage their placement and Pi packages separately from the shell layer.
 
 ## Public resources
 
@@ -24,14 +20,7 @@ Existing private instructions and settings remain in place.
 | `prompts/*.md` | Reusable prompts |
 | `pi-lsp.json` | Settings for language servers |
 
-Use `dotfiles` to review and commit changes to these files:
-
-```sh
-dotfiles diff -- .pi/agent
-dotfiles add .dotfiles/writing.md
-dotfiles diff --cached
-dotfiles commit -m "docs: refine Pi instructions"
-```
+Review changes from the checkout with `git diff -- .pi/agent`.
 
 ## Rewrite a prompt
 
@@ -61,8 +50,6 @@ Install the reviewed package version:
 ```sh
 pi install npm:pi-subagents@0.79.0
 ```
-
-The HOME installer's `--with-pi-subagents` option does this step after the file update.
 
 Use `/reload` after installation.
 The package owns child sessions, fan-out, cancellation, retained results, and later messages.

@@ -63,20 +63,11 @@ def source_files(root: Path) -> tuple[PublicFile, ...] | Rejected:
     env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
     git = ["git", "-c", "core.fsmonitor=false", "-C", str(root)]
-    if (root / ".dotfiles.git").is_dir():
-        git = [
-            "git",
-            "-c",
-            "core.fsmonitor=false",
-            f"--git-dir={root / '.dotfiles.git'}",
-            f"--work-tree={root}",
-        ]
-    else:
-        top = subprocess.run(
-            [*git, "rev-parse", "--show-toplevel"], env=env, capture_output=True, check=False
-        )
-        if top.returncode or Path(os.fsdecode(top.stdout).strip()).resolve() != root:
-            return Rejected("not-source-root", str(root))
+    top = subprocess.run(
+        [*git, "rev-parse", "--show-toplevel"], env=env, capture_output=True, check=False
+    )
+    if top.returncode or Path(os.fsdecode(top.stdout).strip()).resolve() != root:
+        return Rejected("not-source-root", str(root))
     result = subprocess.run(
         [*git, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         env=env,

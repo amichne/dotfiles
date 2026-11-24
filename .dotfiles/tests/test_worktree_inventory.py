@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
-from .conftest import Home
-from .test_df import command
+from .conftest import ROOT, Home
+
+
+def command(home: Home, *args: str) -> subprocess.CompletedProcess[str]:
+    return home.run(str(ROOT / ".local/bin/dotfiles"), *args)
 
 
 def repository(home: Home) -> Path:
@@ -189,3 +193,9 @@ def test_inventory_shared_deadline_stops_slow_git(home: Home) -> None:
         "deadline-exceeded",
         "deadline-exceeded",
     ]
+
+
+def test_retired_home_commands_are_rejected(home: Home) -> None:
+    for name in ("status", "diff", "add", "commit", "git", "setup", "doctor"):
+        assert command(home, name).returncode == 64
+    assert not (home.path / ".dotfiles.git").exists()
