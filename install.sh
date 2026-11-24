@@ -28,8 +28,8 @@ if [ "${1:-}" = --bootstrap ]; then
         *) fail 'HOME must be an absolute path' ;;
     esac
     unset GIT_DIR GIT_COMMON_DIR GIT_WORK_TREE GIT_INDEX_FILE
-    if [ -e "$HOME/.dotfiles.git" ] || [ -L "$HOME/.dotfiles.git" ]; then
-        fail "bare installation at $HOME/.dotfiles.git; migration required"
+    if [ "${1:-}" != --migrate ] && { [ -e "$HOME/.dotfiles.git" ] || [ -L "$HOME/.dotfiles.git" ]; }; then
+        fail "bare installation at $HOME/.dotfiles.git; migration required (use --bootstrap [--commit SHA] --migrate)"
     fi
     root=$(CDPATH='' cd -- "$HOME" && pwd -P)/dotfiles
     [ ! -L "$root" ] || fail "$root is a symbolic link"

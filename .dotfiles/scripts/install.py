@@ -27,6 +27,7 @@ from typing import Literal
 from df import ORIGINS, Failure, git_environment, open_home
 from install_state import apply_lock, digest, encoded
 from layered import LayerConflict, layered_install
+from migration import migrate
 
 PRIVATE = frozenset(
     {
@@ -70,6 +71,7 @@ class Rejected(Exception):
 
 
 class Arguments(argparse.Namespace):
+    migrate: bool
     layered: bool
     uninstall: bool
     source: Path
@@ -498,7 +500,11 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     _ = parser.add_argument("--layered", action="store_true")
-    _ = parser.add_argument("--uninstall", action="store_true")
+    action = parser.add_mutually_exclusive_group()
+    _ = action.add_argument("--uninstall", action="store_true")
+    _ = action.add_argument(
+        "--migrate", action="store_true", help="convert the supported bare main"
+    )
     _ = parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[2])
     _ = parser.add_argument("--apply", action="store_true")
     _ = parser.add_argument("--expected-plan")
@@ -507,8 +513,8 @@ def main() -> int:
     args = parser.parse_args(namespace=Arguments())
     if args.apply != (args.expected_plan is not None):
         parser.error("--apply and --expected-plan must appear together")
-    if args.uninstall and not args.layered:
-        parser.error("--uninstall requires --layered")
+    if (args.migrate or args.uninstall) and not args.layered:
+        parser.error("--migrate and --uninstall require --layered")
     if args.layered and (args.with_pi_subagents or args.without_slopsentral):
         parser.error("the layered setup has no package options")
     env = {**git_environment(), "GIT_OPTIONAL_LOCKS": "0"}
@@ -516,7 +522,7 @@ def main() -> int:
         raise Rejected("missing-dependency", "git", 69)
     home = Path.home().resolve()
     if args.layered:
-        if os.path.lexists(home / ".dotfiles.git"):
+        if not args.migrate and os.path.lexists(home / ".dotfiles.git"):
             raise LayerConflict(
                 f"bare installation at {home / '.dotfiles.git'}; migration required"
             )
@@ -527,9 +533,19 @@ def main() -> int:
         def revision() -> str:
             return git(env, source.arguments(), "rev-parse", "HEAD").decode().strip()
 
-        report = layered_install(
-            source.worktree, revision, home, state_path(home), args.uninstall, args.expected_plan
-        )
+        if args.migrate:
+            report = migrate(
+                source.worktree, revision, home, state_path(home), env, args.expected_plan
+            )
+        else:
+            report = layered_install(
+                source.worktree,
+                revision,
+                home,
+                state_path(home),
+                args.uninstall,
+                args.expected_plan,
+            )
         print(encoded(report).decode(), end="")
         return 0
     plan = build_plan(

@@ -150,3 +150,21 @@ def test_bare_home_stops_before_clone(bootstrap_home: Home) -> None:
     result = bootstrap(home)
     assert result.returncode != 0 and "migration required" in result.stderr
     assert not (home.path / "dotfiles").exists()
+
+
+@pytest.mark.parametrize("pinned", [False, True])
+def test_remote_migration_forwards_to_checkout(
+    bootstrap_home: Home, upstream: Path, pinned: bool
+) -> None:
+    home = bootstrap_home
+    (home.path / ".dotfiles.git").mkdir()
+    args = ["--commit", git(home, upstream, "rev-parse", "HEAD^")] if pinned else []
+    result = bootstrap(home, *args, "--migrate")
+    assert result.returncode == 0, result.stderr
+    root = home.path / "dotfiles"
+    assert result.stdout.splitlines()[-3:] == [
+        str(root / ".dotfiles/scripts/install.py"),
+        "--layered",
+        "--migrate",
+    ]
+    assert (home.path / ".dotfiles.git").is_dir()

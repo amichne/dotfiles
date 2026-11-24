@@ -17,7 +17,8 @@ Review its five destinations. Apply the plan with its printed ID.
 
 For an existing development checkout, run `./install.sh` to preview the same installation.
 Read [layered setup](../.dotfiles/docs/home.md#install-from-an-ordinary-checkout) for local overrides, prerequisites, recovery, and removal.
-Existing bare HOME installations use the [full HOME installer](../.dotfiles/docs/home.md#install-or-update-home).
+For a clean bare HOME on `main` at `cbe207a`, preview the [migration](../.dotfiles/docs/home.md#migrate-a-bare-home) with `./install.sh --migrate`.
+For full HOME updates, use the [bare installer](../.dotfiles/docs/home.md#install-or-update-home).
 
 The source contains:
 

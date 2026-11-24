@@ -162,6 +162,10 @@ class Plan:
     changes: tuple[Change, ...]
 
 
+def ownership_record(source: Path, paths: list[str], created: list[str]) -> bytes:
+    return encoded({"version": 1, "source": str(source), "targets": paths, "created": created})
+
+
 def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: bool) -> Plan:
     if os.path.lexists(home / ".dotfiles.git"):
         raise LayerConflict("bare installation requires migration")
@@ -198,7 +202,7 @@ def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: 
         after = desired(entry, before, bool(ledger), name in initial, uninstall)
         if before != after:
             changes.append(Change(entry, before, after))
-    ownership = encoded({"version": 1, "source": str(source), "targets": paths, "created": initial})
+    ownership = ownership_record(source, paths, initial)
     if ledger and ledger.data != ownership:
         raise LayerConflict(f"checkout or destination differs from ownership record: {state}")
     identity = digest(encoded([revision, digest(ownership), bool(ledger), uninstall, snapshots]))
@@ -214,7 +218,15 @@ def write(path: Path, before: Contents, after: Contents, home: Path) -> None:
         case None:
             path.unlink()
         case Link(target):
-            path.symlink_to(target)
+            if before is None:
+                path.symlink_to(target)
+            else:
+                with tempfile.TemporaryDirectory(dir=path.parent) as directory:
+                    link = Path(directory) / "link"
+                    link.symlink_to(target)
+                    if inspect(path) != before:
+                        raise LayerConflict(f"destination changed: {path}")
+                    _ = link.replace(path)
         case File(data, mode):
             with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as out:
                 temp = Path(out.name)
