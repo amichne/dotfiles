@@ -10,14 +10,11 @@
 # url = "https://pypi.org/simple"
 # default = true
 # ///
-"""Plan or apply a reviewed Dotfiles commit to the single bare HOME index."""
+"""Preview or apply the bare HOME setup or the ordinary-checkout shell layer."""
 
 from __future__ import annotations
 
 import argparse
-import fcntl
-import hashlib
-import json
 import os
 import shutil
 import subprocess
@@ -28,6 +25,8 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from df import ORIGINS, Failure, git_environment, open_home
+from install_state import apply_lock, digest, encoded
+from layered import LayerConflict, layered_install
 
 PRIVATE = frozenset(
     {
@@ -71,19 +70,13 @@ class Rejected(Exception):
 
 
 class Arguments(argparse.Namespace):
+    layered: bool
+    uninstall: bool
     source: Path
     apply: bool
     expected_plan: str | None
     with_pi_subagents: bool
     without_slopsentral: bool
-
-
-def digest(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def encoded(data: object) -> bytes:
-    return (json.dumps(data, sort_keys=True, ensure_ascii=True) + "\n").encode()
 
 
 def git(environment: dict[str, str], prefix: list[str], *args: str) -> bytes:
@@ -231,6 +224,8 @@ class Plan:
 def build_plan(
     source: Path, home: Path, packages: bool, env: dict[str, str], slopsentral: bool = True
 ) -> Plan:
+    if os.path.lexists(state_path(home) / "layered.json"):
+        raise LayerConflict("uninstall the active checkout layer before a bare installation")
     selected = open_source(source, env)
     source_git = selected.arguments()
     origin = os.fsdecode(git(env, source_git, "remote", "get-url", "origin")).strip()
@@ -502,6 +497,8 @@ def apply_plan(plan: Plan, state: Path, env: dict[str, str]) -> tuple[dict[str, 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    _ = parser.add_argument("--layered", action="store_true")
+    _ = parser.add_argument("--uninstall", action="store_true")
     _ = parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[2])
     _ = parser.add_argument("--apply", action="store_true")
     _ = parser.add_argument("--expected-plan")
@@ -510,9 +507,31 @@ def main() -> int:
     args = parser.parse_args(namespace=Arguments())
     if args.apply != (args.expected_plan is not None):
         parser.error("--apply and --expected-plan must appear together")
+    if args.uninstall and not args.layered:
+        parser.error("--uninstall requires --layered")
+    if args.layered and (args.with_pi_subagents or args.without_slopsentral):
+        parser.error("the layered setup has no package options")
     env = {**git_environment(), "GIT_OPTIONAL_LOCKS": "0"}
     if shutil.which("git", path=env.get("PATH")) is None:
         raise Rejected("missing-dependency", "git", 69)
+    home = Path.home().resolve()
+    if args.layered:
+        if os.path.lexists(home / ".dotfiles.git"):
+            raise LayerConflict(
+                f"bare installation at {home / '.dotfiles.git'}; migration required"
+            )
+        source = open_source(args.source.resolve(), env)
+        if source.worktree == home or source.repository == source.worktree / ".dotfiles.git":
+            raise LayerConflict("an ordinary source checkout is required")
+
+        def revision() -> str:
+            return git(env, source.arguments(), "rev-parse", "HEAD").decode().strip()
+
+        report = layered_install(
+            source.worktree, revision, home, state_path(home), args.uninstall, args.expected_plan
+        )
+        print(encoded(report).decode(), end="")
+        return 0
     plan = build_plan(
         args.source.resolve(),
         Path.home().resolve(),
@@ -526,12 +545,10 @@ def main() -> int:
     if args.expected_plan != plan.identity:
         raise Rejected("stale-plan")
     state = state_path(plan.home)
-    state.mkdir(parents=True, exist_ok=True, mode=0o700)
     lock = state / "apply.lock"
     if lock.is_symlink():
         raise Rejected("symlink-state")
-    with lock.open("a") as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX)
+    with apply_lock(state):
         current = build_plan(
             plan.source.worktree,
             plan.home,
@@ -552,6 +569,9 @@ if __name__ == "__main__":
     except Rejected as error:
         print(f"install: {error}", file=sys.stderr)
         raise SystemExit(error.status) from error
+    except LayerConflict as error:
+        print(f"install: {error}", file=sys.stderr)
+        raise SystemExit(65) from error
     except OSError as error:
         print(f"install: io-failed: {error.strerror}", file=sys.stderr)
         raise SystemExit(74) from error

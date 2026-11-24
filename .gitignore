@@ -2,6 +2,7 @@
 *
 !/.gitignore
 !/.python-version
+!/install.sh
 !/.zshrc
 !/.zshenv
 !/.zprofile

@@ -1,5 +1,58 @@
 # HOME setup
 
+## Install from an ordinary checkout
+
+This installer manages five destinations. It needs Git, uv 0.12.9 or later, and Python 3.12 or 3.13.
+The interactive shell also uses the tools and Zsh plugins listed in [configuration](configuration.md).
+Install those dependencies separately.
+
+From a checkout, run `./install.sh` to see the destination paths and exact blocks.
+For a new machine, download the bootstrap into an empty working directory.
+
+```sh
+curl -fsSLo install-dotfiles.sh https://raw.githubusercontent.com/amichne/dotfiles/main/install.sh
+/bin/sh install-dotfiles.sh --bootstrap
+```
+
+The remote bootstrap creates an ordinary checkout at `~/dotfiles` before it previews changes to startup files.
+An existing checkout must be clean, have the expected origin, and match the requested commit.
+For a pinned install, use the same full commit ID in the download URL and after `--bootstrap --commit`.
+Read the plan, then apply it with the printed ID.
+
+```sh
+~/dotfiles/install.sh --apply --expected-plan PLAN_ID
+```
+
+| Destination | What the installer adds |
+| --- | --- |
+| `.zshenv`, `.zprofile`, `.zshrc` in `${ZDOTDIR:-$HOME}` | One marked source block per file. Zsh selects the environment, login, and interactive phases. |
+| `git/config` in `${XDG_CONFIG_HOME:-$HOME/.config}` | A marked include for the shared aliases. Personal settings after the include take precedence. |
+| `starship.toml` in the same configuration directory | One link to the checkout. An occupied path stops installation before the installer writes a hook. |
+
+Shared blocks precede personal settings. The installer preserves an initial interpreter line in a startup file.
+Interactive Zsh reads `.zshrc.local` before it initializes tools. It searches personal functions before checkout functions.
+Use the same `ZDOTDIR` and `XDG_CONFIG_HOME` for preview, apply, and removal.
+Symlinked destination parents require a manual decision. Existing bare installations require a separate migration.
+
+Keep the checkout at its installed path. Edit the public files there and use ordinary Git to review changes.
+Fresh shells and Git commands read checkout edits directly. An update to the checkout takes effect on the next read.
+Review incoming changes before advancing the checkout. The bootstrap never advances an existing checkout.
+
+To remove the layer, preview removal and apply its plan ID.
+
+```sh
+~/dotfiles/install.sh --uninstall
+~/dotfiles/install.sh --uninstall --apply --expected-plan PLAN_ID
+```
+
+Removal keeps personal text outside each block, preexisting empty files, and directories.
+An edited marker or replaced Starship link stops removal and identifies the conflicting path.
+Before a change, the installer saves original bytes and modes in a private recovery directory under `~/.local/state/dotfiles-install`.
+Its receipt maps each changed path to a numbered backup or its former link target.
+If an apply stops partway, inspect the receipt and run a fresh preview before retrying.
+
+## Full HOME layout
+
 `amichne/dotfiles` uses HOME as its worktree and `~/.dotfiles.git` for Git metadata.
 The tracked files are the live files.
 

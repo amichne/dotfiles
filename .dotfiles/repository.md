@@ -24,6 +24,8 @@ verified source checkout; a missing installed HOME does not block that work.
   prompt context.
 - `.dotfiles/scripts/df.py` owns bare Git selection and read-only inspection;
   `.local/bin/dotfiles` is its launcher.
+- Root `install.sh` starts the ordinary-checkout setup. The manifest in
+  `.dotfiles/scripts/layered.py` owns the three Zsh hooks, Git include, and Starship link.
 - `.dotfiles/scripts/install.py` owns reviewed HOME installation, fast-forward
   updates, and the latest Slopsentral setup. Keep its plans read-only and its
   recovery copies private.

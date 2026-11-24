@@ -21,6 +21,7 @@ PYTHON_SOURCE = (
     "../.local/bin/worktrunk-commit-message",
 )
 SHELL_SOURCE = (
+    "install.sh",
     ".agents/setup",
     ".agents/resume",
     ".local/bin/dotfiles",
