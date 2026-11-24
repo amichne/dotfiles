@@ -4,7 +4,7 @@ FROM node:26.0.0-bookworm-slim@sha256:3529ef69feecddd94e9c5ecd3d25a96f2f23ea4066
 
 COPY --from=uv /uv /usr/local/bin/uv
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends bash ca-certificates git neovim shellcheck zsh \
+    && apt-get install --yes --no-install-recommends bash ca-certificates git lsof neovim procps shellcheck zsh \
     && rm -rf /var/lib/apt/lists/*
 
 ENV UV_PYTHON_INSTALL_DIR=/opt/python \
