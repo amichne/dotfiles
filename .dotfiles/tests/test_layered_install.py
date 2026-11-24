@@ -138,6 +138,20 @@ def test_empty_home_install_round_trip(installation: Installation) -> None:
         assert not target.exists() or target.read_bytes() == b""
 
 
+def test_upgrade_theme_only_block_keeps_personal_settings(installation: Installation) -> None:
+    installation.apply()
+    config = installation.home.path / ".config/ghostty/config.ghostty"
+    previous = "# >>> amichne/dotfiles >>>\ntheme = Neon Arcade\n# <<< amichne/dotfiles <<<\n"
+    personal = "cursor-opacity = 0.85\n"
+    _ = config.write_text(previous + personal)
+    installation.apply()
+    shader = installation.source / ".config/ghostty/cursor-trail.glsl"
+    assert config.read_text().count(f"custom-shader = {shader}\n") == 1
+    assert installation.plan()["changes"] == []
+    installation.apply("--uninstall")
+    assert config.read_text() == personal
+
+
 def test_layered_consumers_and_personal_files(installation: Installation) -> None:
     home = installation.home
     zdotdir = home.path / "shell files"

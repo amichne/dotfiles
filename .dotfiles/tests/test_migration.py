@@ -91,6 +91,7 @@ def test_migrate_preserves_other_files_and_archives_git(migration: Installation)
     assert shell.returncode == 0 and shell.stdout.strip() == str(home.path / ".worktrees")
     ghostty = home.path / ".config/ghostty/config.ghostty"
     theme = migration.source / ".config/ghostty/themes/Neon Arcade"
+    shader = migration.source / ".config/ghostty/cursor-trail.glsl"
     assert migration.plan()["changes"] == [
         {
             "path": str(ghostty.parent / "themes/Neon Arcade"),
@@ -101,8 +102,11 @@ def test_migrate_preserves_other_files_and_archives_git(migration: Installation)
         {
             "path": str(ghostty),
             "operation": "block",
-            "source": str(theme),
-            "block": "# >>> amichne/dotfiles >>>\ntheme = Neon Arcade\n# <<< amichne/dotfiles <<<\n",
+            "source": str(shader),
+            "block": (
+                f"# >>> amichne/dotfiles >>>\ntheme = Neon Arcade\ncustom-shader = {shader}\n"
+                "# <<< amichne/dotfiles <<<\n"
+            ),
         },
     ]
     migration.apply()

@@ -28,6 +28,7 @@ class Entry:
     source: Path
     target: Path
     block: bytes | None  # None denotes a symbolic link.
+    previous_block: bytes | None = None
 
 
 def configured_path(name: str, default: Path) -> Path:
@@ -64,9 +65,12 @@ def shell_manifest(source: Path, home: Path) -> tuple[Entry, ...]:
 def ghostty_entries(source: Path, home: Path) -> tuple[Entry, Entry]:
     directory = configured_path("XDG_CONFIG_HOME", home / ".config") / "ghostty"
     theme = source / ".config/ghostty/themes/Neon Arcade"
-    block = b"\n".join([START, b"theme = Neon Arcade", END, b""])
+    shader = source / ".config/ghostty/cursor-trail.glsl"
+    selection = b"theme = Neon Arcade"
+    previous = b"\n".join([START, selection, END, b""])
+    block = b"\n".join([START, selection, b"custom-shader = " + os.fsencode(shader), END, b""])
     return Entry(theme, directory / "themes" / theme.name, None), Entry(
-        theme, directory / "config.ghostty", block
+        shader, directory / "config.ghostty", block, previous
     )
 
 
@@ -127,13 +131,15 @@ def desired(
     data = before.data if before else b""
     mode = before.mode if before else 0o600
     if START in data or END in data:
+        if owned and entry.previous_block is not None:
+            data = data.replace(entry.previous_block, entry.block, 1)
         if not owned or data.count(START) != 1 or data.count(END) != 1 or entry.block not in data:
             raise LayerConflict(f"unrecognized managed block: {entry.target}")
         offset = data.index(entry.block)
         if offset and data[offset - 1 : offset] != b"\n" and data[:offset] != b"\xef\xbb\xbf":
             raise LayerConflict(f"edited managed block: {entry.target}")
         if not uninstall:
-            return before
+            return File(data, mode)
         remainder = data.replace(entry.block, b"", 1)
         return None if created and not remainder else File(remainder, mode)
     if uninstall:

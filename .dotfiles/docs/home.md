@@ -29,9 +29,10 @@ Read the plan, then apply it with the printed ID.
 | `git/config` in `${XDG_CONFIG_HOME:-$HOME/.config}` | A marked include for the shared aliases. Personal settings after the include take precedence. |
 | `starship.toml` in the same configuration directory | One link to the checkout. An occupied path stops installation before the installer writes a hook. |
 | `ghostty/themes/Neon Arcade` in the same configuration directory | A link makes the checkout palette available by name in Ghostty. |
-| `ghostty/config.ghostty` in the same configuration directory | A marked block selects Neon Arcade from the checkout. |
+| `ghostty/config.ghostty` in the same configuration directory | A marked block selects Neon Arcade and loads the cursor trail shader from the checkout. |
 
 Ghostty reads the palette from `.config/ghostty/themes/Neon Arcade` in the checkout.
+The trail follows the terminal cursor and fades in 160 milliseconds. It uses the active cursor color.
 Later personal theme or color settings can override it, including those in the macOS Application Support directory.
 For Rex on another Mac, choose **Import Theme File** and select the same file. Import it again after you edit the palette.
 Rex also includes Neon Arcade in its dark theme picker.

@@ -28,6 +28,7 @@
 !/.config/git/
 !/.config/git/config
 !/.config/ghostty/
+!/.config/ghostty/cursor-trail.glsl
 !/.config/ghostty/themes/
 !/.config/ghostty/themes/Neon Arcade
 !/.config/mise/
