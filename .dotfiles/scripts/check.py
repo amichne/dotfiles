@@ -16,6 +16,7 @@ PYTHON_SOURCE = (
     "scripts",
     "tests",
     "../.local/bin/keys",
+    "../.local/bin/review",
     "../.local/bin/setup-tools",
     "../.local/bin/austincomplete",
     "../.local/bin/worktrunk-commit-message",

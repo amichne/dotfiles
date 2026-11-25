@@ -1,0 +1,268 @@
+#!/usr/bin/env -S uv run --locked --script
+# /// script
+# requires-python = ">=3.12,<3.14"
+# dependencies = []
+# [[tool.uv.index]]
+# name = "pypi"
+# url = "https://pypi.org/simple"
+# default = true
+# ///
+"""Walk through a change, try a small check, and keep a local review draft."""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass, field
+from pathlib import Path
+
+PR_URL = re.compile(r"https://github\.com/([\w.-]+/[\w.-]+)/pull/([1-9]\d*)")
+HANDOFF = (
+    'gum confirm --default=false "Return the note?" || exit "$?"\nprintf "%s\\n" "Handoff ready"'
+)
+SCAN = r"^\+(<{7}|={7}|>{7})( |$)"
+FINISH = "Finish and preview draft"
+
+
+@dataclass(frozen=True)
+class Change:
+    path: str
+    patch: str
+
+
+@dataclass(frozen=True)
+class Review:
+    source: str
+    revision: str
+    changes: tuple[Change, ...]
+    demo: bool = False
+
+
+@dataclass
+class Page:
+    status: str = "Open"
+    notes: list[str] = field(default_factory=list[str])
+
+
+class Arguments(argparse.Namespace):
+    pr: str | None = None
+    demo: bool = False
+    output: Path | None = None
+
+
+def output(*args: str, content: str | None = None) -> str:
+    result = subprocess.run(args, input=content, stdout=subprocess.PIPE, text=True, check=True)
+    return result.stdout.removesuffix("\n")
+
+
+def readable(text: str) -> str:
+    return "".join(c if c.isprintable() or c in "\n\t" else "�" for c in text)
+
+
+def pull_request(pr: str | None) -> Review:
+    if pr and not (re.fullmatch(r"[1-9]\d*", pr) or PR_URL.fullmatch(pr)):
+        raise ValueError("Use a pull request number or a github.com pull request URL.")
+    metadata = [
+        "gh",
+        "pr",
+        "view",
+        *([pr] if pr else []),
+        "--json",
+        "url,baseRefOid,headRefOid,changedFiles",
+        "--jq",
+        "[.url,.baseRefOid,.headRefOid,.changedFiles] | @tsv",
+    ]
+    snapshot = output(*metadata)
+    url, base, head, count = snapshot.split("\t")
+    match = PR_URL.fullmatch(url)
+    if not match or not all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in (base, head)):
+        raise ValueError("GitHub returned an incomplete revision.")
+    repo, number = match.groups()
+    rows = output(
+        "gh",
+        "api",
+        "--hostname",
+        "github.com",
+        "--paginate",
+        f"repos/{repo}/pulls/{number}/files?per_page=100",
+        "--jq",
+        ".[] | {filename,patch} | @json",
+    )
+    changes: list[Change] = []
+    for row in rows.split("\n") if rows else []:
+        record: object = json.loads(row)
+        match record:
+            case {"filename": str(name), "patch": str(patch)}:
+                changes.append(Change(name, patch))
+            case {"filename": str(name), "patch": None}:
+                changes.append(Change(name, ""))
+            case _:
+                raise ValueError("GitHub returned an unreadable file entry.")
+    if len(changes) != int(count) or len({c.path for c in changes}) != len(changes):
+        raise ValueError("GitHub returned an incomplete file list.")
+    if snapshot != output(*metadata):
+        raise ValueError("The pull request changed while opening it. Start the walk again.")
+    return Review(url, head, tuple(changes))
+
+
+def demo_review() -> Review:
+    return Review("Handoff example", "built-in example", (Change("handoff.sh", HANDOFF),), True)
+
+
+def handoff_trial() -> str:
+    with tempfile.TemporaryDirectory(prefix="review-walk-") as directory:
+        root = Path(directory)
+        _ = (root / "handoff.sh").write_text(HANDOFF + "\n")
+        target = root / "note.txt"
+        _ = target.write_bytes(b"keep me\n")
+        command = "sh handoff.sh > note.txt"
+        result = subprocess.run(["sh", "-c", command], cwd=root, check=False)
+        if result.returncode not in (0, 1):
+            raise subprocess.CalledProcessError(result.returncode, command)
+        after = target.read_bytes()
+        return (
+            f"Disposable example: {command}\nBefore: keep me (8 bytes)\n"
+            f"Exit: {result.returncode}\nAfter: {after.decode().rstrip() or '(empty)'} "
+            f"({len(after)} bytes)"
+        )
+
+
+def inspect_patch(change: Change) -> str:
+    result = subprocess.run(
+        ["grep", "-nE", SCAN], input=change.patch, text=True, stdout=subprocess.PIPE, check=False
+    )
+    if result.returncode not in (0, 1):
+        raise subprocess.CalledProcessError(result.returncode, "grep")
+    hits = result.stdout.rstrip() or "No conflict markers matched in the supplied patch."
+    return f"grep -nE '{SCAN}' on the GitHub patch (exit {result.returncode})\n{hits}"
+
+
+def ask(question: str) -> str:
+    return output("gum", "write", "--header", question).strip()
+
+
+def preview(content: str) -> None:
+    _ = subprocess.run(
+        ["gum", "pager"], input=readable(content), text=True, stdout=sys.stderr, check=True
+    )
+
+
+def review_page(review: Review, change: Change, page: Page) -> None:
+    title = readable(change.path).replace("\n", " ")
+    question = (
+        "What happens to the saved note if you decline?"
+        if review.demo
+        else f"What would you like to check in {title}?"
+    )
+    while True:
+        trial = "Try the handoff with a disposable file"
+        scan = "Look for conflict markers in added lines"
+        choices = ["Read the change"]
+        if review.demo or "gum confirm" in change.patch:
+            choices.append(trial)
+        if not review.demo and change.patch:
+            choices.append(scan)
+        choices.extend(["Leave a note", "Looks good", "Come back later"])
+        choice = output("gum", "choose", "--header", question, "--", *choices)
+        if choice not in choices:
+            raise ValueError("No review action selected.")
+        if choice == "Read the change":
+            content = change.patch or "GitHub did not supply a text patch for this file."
+            preview(content)
+        elif choice in (trial, scan):
+            expectation = ask("What do you expect to happen?")
+            if not expectation:
+                continue
+            observation = handoff_trial() if choice == trial else inspect_patch(change)
+            preview(observation)
+            page.notes.append(f"Expected: {expectation}\n\nObserved:\n{readable(observation)}")
+        elif choice == "Leave a note":
+            if note := ask("What would you like to share?"):
+                page.notes.append(note)
+                page.status = "Has a note"
+                return
+        elif choice in ("Looks good", "Come back later"):
+            page.status = "Reviewed" if choice == "Looks good" else "For later"
+            return
+
+
+def walk(review: Review) -> str:
+    pages = [Page() for _ in review.changes]
+    while True:
+        menu = {
+            f"{i + 1}  [{p.status}]  {readable(c.path).replace(chr(10), ' ').replace(chr(9), ' ')}": i
+            for i, (c, p) in enumerate(zip(review.changes, pages, strict=True))
+        }
+        choice = output(
+            "gum",
+            "filter",
+            "--header",
+            "Pick a change, or finish when you're ready",
+            content="\n".join([*menu, FINISH]) + "\n",
+        )
+        if choice == FINISH:
+            break
+        if choice not in menu:
+            raise ValueError("No change selected.")
+        index = menu[choice]
+        review_page(review, review.changes[index], pages[index])
+    lines = ["# Review notes", "", review.source, f"Revision: {review.revision}"]
+    for change, page in zip(review.changes, pages, strict=True):
+        lines.extend(
+            ["", f"## {readable(change.path)}", "", page.status, *["\n" + n for n in page.notes]]
+        )
+    return "\n".join(lines) + "\n"
+
+
+def save_new(target: Path, draft: str) -> None:
+    with tempfile.NamedTemporaryFile(
+        dir=target.parent, mode="w", encoding="utf-8", delete_on_close=False
+    ) as tmp:
+        _ = tmp.write(draft)
+        tmp.close()
+        os.link(tmp.name, target)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="review", description=__doc__)
+    sub = parser.add_subparsers(required=True).add_parser("walk", help="start a guided review")
+    source = sub.add_mutually_exclusive_group()
+    _ = source.add_argument(
+        "pr", nargs="?", help="GitHub PR number or URL (default: current branch)"
+    )
+    _ = source.add_argument("--demo", action="store_true", help="try the local handoff example")
+    _ = sub.add_argument("--output", type=Path, help="new Markdown file for the draft")
+    args = parser.parse_args(namespace=Arguments())
+    if not (sys.stdin.isatty() and sys.stderr.isatty()):
+        print("review walk needs an interactive terminal.", file=sys.stderr)
+        return 2
+    try:
+        review = demo_review() if args.demo else pull_request(args.pr)
+        target = args.output or Path(
+            "review-demo.md" if args.demo else f"review-{review.revision[:12]}.md"
+        )
+        if target.exists() or target.is_symlink():
+            raise ValueError(f"{target} already exists. Choose a new file with --output.")
+        print(f"{review.source} · {review.revision}", file=sys.stderr)
+        draft = walk(review)
+        preview(draft)
+        _ = subprocess.run(
+            ["gum", "confirm", "--default=false", f"Save this draft to {target}?"], check=True
+        )
+        save_new(target, draft)
+        print(target)
+    except subprocess.CalledProcessError as error:
+        return error.returncode if error.returncode > 0 else 128 - error.returncode
+    except (OSError, ValueError) as error:
+        print(f"review: {error}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
