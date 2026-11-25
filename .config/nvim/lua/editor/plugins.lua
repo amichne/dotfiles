@@ -3,10 +3,15 @@ local M = {}
 M.lazy_commit = '306a05526ada86a7b30af95c5cc81ffba93fef97'
 M.spec = {
   {
+    'carlos-algms/agentic.nvim', commit = '4750d6ce4298b3018dd67f975a1457afbeeaa09f',
+    lazy = true, main = 'agentic',
+    opts = { provider = 'copilot-acp', provider_switcher = { hide_unhealthy_providers = true } },
+  },
+  {
     'MeanderingProgrammer/render-markdown.nvim', commit = '640a3ec6d538bad17c328be373c7cad0293d9589', -- v8.14.0
-    ft = 'askmarkdown', main = 'render-markdown',
+    ft = { 'askmarkdown', 'AgenticChat' }, main = 'render-markdown',
     opts = {
-      file_types = { 'askmarkdown' },
+      file_types = { 'askmarkdown', 'AgenticChat' },
       sign = { enabled = false }, anti_conceal = { enabled = false },
       heading = { icons = { '▌ ', '▎ ', '› ' } },
     },

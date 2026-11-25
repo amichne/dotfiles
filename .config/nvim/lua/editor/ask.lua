@@ -19,7 +19,7 @@ function M.open(command)
   vim.b[buf].ask_provider = provider == 'ai-ask' and (vim.env.AI_PROVIDER or 'codex') or provider
   vim.b[buf].ask_status = 'Enter send · Ctrl-J newline'
   vim.bo[buf].bufhidden = 'hide'
-  vim.t.editor_agent = buf
+  vim.t.editor_ask = buf
   M.show(buf)
 
   local function submit()

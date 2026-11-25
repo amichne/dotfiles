@@ -35,7 +35,10 @@ function M.setup()
 
   map('n', '<leader>f', function() require('fff').find_files() end, 'Find files')
   map('n', '<leader>1', '<cmd>25Lexplore<CR>', 'Toggle file sidebar')
-  map('n', '<leader>2', function() require('editor.agent').toggle() end, 'Toggle AI agent pane')
+  map('n', '<leader>2', function() require('agentic').toggle() end, 'Toggle ACP chat')
+  map('n', '<leader>cp', function() require('agentic').new_session_with_provider() end, 'Choose ACP chat provider')
+  map('n', '<leader>a', function() require('editor.agent').ask() end, 'Ask AI (one-shot)')
+  map('n', '<leader>t', function() require('editor.agent').terminal() end, 'Toggle agent terminal')
   map('n', '<leader>/', function() require('fff').live_grep() end, 'Search file contents')
   vim.list_extend(actions, {
     { label = 'Save file', keys = ':write<CR>' },

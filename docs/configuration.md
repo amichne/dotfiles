@@ -167,7 +167,10 @@ The editor uses the Neon Arcade colors from Rex and Ghostty. Space is the leader
 | Shortcut | Action |
 | --- | --- |
 | `Space 1` | Show or hide the file tree on the left. |
-| `Space 2` | Show or hide this tab’s AI pane. Pending requests continue while hidden. |
+| `Space 2` | Show or hide the ACP chat. Reopen it to continue the conversation. |
+| `Space c p` | Choose an installed ACP provider for a new conversation. |
+| `Space a` | Ask AI a one-shot question. |
+| `Space t` | Show or hide the agent terminal. |
 | `Space f` | Find a file by fuzzy name. |
 | `Space /` | Search file contents. |
 | `Space p` | Search editor actions by name or shortcut. Each row shows both. |
@@ -176,12 +179,16 @@ The editor uses the Neon Arcade colors from Rex and Ghostty. Space is the leader
 In the action palette, type `sidebar` or `rename` to filter the list. Use the arrow keys to move one row.
 Use Page Up and Page Down to browse a page at a time. Enter runs the selected action. Esc returns to the editor.
 
-The agent defaults to `codex`. Set `NVIM_AGENT` to another executable, such as `pi`, to use your preferred agent.
+The ACP chat uses agentic.nvim with the GitHub Copilot CLI by default. Install the CLI and sign in with `copilot login`.
+In the prompt, press `Ctrl-s` to send. The chat renders Markdown and displays tool permission requests.
+To use another ACP backend, install its adapter and select **Choose ACP chat provider** in the action palette.
+
+The separate agent terminal defaults to `codex`. Set `NVIM_AGENT` to another interactive executable, such as `pi`, to change it.
 In the terminal, press `Ctrl-\` then `Ctrl-n` to return to Normal mode before a leader shortcut.
 
-If `ai-ask` is on your path, set `export NVIM_AGENT=ai-ask` to use it from Neovim.
-Press `Space 2` to compose a question. Ctrl-J adds a line. Enter sends the question and displays the Markdown answer.
-The pane shows the provider and request status. In Normal mode, `Space 2` hides or reopens it, and `q` dismisses it.
+For a single question, choose **Ask AI (one-shot)** from the action palette. It uses `ai-ask` on your path.
+Ctrl-J adds a line. Enter sends the question and displays the Markdown answer.
+The pane shows the provider and request status. In Normal mode, `Space a` hides or reopens it, and `q` dismisses it.
 `AI_PROVIDER` selects `codex`, `claude`, or `copilot` for `ai-ask`.
 To use another backend, set `NVIM_ASK_COMMAND` to an executable name or path.
 It receives one question on stdin. On success it writes Markdown to stdout. On failure it returns a nonzero exit code and writes to stderr.
