@@ -1,0 +1,336 @@
+from __future__ import annotations
+
+import json
+import os
+import pty
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+from .conftest import Home
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_home_source_contains_the_requested_public_files() -> None:
+    for name in (
+        ".zshrc",
+        ".zshenv",
+        ".zprofile",
+        ".config/git/config",
+        ".config/zsh/functions/main",
+        ".config/zsh/functions/recents",
+        ".local/bin/git-recents",
+        ".local/bin/keys",
+        ".local/bin/shell-prompt",
+    ):
+        assert (ROOT / name).is_file(), name
+    for name in ("git-recents", "keys", "shell-prompt"):
+        assert os.access(ROOT / ".local/bin" / name, os.X_OK)
+    assert {p.name for p in (ROOT / ".config").iterdir()} == {
+        "atuin",
+        "austincomplete",
+        "ghostty",
+        "git",
+        "mise",
+        "nvim",
+        "prompt.json",
+        "shell-prompt",
+        "starship.toml",
+        "worktree-reclaim.toml",
+        "yazi",
+        "zsh",
+    }
+    assert {str(p.relative_to(ROOT / ".pi")) for p in (ROOT / ".pi").rglob("*") if p.is_file()} == {
+        "agent/deepen.md",
+        "agent/extensions/deepen.ts",
+        "agent/extensions/ask-questions.ts",
+        "agent/extensions/subagent/config.json",
+        "agent/lib/questions.ts",
+        "agent/questions.json",
+        "agent/agents/researcher.md",
+        "agent/agents/reviewer.md",
+        "agent/agents/scout.md",
+        "agent/agents/worker.md",
+        "agent/pi-lsp.json",
+        "agent/prompts/verify.md",
+    }
+
+
+def test_repository_contains_only_current_source_owners() -> None:
+    git = ["git", "-C", str(ROOT)]
+    result = subprocess.run(
+        [*git, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    roots = {Path(p).parts[0] for p in result.stdout.split("\0") if p and (ROOT / p).exists()}
+    assert roots == {
+        "Brewfile",
+        "install.sh",
+        ".agents",
+        ".config",
+        ".github",
+        ".gitignore",
+        ".gradle",
+        ".local",
+        ".pi",
+        ".python-version",
+        ".zprofile",
+        ".zshenv",
+        ".zshrc",
+        "Brewfile.development",
+        "Dockerfile",
+        "README.md",
+        "docs",
+        "pyproject.toml",
+        "scripts",
+        "tests",
+        "uv.lock",
+        "zensical.toml",
+        "AGENTS.md",
+    }
+
+
+def prepare_integrations(home: Home) -> Path:
+    log = home.path / "integrations.log"
+    home.env["INTEGRATION_LOG"] = str(log)
+    for name in ("mise", "atuin", "zoxide", "wt", "starship"):
+        tool = home.tools / name
+        _ = tool.write_text(
+            '#!/bin/sh\nprintf "%s" "${0##*/}" >> "$INTEGRATION_LOG"\n'
+            'printf " %s" "$@" >> "$INTEGRATION_LOG"\n'
+            'printf "\\n" >> "$INTEGRATION_LOG"\nprintf ":\\n"\n',
+            encoding="utf-8",
+        )
+        tool.chmod(0o755)
+    plugins = home.path / "system plugins"
+    for name in ("zsh-autosuggestions", "zsh-syntax-highlighting"):
+        directory = plugins / name
+        directory.mkdir(parents=True)
+        _ = (directory / f"{name}.zsh").write_text(
+            f'print -r -- "{name}" >> "$INTEGRATION_LOG"\n', encoding="utf-8"
+        )
+    home.env["ZSH_PLUGIN_ROOT"] = str(plugins)
+    return log
+
+
+def test_fresh_interactive_shell_loads_the_direct_source_once(home: Home) -> None:
+    log = prepare_integrations(home)
+    result = home.run(
+        "/bin/zsh",
+        "-d",
+        "-i",
+        "-c",
+        'source "$HOME/.zshrc"; print -r -- "result=$_SHELL_CONFIG_RESULT"; '
+        'print -r -- "$EDITOR"; whence f rr y; bindkey "^W"',
+    )
+    assert result.returncode == 0, result.stderr
+    assert "result=0" in result.stdout
+    assert "nvim" in result.stdout
+    assert "backward-kill-word" in result.stdout
+    for name in ("f", "rr", "y"):
+        assert name in result.stdout.splitlines()
+    assert log.read_text().splitlines() == [
+        "mise activate zsh",
+        "mise completion zsh",
+        "atuin gen-completions --shell zsh",
+        "zoxide init zsh",
+        "wt config shell init zsh",
+        "atuin init zsh --disable-up-arrow",
+        "starship init zsh",
+        "zsh-autosuggestions",
+        "zsh-syntax-highlighting",
+    ]
+
+
+def test_fuzzy_search_excludes_bare_git_metadata(home: Home) -> None:
+    _ = prepare_integrations(home)
+    result = home.run(
+        "/bin/zsh",
+        "-d",
+        "-i",
+        "-c",
+        'print -rl -- "$FZF_DEFAULT_COMMAND" "$FZF_ALT_C_COMMAND"',
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        "fd --type f --hidden --exclude .git --exclude .dotfiles.git",
+        "fd --type d --hidden --exclude .git --exclude .dotfiles.git",
+    ]
+
+
+def test_fzf_preview_command_is_one_option(home: Home) -> None:
+    _ = prepare_integrations(home)
+    result = home.run("/bin/zsh", "-d", "-i", "-c", 'print -r -- "$FZF_CTRL_T_OPTS"')
+    assert result.returncode == 0, result.stderr
+    assert shlex.split(result.stdout) == [
+        "--preview",
+        "bat --color=always --style=numbers --line-range=:200 -- {}",
+        "--preview-window=right:50%",
+    ]
+
+
+def test_fzf_preview_preserves_custom_options(home: Home) -> None:
+    _ = prepare_integrations(home)
+    options = "--preview 'head -n 20 -- {}' --preview-window=bottom:30%"
+    home.env["FZF_CTRL_T_OPTS"] = options
+    result = home.run("/bin/zsh", "-d", "-i", "-c", 'print -r -- "$FZF_CTRL_T_OPTS"')
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == options
+
+
+def test_missing_shell_dependency_returns_failure(home: Home) -> None:
+    _ = prepare_integrations(home)
+    (home.tools / "atuin").unlink()
+    result = home.run("/bin/zsh", "-d", "-i", "-c", 'return "$_SHELL_CONFIG_RESULT"')
+    assert result.returncode == 127
+    assert "stage=atuin outcome=missing-command" in result.stderr
+
+
+def test_login_shell_only_prepares_paths(home: Home) -> None:
+    log = prepare_integrations(home)
+    result = home.run("/bin/zsh", "-d", "-l", "-c", 'print -rl -- "$path[@]"')
+    assert result.returncode == 0, result.stderr
+    assert str(home.path / ".local/bin") in result.stdout.splitlines()
+    assert str(home.path / ".local/share/mise/shims") in result.stdout.splitlines()
+    assert not log.exists()
+
+
+def test_login_prefers_brew_to_an_old_local_shim(home: Home) -> None:
+    brew_bin = Path(home.env["HOMEBREW_PREFIX"]) / "bin"
+    (brew_bin / "uv").symlink_to(home.tools / "uv")
+    (home.path / ".local/bin/uv").symlink_to(home.tools / "uv")
+    result = home.run("/bin/zsh", "-dlc", 'whence -p uv; print -r -- "$MISE_GLOBAL_CONFIG_FILE"')
+    assert result.stdout.splitlines() == [
+        str(brew_bin / "uv"),
+        str(home.path / ".config/mise/config.toml"),
+    ]
+
+
+def test_diffnav_theme_respects_personal_preferences(home: Home) -> None:
+    _ = prepare_integrations(home)
+    for expected in ("neon", "dracula"):
+        if expected == "dracula":
+            home.env["DIFFNAV_THEME"] = expected
+        result = home.run("/bin/zsh", "-dic", 'print -r -- "$DIFFNAV_THEME"')
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == expected
+
+
+def test_worktree_environment_uses_remote_repository_names(home: Home) -> None:
+    result = home.run(
+        "/bin/zsh", "-d", "-c", 'print -rl -- "$WORKTREE_ROOT" "$WORKTRUNK_WORKTREE_PATH"'
+    )
+    assert result.returncode == 0, result.stderr
+    root = str(home.path / ".worktrees")
+    assert result.stdout.splitlines() == [
+        root,
+        root + "/{{ remote_repo }}/{{ branch | sanitize }}",
+    ]
+
+
+def test_worktree_root_override_is_shared_with_worktrunk(home: Home) -> None:
+    home.env["WORKTREE_ROOT"] = str(home.path / "custom worktrees")
+    result = home.run(
+        "/bin/zsh", "-d", "-c", 'print -rl -- "$WORKTREE_ROOT" "$WORKTRUNK_WORKTREE_PATH"'
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        home.env["WORKTREE_ROOT"],
+        home.env["WORKTREE_ROOT"] + "/{{ remote_repo }}/{{ branch | sanitize }}",
+    ]
+
+
+def test_keys_runs_without_the_removed_toolbox(home: Home) -> None:
+    result = home.run(str(home.path / ".local/bin/keys"), "--json")
+    assert result.returncode == 0, result.stderr
+    rows = json.loads(result.stdout)
+    assert {row["tool"] for row in rows} == {"shell", "yazi"}
+    assert any(row["key"] == "Ctrl-R" for row in rows)
+    result = home.run(str(home.path / ".local/bin/keys"), "unknown", "--list")
+    assert result.returncode == 2
+
+
+def test_keys_preserves_the_empty_example_in_a_gum_selection(home: Home) -> None:
+    gum = home.tools / "gum"
+    _ = gum.write_text(
+        f"#!{sys.executable}\nimport sys\n"
+        "assert sys.argv[1] == 'filter'\n"
+        "print(sys.stdin.read().strip().splitlines()[-1])\n"
+    )
+    gum.chmod(0o755)
+    master, slave = pty.openpty()
+    try:
+        result = subprocess.run(
+            [str(home.path / ".local/bin/keys"), "yazi"],
+            env=home.env,
+            cwd=home.path,
+            stdin=slave,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    finally:
+        os.close(master)
+        os.close(slave)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "yazi\tQ\tQuit while keeping the shell directory\t\n"
+
+
+def test_keys_rejects_invalid_editor_maps(home: Home) -> None:
+    tool = home.tools / "nvim"
+    _ = tool.write_text('#!/bin/sh\nprintf \'[{"key":42,"description":"bad"}]\'\n')
+    tool.chmod(0o755)
+    result = home.run(str(home.path / ".local/bin/keys"), "nvim", "--json")
+    assert result.returncode == 2
+    assert "INVALID_MAPS" in result.stderr
+
+
+def test_prompt_launcher_uses_the_direct_source(home: Home) -> None:
+    assert (home.tools / "node").exists(), "Run scripts/check.sh to resolve the Node executable"
+    result = home.run(str(home.path / ".local/bin/shell-prompt"), "context", "--json")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {"kind": "outside"}
+    result = home.run(
+        str(home.path / ".local/bin/shell-prompt"), "context", "--settings", "invalid"
+    )
+    assert result.returncode == 2
+    assert "stage=settings outcome=invalid" in result.stderr
+
+
+def test_public_inventory_ignores_private_and_generated_state(home: Home) -> None:
+    assert home.run("git", "init", "--quiet").returncode == 0
+    for path in (
+        ".ssh/id_ed25519",
+        ".pi/agent/auth.json",
+        ".pi/agent/sessions/example.jsonl",
+        ".config/ayi/config.json",
+        ".config/work/config.json",
+        ".config/ghostty/config.ghostty",
+        ".zshrc.local",
+        "ayi/drafts/task",
+        ".local/state/tool/data",
+        ".dotfiles.git/index",
+        ".codex/AGENTS.md",
+        ".codex/hooks.json",
+        ".pi/agent/AGENTS.md",
+        ".pi/agent/extensions/private.ts",
+        ".dotfiles/controlled-english.md",
+        "docs/stray.md",
+    ):
+        assert home.run("git", "check-ignore", path).returncode == 0, path
+    for path in (
+        ".zshrc",
+        ".config/starship.toml",
+        ".config/ghostty/themes/Neon Arcade",
+        ".local/bin/keys",
+        "AGENTS.md",
+        "docs/writing.md",
+        "docs/repository.md",
+    ):
+        assert home.run("git", "check-ignore", path).returncode == 1, path

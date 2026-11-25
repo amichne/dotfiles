@@ -15,7 +15,6 @@
 !/.github/workflows/
 !/.github/workflows/sandbox.yml
 !/.github/workflows/pages.yml
-!/.github/README.md
 !/.gradle/
 !/.gradle/init.d/
 !/.gradle/init.d/cache-retention.init.gradle.kts
@@ -56,8 +55,6 @@
 !/.local/bin/git-recents
 !/.local/bin/keys
 !/.local/bin/keys.lock
-!/.local/bin/review
-!/.local/bin/review.lock
 !/.local/bin/setup-tools
 !/.local/bin/setup-tools.lock
 !/.local/bin/shell-prompt
@@ -81,31 +78,35 @@
 !/.pi/agent/prompts/
 !/.pi/agent/prompts/*.md
 
-# Repository support stays under .dotfiles/, never the HOME root.
-!/.dotfiles/
-!/.dotfiles/Brewfile.development
-!/.dotfiles/repository.md
-!/.dotfiles/writing.md
-!/.dotfiles/pyproject.toml
-!/.dotfiles/uv.lock
-!/.dotfiles/zensical.toml
-!/.dotfiles/containers/
-!/.dotfiles/containers/Dockerfile
-!/.dotfiles/docs/
-!/.dotfiles/docs/*.md
-!/.dotfiles/scripts/
-!/.dotfiles/scripts/*.py
-!/.dotfiles/scripts/*.py.lock
-!/.dotfiles/scripts/check.sh
-!/.dotfiles/tests/
-!/.dotfiles/tests/*.py
-!/.dotfiles/tests/*.mjs
+# Checkout guides, build inputs, and maintenance commands.
+!/README.md
+!/Brewfile.development
+!/pyproject.toml
+!/uv.lock
+!/zensical.toml
+!/Dockerfile
+!/docs/
+!/docs/ayi-commands.md
+!/docs/configuration.md
+!/docs/home.md
+!/docs/index.md
+!/docs/pi.md
+!/docs/repository.md
+!/docs/testing.md
+!/docs/writing.md
+!/scripts/
+!/scripts/*.py
+!/scripts/*.py.lock
+!/scripts/check.sh
+!/tests/
+!/tests/*.py
+!/tests/*.mjs
 # Private controlled-English rules stay local.
 /.dotfiles/controlled-english.md
 
 # Generated state stays outside the source inventory.
 **/.venv/
-/.dotfiles/site/
+/site/
 **/__pycache__/
 **/.pytest_cache/
 **/.ruff_cache/

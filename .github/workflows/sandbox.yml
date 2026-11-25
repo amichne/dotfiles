@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12.14"
           enable-cache: false
       - name: Run disposable container gate
-        run: uv run --locked --script .dotfiles/scripts/sandbox.py check
+        run: uv run --locked --script scripts/sandbox.py check
 
   pi-types:
     name: Pi TypeScript
@@ -50,4 +50,4 @@ jobs:
         run: |
           export PI_SDK_ROOT="$RUNNER_TEMP/pi-types/node_modules/@earendil-works/pi-coding-agent"
           export TYPESCRIPT_ROOT="$RUNNER_TEMP/pi-types/node_modules/typescript"
-          node --test .dotfiles/tests/pi-types.test.mjs
+          node --test tests/pi-types.test.mjs
