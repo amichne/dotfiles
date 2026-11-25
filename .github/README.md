@@ -31,8 +31,9 @@ Use ordinary Git in the checkout to review, stage, and commit changes.
 
 The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ayi` commands and their installer.
 
-Preview core tool and Brew installs with `mise run setup:plan`; use `mise run setup`
-for best-effort installation or `mise run setup:strict` to require completeness.
+From the checkout, run `brew bundle install --file Brewfile --no-upgrade` for the core shell tools.
+With uv and Python available, `./.local/bin/setup-tools` previews setup.
+Use `./.local/bin/setup-tools --apply --strict` to install missing tools and the pinned JDK and Kotlin compiler.
 Read [configuration](../.dotfiles/docs/configuration.md#install-tools), [Pi setup](../.dotfiles/docs/pi.md), and [Ayi commands](../.dotfiles/docs/ayi-commands.md).
 Read [disposable containers](../.dotfiles/docs/testing.md) for the same isolated gate on local and cloud Docker workers.
 The [repository instructions](../.dotfiles/repository.md) define ownership and the local gate:

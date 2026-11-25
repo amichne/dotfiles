@@ -97,7 +97,7 @@ The tool paths also load in new non-interactive Bash login shells inside this ch
 Amp snapshots successful setup for reuse by fresh orbs.
 An exact snapshot skips setup; a stale snapshot reruns it against the updated checkout.
 `.agents/resume` does no work because this repository needs no services or authentication.
-Neither script installs HOME configuration or the personal mise toolbox.
+Both scripts use the container's toolchain independently of the personal Brewfile and mise pins.
 Setup refuses to run on macOS or from the installed HOME.
 No secrets, pre-clone script, pre-setup script, or supervised services are required.
 

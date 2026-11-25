@@ -67,6 +67,7 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
     path.mkdir()
     selected = (
         ".gitignore",
+        "Brewfile",
         ".zshrc",
         ".zshenv",
         ".zprofile",
@@ -82,6 +83,9 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
             target.chmod(mode)
     tools = tmp_path / "tools"
     tools.mkdir()
+    brew_bin = tmp_path / "brew prefix/bin"
+    brew_bin.mkdir(parents=True)
+    (brew_bin / "brew").symlink_to("/usr/bin/false")
     uv = os.environ.get("DOTFILES_TEST_UV") or shutil.which("uv")
     assert uv is not None
     (tools / "uv").symlink_to(Path(uv).resolve())
@@ -90,6 +94,7 @@ def home(tmp_path: Path, public_files: tuple[tuple[str, bytes, int], ...]) -> Ho
         (tools / "node").symlink_to(node)
     env = {
         "HOME": str(path),
+        "HOMEBREW_PREFIX": str(brew_bin.parent),
         "ZDOTDIR": str(path),
         "XDG_CONFIG_HOME": str(path / ".config"),
         "XDG_DATA_HOME": str(path / ".local/share"),

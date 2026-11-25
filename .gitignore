@@ -2,6 +2,7 @@
 *
 !/.gitignore
 !/.python-version
+!/Brewfile
 !/install.sh
 !/.zshrc
 !/.zshenv
@@ -82,6 +83,7 @@
 
 # Repository support stays under .dotfiles/, never the HOME root.
 !/.dotfiles/
+!/.dotfiles/Brewfile.development
 !/.dotfiles/repository.md
 !/.dotfiles/writing.md
 !/.dotfiles/pyproject.toml

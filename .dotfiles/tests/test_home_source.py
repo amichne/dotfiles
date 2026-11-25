@@ -67,6 +67,7 @@ def test_repository_contains_only_current_source_owners() -> None:
     )
     roots = {Path(p).parts[0] for p in result.stdout.split("\0") if p and (ROOT / p).exists()}
     assert roots == {
+        "Brewfile",
         "install.sh",
         ".agents",
         ".config",
@@ -187,6 +188,27 @@ def test_login_shell_only_prepares_paths(home: Home) -> None:
     assert str(home.path / ".local/bin") in result.stdout.splitlines()
     assert str(home.path / ".local/share/mise/shims") in result.stdout.splitlines()
     assert not log.exists()
+
+
+def test_login_prefers_brew_to_an_old_local_shim(home: Home) -> None:
+    brew_bin = Path(home.env["HOMEBREW_PREFIX"]) / "bin"
+    (brew_bin / "uv").symlink_to(home.tools / "uv")
+    (home.path / ".local/bin/uv").symlink_to(home.tools / "uv")
+    result = home.run("/bin/zsh", "-dlc", 'whence -p uv; print -r -- "$MISE_GLOBAL_CONFIG_FILE"')
+    assert result.stdout.splitlines() == [
+        str(brew_bin / "uv"),
+        str(home.path / ".config/mise/config.toml"),
+    ]
+
+
+def test_diffnav_theme_respects_personal_preferences(home: Home) -> None:
+    _ = prepare_integrations(home)
+    for expected in ("neon", "dracula"):
+        if expected == "dracula":
+            home.env["DIFFNAV_THEME"] = expected
+        result = home.run("/bin/zsh", "-dic", 'print -r -- "$DIFFNAV_THEME"')
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == expected
 
 
 def test_worktree_environment_uses_remote_repository_names(home: Home) -> None:

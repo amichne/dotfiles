@@ -12,8 +12,8 @@ Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installe
 - `.gitignore` owns the default-deny public inventory.
 - `.zshenv`, `.zshrc`, and `.zprofile` own shell exports and startup;
   `.config/zsh/functions` owns the autoloaded functions.
-- `.config/mise/config.toml` owns tool pins, the Brew inventory, and setup tasks;
-  `.local/bin/setup-tools` owns preview and per-item installation.
+- `Brewfile` owns the core Homebrew tools. `.dotfiles/Brewfile.development` lists optional developer tools.
+  `.config/mise/config.toml` pins the JDK and Kotlin compiler. `.local/bin/setup-tools` previews and installs the core inventory.
 - `.local/bin/keys` owns the shortcut browser; `.config/shell-prompt` owns Git
   prompt context.
 - `.local/bin/dotfiles` runs worktree reclaim from the checkout.

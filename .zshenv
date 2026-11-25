@@ -5,6 +5,7 @@ export WORKTREE_ROOT="${WORKTREE_ROOT:-$HOME/.worktrees}"
 export WORKTRUNK_WORKTREE_PATH="$WORKTREE_ROOT/{{ remote_repo }}/{{ branch | sanitize }}"
 # Bind the Worktrunk user alias to this checkout, including in non-interactive shells.
 export DOTFILES_COMMAND=${${(%):-%x}:A:h}/.local/bin/dotfiles
+export MISE_GLOBAL_CONFIG_FILE="${MISE_GLOBAL_CONFIG_FILE:-${${(%):-%x}:A:h}/.config/mise/config.toml}"
 export WORKTRUNK_ALIASES__RECLAIM='"$DOTFILES_COMMAND" reclaim {{ args }}'
 export FFF_ENABLE_HOME_SCAN=0
 

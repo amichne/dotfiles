@@ -33,6 +33,7 @@ from typing import Literal, TypeGuard
 
 NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._/-]*(?::[a-zA-Z0-9][a-zA-Z0-9._/-]*)?")
 VERSION = re.compile(r"(?:[a-zA-Z][a-zA-Z0-9_-]*-)?[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9.+_-]*")
+BREW_ENTRY = re.compile(r'(brew|cask)\s+"([a-zA-Z0-9][a-zA-Z0-9._+@/-]*)"')
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,18 +77,40 @@ def is_table(value: object) -> TypeGuard[dict[object, object]]:
     return isinstance(value, dict)
 
 
-def read_inventory(
-    path: Path, provider: Literal["all", "brew", "mise"]
-) -> Inventory | ConfigFailure:
+def read_brewfile(path: Path) -> list[_Target] | ConfigFailure:
     try:
-        data: dict[str, object] = tomllib.loads(path.read_text(encoding="utf-8"))
+        lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeError):
         return ConfigFailure("unreadable-config", f"Cannot read {path}")
-    except tomllib.TOMLDecodeError:
-        return ConfigFailure("invalid-config", "Invalid TOML; review the selected config")
-    tools, variables = data.get("tools"), data.get("vars")
-    if not is_table(tools) or not is_table(variables):
-        return ConfigFailure("invalid-config", "Expected [tools] and [vars] inventories")
+    targets: list[_Target] = []
+    for number, line in enumerate(lines, start=1):
+        entry = line.partition("#")[0].strip()
+        if not entry:
+            continue
+        match = BREW_ENTRY.fullmatch(entry)
+        if not match:
+            return ConfigFailure("invalid-config", f"Unsupported Brewfile entry at {path}:{number}")
+        target = _Target("brew" if match[1] == "brew" else "cask", match[2])
+        if target in targets:
+            return ConfigFailure("invalid-config", f"Duplicate {target.name} at {path}:{number}")
+        targets.append(target)
+    if not targets:
+        return ConfigFailure("invalid-config", f"Empty Brewfile: {path}")
+    return targets
+
+
+def brew_inventory(
+    variables: dict[object, object], directory: Path
+) -> list[_Target] | ConfigFailure:
+    if "setup_brewfile" in variables:
+        name = variables["setup_brewfile"]
+        if not isinstance(name, str) or not name.strip() or "\x00" in name:
+            return ConfigFailure("invalid-config", "vars.setup_brewfile needs a path")
+        if "setup_brew_formulae" in variables or "setup_brew_casks" in variables:
+            return ConfigFailure("invalid-config", "Select one Brew inventory")
+        return read_brewfile(directory / name)
+
+    # Explicit configs from earlier installs can still carry the inline lists.
     targets: list[_Target] = []
     for key, kind in (("setup_brew_formulae", "brew"), ("setup_brew_casks", "cask")):
         value = variables.get(key)
@@ -101,6 +124,24 @@ def read_inventory(
                 "invalid-config", f"vars.{key} contains duplicate or invalid names"
             )
         targets.extend(_Target("cask" if kind == "cask" else "brew", name) for name in names)
+    return targets
+
+
+def read_inventory(
+    path: Path, provider: Literal["all", "brew", "mise"]
+) -> Inventory | ConfigFailure:
+    try:
+        data: dict[str, object] = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError):
+        return ConfigFailure("unreadable-config", f"Cannot read {path}")
+    except tomllib.TOMLDecodeError:
+        return ConfigFailure("invalid-config", "Invalid TOML; review the selected config")
+    tools, variables = data.get("tools"), data.get("vars")
+    if not is_table(tools) or not is_table(variables):
+        return ConfigFailure("invalid-config", "Expected [tools] and [vars] inventories")
+    targets = brew_inventory(variables, path.parent)
+    if isinstance(targets, ConfigFailure):
+        return targets
     for tool, version in tools.items():
         if not isinstance(tool, str) or NAME.fullmatch(tool) is None:
             return ConfigFailure("invalid-config", "Invalid mise tool name")
@@ -279,13 +320,15 @@ def emit(report: dict[str, object], rows: list[dict[str, object]], structured: b
     if "detail" in report:
         print(report["detail"])
     if report["status"] == "planned":
-        print("No installs attempted. Apply with mise run setup; see setup-tools --help.")
+        print("Apply with setup-tools --apply. Use --strict to fail on incomplete setup.")
     elif report["status"] == "partial":
         print("INCOMPLETE: review issues above, then rerun; --strict makes issues return exit 1.")
 
 
 def main() -> int:
     config_home = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+    root = Path(__file__).resolve().parents[2]
+    default_config = (config_home if root == Path.home() else root / ".config") / "mise/config.toml"
     parser = argparse.ArgumentParser(
         description=__doc__,
         allow_abbrev=False,
@@ -294,10 +337,8 @@ def main() -> int:
     _ = parser.add_argument(
         "--config",
         type=Path,
-        default=Path(
-            os.environ.get("MISE_GLOBAL_CONFIG_FILE", str(config_home / "mise/config.toml"))
-        ),
-        help="inventory (default: MISE_GLOBAL_CONFIG_FILE, then XDG_CONFIG_HOME/mise/config.toml)",
+        default=Path(os.environ.get("MISE_GLOBAL_CONFIG_FILE", default_config)),
+        help="inventory (default: MISE_GLOBAL_CONFIG_FILE, then the checkout config)",
     )
     _ = parser.add_argument(
         "--apply", action="store_true", help="install; default is an offline preview"
