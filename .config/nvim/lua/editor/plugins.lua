@@ -25,7 +25,7 @@ M.spec = {
         },
       },
       spec = {
-        { '<leader>f', group = 'Find' }, { '<leader>c', group = 'Code' },
+        { '<leader>c', group = 'Code' },
         { '<leader>g', group = 'Git and navigation' }, { '<leader>h', group = 'Help' },
       },
     },
@@ -56,6 +56,7 @@ function M.setup()
   if vim.trim(head.stdout) ~= M.lazy_commit then return { outcome = 'PIN_MISMATCH', stage = 'VERIFY' } end
   vim.opt.rtp:prepend(path)
   require('lazy').setup(M.spec, {
+    performance = { rtp = { reset = false } },
     lockfile = vim.fn.stdpath('state') .. '/lazy-lock.json',
     checker = { enabled = false }, change_detection = { notify = false },
   })

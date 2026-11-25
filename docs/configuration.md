@@ -161,6 +161,21 @@ Set `DIFFNAV_THEME` in `.zshrc.local` to select a different preset.
 Neovim needs version 0.12 or later.
 Its health report names missing language servers and editor dependencies.
 
+Interactive Zsh maps `vim` to Neovim when `nvim` is on your path.
+The editor uses the Neon Arcade colors from Rex and Ghostty. Space is the leader in Normal mode.
+
+| Shortcut | Action |
+| --- | --- |
+| `Space 1` | Show or hide the file tree on the left. |
+| `Space 2` | Show or hide this tab’s agent terminal. The agent keeps running while hidden. |
+| `Space f` | Find a file by fuzzy name. |
+| `Space /` | Search file contents. |
+| `Space p` | Open the Neovim command line. Type part of a command and press Tab for fuzzy matches. |
+| `Space ?` | Browse key bindings. |
+
+The agent defaults to `codex`. Set `NVIM_AGENT` to another executable, such as `pi`, to use your preferred agent.
+In the terminal, press `Ctrl-\` then `Ctrl-n` to return to Normal mode before a leader shortcut.
+
 Starship shows the branch, upstream, sync state, file counts, worktree, and cached PR using local Git reads. If Git status is slow, it falls back to the branch or detached commit and marks the status unavailable. An incomplete untracked scan shows `?unknown`.
 
 `→ origin//` means the upstream on `origin` has the same name as the local branch. Other upstreams display their full name.

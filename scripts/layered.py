@@ -189,7 +189,10 @@ def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: 
     ledger = inspect(state / "layered.json")
     shell_paths = [str(e.target) for e in entries]
     terminal = ghostty_entries(source, home)
-    paths = [*shell_paths, *(str(e.target) for e in terminal)]
+    terminal_paths = [*shell_paths, *(str(e.target) for e in terminal)]
+    config = configured_path("XDG_CONFIG_HOME", home / ".config")
+    editor = Entry(source / ".config/nvim/init.lua", config / "nvim/init.lua", None)
+    paths = [*terminal_paths, str(editor.target)]
     owned_paths: list[str] = []
     initial: list[str] = []
     if isinstance(ledger, Link):
@@ -203,7 +206,7 @@ def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: 
             initial = [path for path in paths if path in created]
         except (ValueError, KeyError, TypeError) as error:
             raise LayerConflict(f"invalid ownership record: {state}") from error
-        for candidate in (shell_paths, paths):
+        for candidate in (shell_paths, terminal_paths, paths):
             if ledger.data == ownership_record(
                 source, candidate, [p for p in candidate if p in initial]
             ):
@@ -213,22 +216,23 @@ def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: 
             raise LayerConflict(f"checkout or destination differs from ownership record: {state}")
     snapshots: list[object] = []
     changes: list[Change] = []
-    if not uninstall or owned_paths == paths:
-        entries = (*entries, *terminal)
+    entries = (*entries, *terminal, editor)
     for entry in entries:
+        name = str(entry.target)
+        owned = name in owned_paths
+        if uninstall and not owned:
+            continue
         check_parents(entry.target, home)
+        if entry == editor and not uninstall and os.path.lexists(config / "nvim/init.vim"):
+            raise LayerConflict(f"occupied Neovim configuration: {config / 'nvim/init.vim'}")
         if entry.target.is_relative_to(source) or entry.target.is_relative_to(state):
             raise LayerConflict(f"destination overlaps installer files: {entry.target}")
         if entry.source.resolve() != entry.source or not entry.source.is_file():
             raise LayerConflict(f"missing or linked checkout file: {entry.source}")
         before = inspect(entry.target)
-        name = str(entry.target)
-        owned = name in owned_paths
         if not owned and before is None:
             initial.append(name)
         snapshots.append([name, fingerprint(before), digest(entry.source.read_bytes())])
-        if uninstall and not owned:
-            continue
         after = desired(entry, before, owned, name in initial, uninstall)
         if before != after:
             changes.append(Change(entry, before, after))

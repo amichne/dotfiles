@@ -92,6 +92,10 @@ def test_migrate_preserves_other_files_and_archives_git(migration: Installation)
     ghostty = home.path / ".config/ghostty/config.ghostty"
     theme = migration.source / ".config/ghostty/themes/Neon Arcade"
     shader = migration.source / ".config/ghostty/cursor-trail.glsl"
+    editor = home.path / ".config/nvim/init.lua"
+    assert migration.run().returncode != 0
+    assert editor.is_file() and not editor.is_symlink()
+    _ = editor.rename(editor.with_suffix(".lua.personal"))
     assert migration.plan()["changes"] == [
         {
             "path": str(ghostty.parent / "themes/Neon Arcade"),
@@ -107,6 +111,12 @@ def test_migrate_preserves_other_files_and_archives_git(migration: Installation)
                 f"# >>> amichne/dotfiles >>>\ntheme = Neon Arcade\ncustom-shader = {shader}\n"
                 "# <<< amichne/dotfiles <<<\n"
             ),
+        },
+        {
+            "path": str(editor),
+            "operation": "link",
+            "source": str(migration.source / ".config/nvim/init.lua"),
+            "block": None,
         },
     ]
     migration.apply()

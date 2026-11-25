@@ -30,6 +30,7 @@ Read the plan, then apply it with the printed ID.
 | `starship.toml` in the same configuration directory | One link to the checkout. An occupied path stops installation before the installer writes a hook. |
 | `ghostty/themes/Neon Arcade` in the same configuration directory | A link makes the checkout palette available by name in Ghostty. |
 | `ghostty/config.ghostty` in the same configuration directory | A marked block selects Neon Arcade and loads the cursor trail shader from the checkout. |
+| `nvim/init.lua` in the same configuration directory | A link loads the editor setup and colorscheme from the checkout. |
 
 Ghostty reads the palette from `.config/ghostty/themes/Neon Arcade` in the checkout.
 The trail follows the terminal cursor and fades in 160 milliseconds. It uses the active cursor color.
@@ -96,8 +97,9 @@ If migration stops partway, run `./install.sh --migrate` from the same checkout.
 The installer accepts each original file or its exact replacement. Inspect other changes at the reported paths.
 Review the new plan and apply its printed ID.
 
-After migration or an update from the five-destination installer, run `./install.sh` to preview the Ghostty theme link and block.
-Apply that plan to add the terminal theme. Layered uninstall preserves the migration archive.
+After migration or an update from an older installer, run `./install.sh` to preview the new destinations.
+If you want the checkout editor setup, move an existing personal `nvim/init.lua` or `nvim/init.vim` aside before installation.
+Layered uninstall preserves the migration archive.
 
 ## Worktree location
 
