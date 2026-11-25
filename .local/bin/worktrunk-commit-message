@@ -8,6 +8,7 @@
 # url = "https://pypi.org/simple"
 # default = true
 # ///
+import subprocess
 import sys
 
 
@@ -18,15 +19,26 @@ def main() -> int:
         return 0
 
     try:
-        with (
-            open("/dev/tty", encoding="utf-8") as terminal,
-            open("/dev/tty", "w", encoding="utf-8") as prompt,
-        ):
-            print("Commit message: ", end="", file=prompt, flush=True)
-            message = terminal.readline().strip()
+        terminal = open("/dev/tty", "r+b", buffering=0)
     except OSError:
         print("commit: no terminal for a manual message", file=sys.stderr)
         return 1
+    with terminal:
+        try:
+            result = subprocess.run(
+                ["gum", "input", "--prompt=Commit message: ", "--char-limit=0"],
+                stdin=terminal,
+                stderr=terminal,
+                stdout=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            print("commit: gum is missing", file=sys.stderr)
+            return 127
+    if result.returncode:
+        return result.returncode
+    message = result.stdout.strip()
     if not message or message == "null":
         print("commit: no message entered", file=sys.stderr)
         return 1

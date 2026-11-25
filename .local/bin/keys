@@ -178,26 +178,28 @@ def main(argv: list[str]) -> int:
         if args.list or not sys.stdin.isatty():
             print("\n".join(rows))
             return 0
+        if not rows:
+            return 0
+        # Gum trims trailing whitespace from its input. Keep the original TSV for stdout.
+        choices = {row.rstrip(): row for row in rows}
         result = subprocess.run(
             [
-                "fzf",
-                "--height=70%",
-                "--layout=reverse",
-                "--border",
-                "--delimiter=\t",
-                "--with-nth=1,2,3,4",
-                "--prompt=keys> ",
-                "--header=Search actions and examples; Enter closes, Esc cancels",
+                "gum",
+                "filter",
+                "--strict",
+                "--limit=1",
+                "--placeholder=Search shortcuts",
             ],
-            input="\n".join(rows) + "\n",
+            input="\n".join(choices),
             text=True,
             stdout=subprocess.PIPE,
         )
         if result.returncode in (1, 130):
             return 0
-        if result.returncode or result.stdout.rstrip("\n") not in rows:
+        selected = result.stdout.removesuffix("\n")
+        if result.returncode or selected not in choices:
             return report(Failure(Reason.INVALID_SELECTION))
-        print(result.stdout.rstrip("\n"))
+        print(choices[selected])
         return 0
     except FileNotFoundError:
         return report(Failure(Reason.MISSING_COMMAND))

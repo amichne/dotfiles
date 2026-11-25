@@ -2,7 +2,7 @@
 
 These are the user-scoped instructions for every agent session.
 `~/.codex/AGENTS.md` and `~/.claude/CLAUDE.md` link to this file.
-Paths that start with `~/` refer to the user's home directory.
+Resolve `docs/` paths from the dotfiles checkout that supplies this file.
 
 ## Route the task
 
@@ -10,9 +10,9 @@ Read only the row that matches the intended action, before acting.
 
 | Intended action | Read |
 | --- | --- |
-| Produce or revise original prose | `~/.dotfiles/writing.md` |
+| Produce or revise original prose | `docs/writing.md` |
 | Design, change, or review software | Slopsentral's Software Engineering session context; without it, the [global instructions](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/examples/global/AGENTS.md) |
-| Change the dotfiles checkout | `.dotfiles/repository.md` in that checkout |
+| Change the dotfiles checkout | `docs/repository.md` in that checkout |
 
 If a required file is unavailable, name the gap and complete independent
 authorized work without claiming compliance.

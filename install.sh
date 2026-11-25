@@ -9,6 +9,7 @@ fail() {
 
 command -v uv >/dev/null 2>&1 || fail 'install uv 0.12.9 or newer first'
 
+installer=scripts/install.py
 if [ "${1:-}" = --bootstrap ]; then
     shift
     origin=https://github.com/amichne/dotfiles.git
@@ -65,10 +66,14 @@ if [ "${1:-}" = --bootstrap ]; then
     [ "$head" = "$commit" ] || fail "$root is at $head, requested $commit; review the checkout before updating it"
     changes=$(git -C "$root" -c core.fsmonitor=false status --porcelain --untracked-files=normal)
     [ -z "$changes" ] || fail "$root contains local changes"
-    git -C "$root" ls-files --error-unmatch -- install.sh .dotfiles/scripts/install.py .dotfiles/scripts/install.py.lock >/dev/null ||
+    # A pinned checkout can predate the move to top-level scripts.
+    if ! git -C "$root" ls-files --error-unmatch -- "$installer" >/dev/null 2>&1; then
+        installer=.dotfiles/scripts/install.py
+    fi
+    git -C "$root" ls-files --error-unmatch -- install.sh "$installer" "$installer.lock" >/dev/null ||
         fail "$commit does not contain the layered installer"
 else
     root=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 fi
 
-exec uv run --locked --script "$root/.dotfiles/scripts/install.py" --layered "$@"
+exec uv run --locked --script "$root/$installer" --layered "$@"

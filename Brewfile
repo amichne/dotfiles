@@ -23,6 +23,7 @@ brew "node" # shell-prompt
 brew "ripgrep"
 brew "fd"
 brew "fzf"
+brew "gum"
 brew "bat"
 brew "eza"
 brew "yazi"
@@ -30,4 +31,3 @@ brew "yazi"
 # Track the diff renderer so bundle can update it between DiffNav releases.
 brew "diffnav"
 brew "git-delta"
-brew "gum"
