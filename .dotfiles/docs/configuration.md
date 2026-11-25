@@ -172,7 +172,7 @@ If both shortcuts open the repository, map Ctrl-Shift-G in your terminal to send
 Ctrl-T selects files with a bat preview.
 Set `FZF_CTRL_T_OPTS` in `.zshrc.local` to customize the file preview.
 
-Use `git diff | diffnav` for a file tree and colored diff.
+Use `git diff --no-ext-diff | diffnav` for a file tree and colored diff, including when Git has an external diff driver.
 Interactive Zsh selects DiffNav's built-in Neon theme to complement Ghostty's Neon Arcade.
 DiffNav 0.13.1 accepts preset themes. It cannot import Ghostty's custom palette.
 Set `DIFFNAV_THEME` in `.zshrc.local` to select a different preset.
