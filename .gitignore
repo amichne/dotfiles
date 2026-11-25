@@ -49,6 +49,8 @@
 
 !/.local/
 !/.local/bin/
+!/.local/bin/ai-ask
+!/.local/bin/ai-ask.lock
 !/.local/bin/austincomplete
 !/.local/bin/austincomplete.lock
 !/.local/bin/dotfiles
