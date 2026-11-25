@@ -1,6 +1,6 @@
 # Dotfiles
 
-Install the Zsh setup, Git aliases, Starship prompt, and Neon Arcade terminal theme from an ordinary checkout.
+Install the Zsh setup, Git aliases, Starship prompt, and Neon Arcade theme for Ghostty and Neovim from an ordinary checkout.
 Git, uv 0.12.9 or later, and Python 3.12 or 3.13 are needed.
 
 ```sh

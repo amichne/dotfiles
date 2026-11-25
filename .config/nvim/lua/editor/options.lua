@@ -18,6 +18,9 @@ function M.setup()
   vim.opt.colorcolumn = '120'
   vim.opt.clipboard = 'unnamedplus'
   vim.opt.wildmode = 'longest:full,full'
+  vim.opt.wildoptions:append('fuzzy')
+  vim.g.netrw_liststyle = 3
+  vim.g.netrw_banner = 0
   vim.opt.termguicolors = true
   vim.opt.signcolumn = 'yes'
   vim.opt.splitbelow = true

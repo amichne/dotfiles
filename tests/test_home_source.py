@@ -120,17 +120,19 @@ def prepare_integrations(home: Home) -> Path:
 
 def test_fresh_interactive_shell_loads_the_direct_source_once(home: Home) -> None:
     log = prepare_integrations(home)
+    (home.tools / "nvim").symlink_to("/bin/echo")
     result = home.run(
         "/bin/zsh",
         "-d",
         "-i",
         "-c",
         'source "$HOME/.zshrc"; print -r -- "result=$_SHELL_CONFIG_RESULT"; '
-        'print -r -- "$EDITOR"; whence f rr y; bindkey "^W"',
+        'print -r -- "$EDITOR"; vim -- fixture.txt; whence f rr y; bindkey "^W"',
     )
     assert result.returncode == 0, result.stderr
     assert "result=0" in result.stdout
     assert "nvim" in result.stdout
+    assert "-- fixture.txt" in result.stdout.splitlines()
     assert "backward-kill-word" in result.stdout
     for name in ("f", "rr", "y"):
         assert name in result.stdout.splitlines()

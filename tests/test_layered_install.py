@@ -119,6 +119,8 @@ def test_empty_home_install_round_trip(installation: Installation) -> None:
     installation.apply()
     assert starship.is_symlink()
     assert starship.resolve() == installation.source / ".config/starship.toml"
+    editor = home / ".config/nvim/init.lua"
+    assert editor.readlink() == installation.source / ".config/nvim/init.lua"
     config = home / ".config/ghostty/config.ghostty"
     theme = config.parent / "themes/Neon Arcade"
     assert theme.readlink() == installation.source / ".config/ghostty/themes/Neon Arcade"
@@ -128,6 +130,7 @@ def test_empty_home_install_round_trip(installation: Installation) -> None:
     assert installation.plan()["changes"] == []
     installation.apply("--uninstall")
     assert not starship.is_symlink()
+    assert not editor.is_symlink()
     assert not config.exists()
     assert not theme.is_symlink()
     assert installation.plan("--uninstall")["changes"] == []
