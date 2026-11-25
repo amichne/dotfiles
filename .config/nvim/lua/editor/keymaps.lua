@@ -35,7 +35,7 @@ function M.setup()
 
   map('n', '<leader>f', function() require('fff').find_files() end, 'Find files')
   map('n', '<leader>1', '<cmd>25Lexplore<CR>', 'Toggle file sidebar')
-  map('n', '<leader>2', function() require('editor.agent').toggle() end, 'Toggle agent terminal')
+  map('n', '<leader>2', function() require('editor.agent').toggle() end, 'Toggle AI agent pane')
   map('n', '<leader>/', function() require('fff').live_grep() end, 'Search file contents')
   vim.list_extend(actions, {
     { label = 'Save file', keys = ':write<CR>' },

@@ -167,7 +167,7 @@ The editor uses the Neon Arcade colors from Rex and Ghostty. Space is the leader
 | Shortcut | Action |
 | --- | --- |
 | `Space 1` | Show or hide the file tree on the left. |
-| `Space 2` | Show or hide this tab’s agent terminal. The agent keeps running while hidden. |
+| `Space 2` | Show or hide this tab’s AI pane. Pending requests continue while hidden. |
 | `Space f` | Find a file by fuzzy name. |
 | `Space /` | Search file contents. |
 | `Space p` | Search editor actions by name or shortcut. Each row shows both. |
@@ -180,9 +180,11 @@ The agent defaults to `codex`. Set `NVIM_AGENT` to another executable, such as `
 In the terminal, press `Ctrl-\` then `Ctrl-n` to return to Normal mode before a leader shortcut.
 
 If `ai-ask` is on your path, set `export NVIM_AGENT=ai-ask` to use it from Neovim.
-Press `Space 2`, type a question, and press Enter. The answer opens in a split.
-Use `Space 2` to hide or reopen it. Press `q` to dismiss the answer before the next question.
-`ai-ask` reads `AI_PROVIDER` to select the provider.
+Press `Space 2` to compose a question. Ctrl-J adds a line. Enter sends the question and displays the Markdown answer.
+The pane shows the provider and request status. In Normal mode, `Space 2` hides or reopens it, and `q` dismisses it.
+`AI_PROVIDER` selects `codex`, `claude`, or `copilot` for `ai-ask`.
+To use another backend, set `NVIM_ASK_COMMAND` to an executable name or path.
+It receives one question on stdin. On success it writes Markdown to stdout. On failure it returns a nonzero exit code and writes to stderr.
 
 Starship shows the branch, upstream, sync state, file counts, worktree, and cached PR using local Git reads. If Git status is slow, it falls back to the branch or detached commit and marks the status unavailable. An incomplete untracked scan shows `?unknown`.
 
