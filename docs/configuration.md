@@ -176,6 +176,11 @@ The editor uses the Neon Arcade colors from Rex and Ghostty. Space is the leader
 The agent defaults to `codex`. Set `NVIM_AGENT` to another executable, such as `pi`, to use your preferred agent.
 In the terminal, press `Ctrl-\` then `Ctrl-n` to return to Normal mode before a leader shortcut.
 
+If `ai-ask` is on your path, set `export NVIM_AGENT=ai-ask` to use it from Neovim.
+Press `Space 2`, type a question, and press Enter. The answer opens in a split.
+Use `Space 2` to hide or reopen it. Press `q` to dismiss the answer before the next question.
+`ai-ask` reads `AI_PROVIDER` to select the provider.
+
 Starship shows the branch, upstream, sync state, file counts, worktree, and cached PR using local Git reads. If Git status is slow, it falls back to the branch or detached commit and marks the status unavailable. An incomplete untracked scan shows `?unknown`.
 
 `→ origin//` means the upstream on `origin` has the same name as the local branch. Other upstreams display their full name.
