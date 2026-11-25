@@ -188,6 +188,8 @@ It receives one question on stdin. On success it writes Markdown to stdout. On f
 
 Starship shows the branch, upstream, sync state, file counts, worktree, and cached PR using local Git reads. If Git status is slow, it falls back to the branch or detached commit and marks the status unavailable. An incomplete untracked scan shows `?unknown`.
 
+In a linked worktree, a visible directory such as `feature-search` stands for the branch `feature/search`. If Starship truncates that directory, the branch appears again. The worktree count and lock state stay visible. The prompt shows PR status when the cache or Worktrunk supplies it.
+
 `→ origin//` means the upstream on `origin` has the same name as the local branch. Other upstreams display their full name.
 
 The first prompt starts a background `wt list statusline --format=json` refresh. Later prompts can add working line counts, divergence and changed lines against the default branch, and the latest reported CI state. For example, `synced` describes the upstream, while `vs origin/main: ↑1 ↓61` describes a separate comparison. A bare `#` from Worktrunk only becomes a PR label if Worktrunk supplies a PR number.

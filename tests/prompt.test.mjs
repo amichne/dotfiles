@@ -77,6 +77,7 @@ test('a blocked Worktrunk cannot delay the local labels; a later redraw adds lab
     worktree: {path:await realpath(repo), changes:{diff:{added:270, deleted:1}}},
     default_branch: {ahead:1, behind:61, diff:{added:63, deleted:27}},
     checks: {status:'failed', source:'branch', stale:false},
+    pr: {number:42},
   };
   const env = {PATH:root + ':/usr/bin:/bin', XDG_CACHE_HOME:join(root, 'cache')};
   await writeFile(join(root, 'report'), JSON.stringify({schema:2, repo:{default_branch:'main'}, items:[row]}));
@@ -88,7 +89,7 @@ test('a blocked Worktrunk cannot delay the local labels; a later redraw adds lab
   ].join('\n'), {mode:0o755});
   await writeFile(join(repo, 'tracked'), 'changed\n');
   const first = await statusline(repo, env);
-  assert.match(first, /^fixture-main · no upstream · !1 · PR not checked$/);
+  assert.equal(first, 'fixture-main · no upstream · !1');
   await writeFile(join(root, 'release'), '');
   const deadline = performance.now() + 3500;
   let warm;
@@ -96,7 +97,7 @@ test('a blocked Worktrunk cannot delay the local labels; a later redraw adds lab
     await new Promise(done => setTimeout(done, 40));
     warm = await statusline(repo, env);
   } while (!warm.includes('branch CI failed') && performance.now() < deadline);
-  assert.equal(warm, first + ' · working lines +270 -1 · vs main: ↑1 ↓61, +63 -27 lines · branch CI failed');
+  assert.equal(warm, first + ' · PR #42 · working lines +270 -1 · vs main: ↑1 ↓61, +63 -27 lines · branch CI failed');
   await git('restore', 'tracked');
   const clean = await statusline(repo, env);
   assert.match(clean, / · clean · /);
@@ -140,6 +141,34 @@ test('Git context preserves remote, divergence, worktree, and pull request meani
     'wt:feature-worktree / 3 total',
     'PR #42 → main',
   ]);
+});
+
+test('a worktree-only layout keeps the name when Starship truncates the directory', async t => {
+  const {root, git} = await fixture(t);
+  const tree = join(root, 'feature-search');
+  await git('worktree', 'add', '-b', 'feature/search', tree);
+  const config = join(root, 'config');
+  const env = {XDG_CONFIG_HOME: config, PATH: root + ':/usr/bin:/bin'};
+  await mkdir(join(config, 'shell-prompt'), {recursive: true});
+  await writeFile(join(config, 'shell-prompt/statusline.json'), '["worktree"]');
+  await writeFile(join(root, 'starship'), '#!/bin/sh\nprintf "%s " "$VISIBLE_PATH"\n', {mode: 0o755});
+  assert.equal(await statusline(tree, {...env, VISIBLE_PATH: '…/feature-search'}), '2 worktrees');
+  assert.equal(await statusline(tree, {...env, VISIBLE_PATH: '…/deep/lib'}), 'wt:feature-search / 2 total');
+});
+
+test('the prompt names a linked checkout once across visible and truncated paths', () => {
+  const worktree = {...repository.worktree, name: 'feature-prompt-editor', locked: true};
+  const labels = (g, path) => gitParts(defaults, g, path)
+    .filter(part => part.type === 'branch' || part.type === 'worktree')
+    .map(part => part.text);
+  const linked = {...repository, worktree};
+  assert.deepEqual(labels(linked, '…/repo/feature-prompt-editor/src'), ['3 worktrees / locked']);
+  assert.deepEqual(labels(linked, '…/src/deep/lib'), ['feature/prompt-editor', '3 worktrees / locked']);
+  assert.deepEqual(labels(linked, '…/feature-prompt-editor-v2'), ['feature/prompt-editor', '3 worktrees / locked']);
+  assert.deepEqual(labels(repository, '…/feature-worktree'), ['feature/prompt-editor', '3 worktrees']);
+  assert.deepEqual(labels(repository, '…/src/deep/lib'), ['feature/prompt-editor', 'wt:feature-worktree / 3 total']);
+  const detached = {...linked, branch: {kind: 'detached', oid: 'a'.repeat(40)}};
+  assert.deepEqual(labels(detached, '…/feature-prompt-editor'), ['detached aaaaaaa', '3 worktrees / locked']);
 });
 
 test('upstreams with another branch or remote keep their full name', () => {
