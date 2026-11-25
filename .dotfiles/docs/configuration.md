@@ -8,7 +8,7 @@ That file remains private.
 ## Install tools
 
 The checkout's `Brewfile` supplies the interactive shell, Git helpers, prompt, and setup tools.
-It includes Gum and DiffNav. Homebrew installs Delta as a DiffNav dependency.
+It includes Gum, DiffNav, and its Delta renderer. The explicit Delta entry permits independent updates.
 Mise manages the Temurin JDK and Kotlin compiler pins in `.config/mise/config.toml`.
 Homebrew tools follow their formula versions.
 
@@ -35,9 +35,10 @@ The existing `mise run setup:plan`, `setup`, and `setup:strict` tasks call the s
 The shell uses the checkout as its global mise configuration. Projects can still select their own versions.
 To use a personal global config, set `MISE_GLOBAL_CONFIG_FILE` before the checkout's Zsh environment hook.
 
-For the optional Neovim and Pi language servers, jq, and Atlassian CLI, run
+For the optional editor language servers, jq, and Atlassian CLI, run
 `brew bundle install --file .dotfiles/Brewfile.development --no-upgrade`.
 Atlassian supplies ACLI through its own tap. Homebrew can request trust for that formula.
+On macOS this bundle includes the Kotlin language server for Neovim.
 
 A failed install, missing provider, or timeout produces an explicit item outcome
 and retry command. Other items still run. The final report says `partial`, not

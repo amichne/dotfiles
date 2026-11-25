@@ -2,6 +2,7 @@
 brew "ty"
 brew "ruff"
 brew "biome"
+cask "kotlin-lsp" if OS.mac?
 
 # Standalone JSON queries and Atlassian Cloud.
 brew "jq"

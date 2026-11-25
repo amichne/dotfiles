@@ -27,6 +27,7 @@ brew "bat"
 brew "eza"
 brew "yazi"
 
-# Terminal diff review and interactive scripts. DiffNav brings git-delta.
+# Track the diff renderer so bundle can update it between DiffNav releases.
 brew "diffnav"
+brew "git-delta"
 brew "gum"
