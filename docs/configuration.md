@@ -170,8 +170,11 @@ The editor uses the Neon Arcade colors from Rex and Ghostty. Space is the leader
 | `Space 2` | Show or hide this tab’s agent terminal. The agent keeps running while hidden. |
 | `Space f` | Find a file by fuzzy name. |
 | `Space /` | Search file contents. |
-| `Space p` | Open the Neovim command line. Type part of a command and press Tab for fuzzy matches. |
+| `Space p` | Search editor actions by name or shortcut. Each row shows both. |
 | `Space ?` | Browse key bindings. |
+
+In the action palette, type `sidebar` or `rename` to filter the list. Use the arrow keys to move one row.
+Use Page Up and Page Down to browse a page at a time. Enter runs the selected action. Esc returns to the editor.
 
 The agent defaults to `codex`. Set `NVIM_AGENT` to another executable, such as `pi`, to use your preferred agent.
 In the terminal, press `Ctrl-\` then `Ctrl-n` to return to Normal mode before a leader shortcut.
