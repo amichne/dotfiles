@@ -143,6 +143,19 @@ test('Git context preserves remote, divergence, worktree, and pull request meani
   ]);
 });
 
+test('a worktree-only layout keeps the name when Starship truncates the directory', async t => {
+  const {root, git} = await fixture(t);
+  const tree = join(root, 'feature-search');
+  await git('worktree', 'add', '-b', 'feature/search', tree);
+  const config = join(root, 'config');
+  const env = {XDG_CONFIG_HOME: config, PATH: root + ':/usr/bin:/bin'};
+  await mkdir(join(config, 'shell-prompt'), {recursive: true});
+  await writeFile(join(config, 'shell-prompt/statusline.json'), '["worktree"]');
+  await writeFile(join(root, 'starship'), '#!/bin/sh\nprintf "%s " "$VISIBLE_PATH"\n', {mode: 0o755});
+  assert.equal(await statusline(tree, {...env, VISIBLE_PATH: '…/feature-search'}), '2 worktrees');
+  assert.equal(await statusline(tree, {...env, VISIBLE_PATH: '…/deep/lib'}), 'wt:feature-search / 2 total');
+});
+
 test('the prompt names a linked checkout once across visible and truncated paths', () => {
   const worktree = {...repository.worktree, name: 'feature-prompt-editor', locked: true};
   const labels = (g, path) => gitParts(defaults, g, path)
