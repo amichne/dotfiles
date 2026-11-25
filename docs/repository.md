@@ -20,7 +20,7 @@ Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installe
   `scripts/layered.py` owns the three Zsh hooks, Git include, Starship link, and Ghostty theme selection.
 - `scripts/install.py` previews and applies the layer and its removal.
   `migration.py` converts the supported legacy HOME revision.
-- `.pi` contains public Pi resources. `amichne/ayi` owns the AI commands.
+- `.pi` contains public Pi resources. `.local/bin/ai-ask` owns text requests to the native AI providers.
   Slopsentral owns development standards, validators, and skills.
 - Private instructions, hooks, credentials, sessions, and
   `.dotfiles/controlled-english.md` stay outside the tracked inventory.

@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {performance} from 'node:perf_hooks';
 import {defaults,validateSettings,parseStatus,parseUntracked,parseWorktrees,gitText,gitANSI,gitParts,display} from './model.mjs';
 import {cachedWorktrunk, refreshWorktrunk} from './worktrunk.mjs';
+import {activeLayout, customize} from './layout.mjs';
 const exec=promisify(execFile);
 const cacheRoot=join(process.env.XDG_CACHE_HOME||join(homedir(),'.cache'),'config','pull-requests');
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -108,6 +109,11 @@ export async function refreshPR(cwd=process.cwd()) {
 }
 async function main() {
   const [mode,...args]=process.argv.slice(2);
+  if (mode === 'customize') {
+    try { await customize(args); }
+    catch (error) { console.error('shell-prompt: ' + error.message); process.exitCode = 1; }
+    return;
+  }
   if (mode === 'refresh-worktrunk' && args.length === 3) {
     await refreshWorktrunk(args[0], args[1], Number(args[2]), readCommand);
     return;
@@ -115,35 +121,42 @@ async function main() {
   if (mode === 'statusline' && !args.length) {
     const g = await readRepository(process.cwd(), {partial:true});
     if (g.kind === 'outside') return;
+    const layout = await activeLayout();
     if (g.kind !== 'repository') {
       const [branch, head] = await Promise.all([
         git(['symbolic-ref', '--quiet', '--short', 'HEAD'], process.cwd(), 'branch', {timeout: 100}),
         git(['rev-parse', '--short', 'HEAD'], process.cwd(), 'head', {timeout: 100}),
       ]);
       const identity = branch.stdout?.trim() || (head.stdout && `detached ${head.stdout.trim()}`);
-      console.log(identity ? `${display(identity)} · Git status unavailable` : 'Git status unavailable');
+      if (layout.length) console.log(identity && layout.includes('branch') ? `${display(identity)} · Git status unavailable` : 'Git status unavailable');
       return;
     }
-    const snapshot = await cachedWorktrunk(g);
+    const snapshot = layout.some(name => ['pr', 'working', 'details'].includes(name)) ? await cachedWorktrunk(g) : null;
     const parts = gitParts({...defaults, labels: 'compact'}, g);
     if (snapshot?.prNumber && (g.pr.kind === 'unchecked' || g.pr.kind === 'unavailable' || g.pr.stale)) {
       parts.find(part => part.type === 'pr').text = `PR #${snapshot.prNumber}`;
     }
     const colors = {branch: '1;35', changes: '33', pr: '34'};
-    const labeled = parts.map(({type, text}) => `\x1b[${colors[type] ?? '37'}m${text}\x1b[0m`);
+    const labels = new Map(parts.map(({type, text}) => [type, [`\x1b[${colors[type] ?? '37'}m${text}\x1b[0m`]]));
     const trackedChanges = g.counts.staged || g.counts.modified || g.counts.conflicted;
     if (snapshot?.working && (trackedChanges || g.untracked.count > 0)) {
-      labeled.push(`working lines ${display(snapshot.working)}`);
+      labels.set('working', [`working lines ${display(snapshot.working)}`]);
     }
-    for (const label of snapshot?.labels ?? []) labeled.push(display(label));
-    console.log(labeled.join(' · '));
+    labels.set('details', (snapshot?.labels ?? []).map(display));
+    const visible = layout.flatMap(name => labels.get(name) ?? []);
+    if (visible.length) console.log(visible.join(' · '));
     return;
   }
   if(mode==='refresh-pr') {
     const result=await refreshPR();
     console.log(JSON.stringify(result)); process.exitCode=result.kind==='unavailable'?1:0; return;
   }
-  if(mode!=='context') {console.error('usage: shell-prompt context [--json | --ansi --settings BASE64] | refresh-pr'); process.exitCode=2; return;}
+  if(mode!=='context') {
+    const usage = 'usage: shell-prompt context [--json | --ansi --settings BASE64] | statusline | customize [--help] | refresh-pr';
+    if (mode === '--help') console.log(usage);
+    else { console.error(usage); process.exitCode=2; }
+    return;
+  }
   const ansi=args[0]==='--ansi';
   if(ansi) args.shift();
   let s=defaults;

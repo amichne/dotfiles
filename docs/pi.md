@@ -191,7 +191,7 @@ Use Kast commands to manage that file.
 `kast status` reports where Kast is set up.
 A live Pi session must load the extension before it can call Kast tools.
 
-The separate [Ayi repository](https://github.com/amichne/ayi) owns the `ayi` task commands and their installer.
+The [archived Ayi repository](https://github.com/amichne/ayi) contains the former `ayi` task commands and installer.
 
 `~/AGENTS.md` routes agents to the shared engineering rules.
 Keep private Pi instructions and package-managed extensions outside the public inventory.

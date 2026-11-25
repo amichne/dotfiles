@@ -29,12 +29,12 @@ The source contains:
 
 Use ordinary Git in the checkout to review, stage, and commit changes.
 
-The separate public repository [Ayi](https://github.com/amichne/ayi) owns the `ayi` commands and their installer.
+Use `ai-ask` to prompt Codex, Copilot, or Claude from a CLI. Use `shell-prompt customize` to change the Starship Git status line.
 
 From the checkout, run `brew bundle install --file Brewfile --no-upgrade` for the core shell tools.
 With uv and Python available, `./.local/bin/setup-tools` previews setup.
 Use `./.local/bin/setup-tools --apply --strict` to install missing tools and the pinned JDK and Kotlin compiler.
-Read [configuration](docs/configuration.md#install-tools), [Pi setup](docs/pi.md), and [Ayi commands](docs/ayi-commands.md).
+Read [configuration](docs/configuration.md#install-tools), [Pi setup](docs/pi.md), and [AI providers](docs/configuration.md#call-an-ai-provider-from-a-cli).
 Read [disposable containers](docs/testing.md) for the same isolated gate on local and cloud Docker workers.
 The [repository instructions](docs/repository.md) define ownership and the local gate:
 

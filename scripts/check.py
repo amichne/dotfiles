@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PYTHON_SOURCE = (
     "scripts",
     "tests",
+    ".local/bin/ai-ask",
     ".local/bin/keys",
     ".local/bin/setup-tools",
     ".local/bin/austincomplete",

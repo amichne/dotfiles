@@ -175,9 +175,39 @@ Starship and Worktrunk use the terminal's ANSI palette. In Rex, both follow the 
 `shell-prompt refresh-pr` explicitly refreshes PR data through GitHub CLI.
 The helper needs Node and Git. The refresh operation also needs authenticated `gh`.
 
+### Customize the Git status line
+
+Run `shell-prompt customize` to see the active segments in display order.
+To preview a layout, describe the change. The customizer sends your description, active layout, and available segments to `ai-ask`.
+
+```sh
+shell-prompt customize --ask 'Show the branch first, then file changes, then the pull request'
+# Example response: ["branch","changes","pr"]
+shell-prompt customize --apply '["branch","changes","pr"]'
+```
+
+The next Starship prompt uses the saved order. Omit a segment to hide it.
+`working` shows changed line counts. `details` shows the default-branch comparison and CI status.
+Use `shell-prompt customize --help` for the full list in default order.
+The customizer saves the layout under `${XDG_CONFIG_HOME:-$HOME/.config}/shell-prompt/statusline.json`. Remove that file to restore the default.
+Only `--ask` calls an AI provider. To use Claude for one suggestion, prefix the command with `AI_PROVIDER=claude`.
+
+### Call an AI provider from a CLI
+
+`ai-ask` reads a quoted prompt or reads standard input when you omit the argument.
+It runs `codex exec` by default. Install and authenticate the native CLI for each provider you use.
+Set `AI_PROVIDER` to `codex`, `copilot`, or `claude` to select a default. The `--provider` flag takes precedence.
+
+```sh
+ai-ask 'Suggest a short label for untracked files'
+printf '%s\n' 'Suggest a short label for staged changes' | ai-ask --provider copilot
+```
+
+Each request starts in a temporary directory. A successful request prints the answer to stdout.
+A provider failure reports its exit status on stderr. A missing executable exits with 127, and a 120-second timeout exits with 124.
+
 `~/.pi/agent` holds Pi configuration, public instructions, agents, prompts, and LSP settings.
 Use [Pi setup](pi.md) for the public inventory and Kast registration.
-The separate [Ayi repository](https://github.com/amichne/ayi) owns the AI registry and its optional installed links.
 
 Use `nvim '+checkhealth editor'` for editor diagnostics.
 
