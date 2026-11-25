@@ -1,0 +1,8 @@
+# Language servers for Neovim and Pi.
+brew "ty"
+brew "ruff"
+brew "biome"
+
+# Standalone JSON queries and Atlassian Cloud.
+brew "jq"
+brew "atlassian/acli/acli"

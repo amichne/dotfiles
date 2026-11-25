@@ -93,7 +93,44 @@ def test_committed_inventory_accepts_exact_version_tables(tmp_path: Path) -> Non
     )
     assert result.returncode == 0, result.stdout
     report = json.loads(result.stdout)
-    assert any(row["target"] == "mise:kotlin@2.4.21" for row in report["items"])
+    targets = {row["target"] for row in report["items"]}
+    assert {name for name in targets if name.startswith("mise:")} == {
+        "mise:java@temurin-25.0.5.1+2.0.LTS",
+        "mise:kotlin@2.4.21",
+    }
+    assert {"brew:diffnav", "brew:gum", "brew:uv", "brew:node", "brew:worktrunk"} <= targets
+
+
+def test_brewfile_apply_uses_the_config_directory(setup: tuple[Path, dict[str, str]]) -> None:
+    config, env = setup
+    _ = config.write_text('[tools]\n[vars]\nsetup_brewfile = "Core Brewfile"\n')
+    _ = (config.parent / "Core Brewfile").write_text(
+        '# terminal tools\nbrew "git"\nbrew "gum" # scripts\ncask "example-app"\n'
+    )
+    assert invoke(setup, "--apply", "--strict").returncode == 0
+    assert calls(env) == [
+        ["brew", "list", "--formula", "--versions", "git"],
+        ["brew", "list", "--formula", "--versions", "gum"],
+        ["brew", "install", "--formula", "gum"],
+        ["brew", "list", "--cask", "--versions", "example-app"],
+        ["brew", "install", "--cask", "example-app"],
+    ]
+
+
+@pytest.mark.parametrize("content", [None, "# empty", 'brew "git"\nbrew "git"', 'system "false"'])
+def test_unusable_brewfile_stops_before_install(
+    setup: tuple[Path, dict[str, str]], content: str | None
+) -> None:
+    config, env = setup
+    _ = config.write_text('[tools]\n[vars]\nsetup_brewfile = "Brewfile"\n')
+    if content is not None:
+        _ = (config.parent / "Brewfile").write_text(content)
+    result = invoke(setup, "--apply")
+    assert result.returncode == 2
+    assert json.loads(result.stdout)["status"] == (
+        "unreadable-config" if content is None else "invalid-config"
+    )
+    assert calls(env) == []
 
 
 @pytest.mark.parametrize(

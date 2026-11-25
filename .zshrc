@@ -5,7 +5,8 @@ typeset -g _SHELL_CONFIG_RESULT=0
 
 typeset -U path fpath
 _shell_source_root=${${(%):-%x}:A:h}
-path=("$HOME/.local/bin" "${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims" $path /opt/homebrew/bin /usr/local/bin /home/linuxbrew/.linuxbrew/bin "$_shell_source_root/.local/bin")
+source "$_shell_source_root/.zprofile"
+[[ $_shell_source_root == ${HOME:A} ]] || path=("$_shell_source_root/.local/bin" $path)
 
 # Machine-specific additions and preferences, before tool activation.
 if [[ -f ${ZDOTDIR:-$HOME}/.zshrc.local ]]; then
@@ -15,6 +16,8 @@ fi
 export EDITOR=${EDITOR:-nvim}
 export VISUAL=${VISUAL:-$EDITOR}
 export PAGER=${PAGER:-less}
+# DiffNav's built-in Neon preset pairs with Ghostty's Neon Arcade palette.
+export DIFFNAV_THEME=${DIFFNAV_THEME:-neon}
 export LESS=${LESS:--FRiX}
 HISTFILE=${ZDOTDIR:-$HOME}/.zsh_history
 HISTSIZE=100000
@@ -145,7 +148,7 @@ PROMPT=${PROMPT/\\n/$'\n'}
 _shell_activate() {
     local init_code
     if (( ! $+commands[$1] )); then
-        print -u2 -- "zsh: stage=$1 outcome=missing-command; run mise install outside a project"
+        print -u2 -- "zsh: stage=$1 outcome=missing-command; run setup-tools --apply --strict"
         _SHELL_CONFIG_RESULT=127
         return
     fi

@@ -1,42 +1,43 @@
 # Configuration
 
-`.zprofile` adds `~/.local/bin` and the mise shims to `PATH`.
+`.zprofile` puts Homebrew before old mise shims and their links in `~/.local/bin`.
 `.zshrc` adds interactive history, completion, key bindings, and tool integrations.
 It reads an optional `.zshrc.local` before tool initialization.
 That file remains private.
 
 ## Install tools
 
-`.config/mise/config.toml` owns exact mise tool pins, the Brew inventory, and setup tasks.
-Review it before trusting or running it. Setup needs mise and uv on `PATH`.
-On a new machine, install mise and Homebrew using their official instructions,
-then run `mise install uv` to bootstrap the pinned script runner.
-The script uses an existing Python 3.12 or 3.13 through uv; it has no third-party
-dependencies. If neither interpreter is available, explicitly bootstrap one with
-`mise exec -- uv python install 3.12`. The runner uses `--offline` so even a first
-preview cannot silently download an interpreter. Missing bootstrap prerequisites
-are hard failures before the per-item setup starts.
+The checkout's `Brewfile` supplies the interactive shell, Git helpers, prompt, and setup tools.
+It includes Gum and DiffNav. Homebrew installs Delta as a DiffNav dependency.
+Mise manages the Temurin JDK and Kotlin compiler pins in `.config/mise/config.toml`.
+Homebrew tools follow their formula versions.
+
+From a fresh checkout with Homebrew on `PATH`, install the core formulae.
 
 ```sh
-mise run setup:plan    # Offline inventory preview; no provider commands
-mise run setup         # Attempt every item; report issues without blocking setup
-mise run setup:strict  # Same attempts; exit 1 if any item remains incomplete
+brew bundle install --file Brewfile --no-upgrade
 ```
 
-Setup installs the Brew formulae and casks first, then mise tools, one at a time.
-The `setup_brew_formulae` and `setup_brew_casks` strings under `[vars]` are
-whitespace-separated package names. The initial Brew list supplies Git, Neovim,
-ShellCheck, Zsh, and its completion/highlighting packages. No casks are selected.
-Keep version-managed tools in `[tools]` rather than adding duplicate Brew owners.
-Brew versions follow the configured taps; only the mise versions are pinned.
-Setup does not manage tap registration, GUI permissions, credentials, services,
-Ayi/Pi installers, or editor plugins.
+For a later update, run `brew update` and then `brew bundle install --file Brewfile`.
+Use `brew bundle check --file Brewfile` to see whether every selected formula is current.
 
-Existing Brew packages are left alone. Mise ensures each exact requested version
-is installed without changing its pin. Setup does not run upgrades, cleanup,
-uninstalls, automatic Homebrew updates, or automatic trust changes.
-It disables mise task pre-installation so an unavailable pin cannot prevent the
-per-item installer from starting. No setup step runs at shell startup.
+If uv needs a Python interpreter, run `uv python install 3.12`.
+With uv and Python 3.12 or 3.13 available, preview or apply setup from the checkout.
+
+```sh
+./.local/bin/setup-tools                  # Offline preview
+./.local/bin/setup-tools --apply --strict # Install missing tools, then report failures
+```
+
+The script accepts literal `brew "name"` and `cask "name"` declarations in the core Brewfile.
+It skips installed Brew packages and installs the two pinned toolchains through mise.
+The existing `mise run setup:plan`, `setup`, and `setup:strict` tasks call the same script.
+The shell uses the checkout as its global mise configuration. Projects can still select their own versions.
+To use a personal global config, set `MISE_GLOBAL_CONFIG_FILE` before the checkout's Zsh environment hook.
+
+For the optional Neovim and Pi language servers, jq, and Atlassian CLI, run
+`brew bundle install --file .dotfiles/Brewfile.development --no-upgrade`.
+Atlassian supplies ACLI through its own tap. Homebrew can request trust for that formula.
 
 A failed install, missing provider, or timeout produces an explicit item outcome
 and retry command. Other items still run. The final report says `partial`, not
@@ -56,7 +57,8 @@ setup-tools --apply --strict --timeout 1800 # Allow 30 minutes per provider comm
 ```
 
 `--config` selects an inventory explicitly. Otherwise the script uses
-`MISE_GLOBAL_CONFIG_FILE`, then `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml`.
+`MISE_GLOBAL_CONFIG_FILE`, then the config in the checkout that contains the script.
+An installation directly under HOME uses `${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml` as its fallback.
 Provider diagnostics go to stderr; failed commands show at most their last 2,000
 output bytes. JSON reports contain `status`, `config`, `remaining`,
 `missingProviders`, and `items` with target, outcome, command, retry command, and
@@ -64,10 +66,9 @@ native failure code when available. For example, an unavailable Brew executable
 produces `outcome: "missing-provider"` and an overall `status: "partial"`.
 Argument parsing errors use standard argparse stderr and exit 2.
 
-Shell startup uses offline mise initialization and does not install missing tools.
-On systems without Homebrew, supply `zsh-autosuggestions` and
-`zsh-syntax-highlighting` through the system package manager and select
-`--provider mise`. `ZSH_PLUGIN_ROOT` can select their reviewed physical package directory.
+Shell startup initializes mise offline. On systems without Homebrew, install the shell tools through the system package manager.
+Use `--provider mise` for the JDK and Kotlin compiler.
+`ZSH_PLUGIN_ROOT` can select the system directory for the two Zsh plugins.
 
 ## Managed Zsh completions
 
@@ -145,6 +146,11 @@ Ctrl-Shift-G opens the current branch's open GitHub pull request through the aut
 If both shortcuts open the repository, map Ctrl-Shift-G in your terminal to send Escape followed by `[103;6u`.
 Ctrl-T selects files with a bat preview.
 Set `FZF_CTRL_T_OPTS` in `.zshrc.local` to customize the file preview.
+
+Use `git diff | diffnav` for a file tree and colored diff.
+Interactive Zsh selects DiffNav's built-in Neon theme to complement Ghostty's Neon Arcade.
+DiffNav 0.13.1 accepts preset themes. It cannot import Ghostty's custom palette.
+Set `DIFFNAV_THEME` in `.zshrc.local` to select a different preset.
 
 `keys --list` prints shell and Yazi shortcuts.
 `keys nvim --list` reads mappings from Neovim and can start its configured plugins.
