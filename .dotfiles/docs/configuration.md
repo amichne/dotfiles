@@ -71,6 +71,30 @@ Shell startup initializes mise offline. On systems without Homebrew, install the
 Use `--provider mise` for the JDK and Kotlin compiler.
 `ZSH_PLUGIN_ROOT` can select the system directory for the two Zsh plugins.
 
+## Walk through a review
+
+Try the handoff example in a terminal:
+
+```sh
+review walk --demo
+```
+
+Pick `handoff.sh`, then **Try the handoff with a disposable file**. Write what you expect to happen when you decline. At **Return the note?**, choose **No**. The next screen shows the file contents before and after the command. Press **q** to return. Choose **Leave a note** to keep your observation or **Come back later** to revisit the question.
+
+For a GitHub review, use the current branch, a pull request number, or a URL:
+
+```sh
+review walk
+review walk 42 --output my-review.md
+review walk https://github.com/amichne/slopsentral/pull/166
+```
+
+Search the file list by name. Open a patch, check added lines for conflict markers, or record a note. The handoff trial uses a built-in example in a temporary directory. The patch check reads the diff that GitHub supplied.
+
+Choose **Finish and preview draft** to see your notes, expectations, results, and files left for later. Press **q** to leave the preview. Choose **Yes** to save a new local Markdown file. The draft includes the PR URL and head commit. By default it is named `review-<short-sha>.md` or `review-demo.md` in the current directory. Posting the draft is a separate step.
+
+The demo needs uv and Gum. Pull request mode also needs an authenticated GitHub CLI.
+
 ## Managed Zsh completions
 
 `austincomplete` saves a completion and remembers how to regenerate it:
