@@ -1,5 +1,5 @@
 import {execFile,spawn} from 'node:child_process';
-import {promisify} from 'node:util';
+import {promisify,stripVTControlCharacters} from 'node:util';
 import {readFile,writeFile,mkdir,rename,lstat,realpath} from 'node:fs/promises';
 import {dirname,resolve,join} from 'node:path';
 import {homedir} from 'node:os';
@@ -124,8 +124,15 @@ async function main() {
       console.log(identity ? `${display(identity)} · Git status unavailable` : 'Git status unavailable');
       return;
     }
-    const snapshot = await cachedWorktrunk(g);
-    const parts = gitParts({...defaults, labels: 'compact'}, g);
+    const [snapshot, directory] = await Promise.all([
+      cachedWorktrunk(g),
+      g.worktree.kind === 'linked'
+        ? readCommand('starship', ['module', 'directory'], process.cwd(), 'directory', {timeout: 100})
+        : null,
+    ]);
+    const visiblePath = stripVTControlCharacters(directory?.stdout ?? '').trimEnd();
+    const showPR = g.pr.kind !== 'unchecked' || Boolean(snapshot?.prNumber);
+    const parts = gitParts({...defaults, labels: 'compact', pr: showPR}, g, visiblePath);
     if (snapshot?.prNumber && (g.pr.kind === 'unchecked' || g.pr.kind === 'unavailable' || g.pr.stale)) {
       parts.find(part => part.type === 'pr').text = `PR #${snapshot.prNumber}`;
     }

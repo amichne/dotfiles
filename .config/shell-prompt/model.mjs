@@ -74,11 +74,17 @@ export function parseWorktrees(raw,root) {
   if(idx<0) return {kind:'unknown'};
   return {kind:idx===0?'main':'linked',name:root.split('/').at(-1),total:trees.length,locked:trees[idx].locked,prunable:trees[idx].prunable};
 }
-export function gitParts(s,g) {
+export function gitParts(s,g,directory) {
   if(g.kind==='outside') return [];
   if(g.kind!=='repository') return [{type:'error',text:'Git unavailable'}];
   const result=[]; const add=(type,text)=>result.push({type,text}); const compact=s.labels==='compact';
-  if(s.branch) add('branch',g.branch.kind==='detached'?`detached ${g.branch.oid.slice(0,7)}`:display(g.branch.name));
+  const worktree = g.worktree;
+  const linkedPrompt = worktree.kind === 'linked' && directory !== undefined;
+  const nameInPath = linkedPrompt && directory.split('/').includes(worktree.name);
+  const nameIsBranch = linkedPrompt && g.branch.kind === 'named' && worktree.name === g.branch.name.replaceAll('/', '-');
+  if (s.branch && !(nameInPath && nameIsBranch)) {
+    add('branch', g.branch.kind === 'detached' ? `detached ${g.branch.oid.slice(0,7)}` : display(g.branch.name));
+  }
   if(s.remote && g.tracking.kind!=='untracked') {
     const sameOriginBranch = g.branch.kind === 'named' && g.tracking.name === `origin/${g.branch.name}`;
     add('remote', `→ ${sameOriginBranch ? 'origin//' : display(g.tracking.name)}`);
@@ -103,9 +109,13 @@ export function gitParts(s,g) {
     if(parts.length) add('changes',parts.join(' ')); else if(s.clean && g.untracked.kind==='known') add('changes','clean');
   }
   if(s.worktree) {
-    const w=g.worktree;
-    if(w.kind==='unknown') add('worktree','worktree unknown');
-    else if(w.kind==='linked' || w.total>1) add('worktree',`${w.kind==='main'?'main worktree':`wt:${display(w.name)}`} / ${w.total} total${w.locked?' / locked':''}${w.prunable?' / prunable':''}`);
+    if(worktree.kind==='unknown') add('worktree','worktree unknown');
+    else if(worktree.kind==='linked' || worktree.total>1) {
+      const summary = nameInPath || (s.branch && nameIsBranch)
+        ? `${worktree.total} worktrees`
+        : `${worktree.kind === 'main' ? 'main worktree' : `wt:${display(worktree.name)}`} / ${worktree.total} total`;
+      add('worktree', `${summary}${worktree.locked ? ' / locked' : ''}${worktree.prunable ? ' / prunable' : ''}`);
+    }
   }
   if(s.pr) {
     const p=g.pr;
