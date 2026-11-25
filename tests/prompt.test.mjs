@@ -112,6 +112,26 @@ test('a slow Git status keeps branch identity and never claims the worktree is c
   assert.equal(await statusline(repo, {PATH:root + ':/usr/bin:/bin'}), 'fixture-main · Git status unavailable');
 });
 
+test('customize proposes through ai-ask and applies only an explicit valid layout', async t => {
+  const {root, repo} = await fixture(t);
+  const env = {...runtimeEnv, XDG_CONFIG_HOME:join(root, 'config'), PATH:root + ':' + runtimeEnv.PATH};
+  const launcher = fileURLToPath(new URL('../.local/bin/shell-prompt', import.meta.url));
+  const customize = (...args) => exec(launcher, ['customize', ...args], {cwd:repo, env});
+  const provider = join(root, 'ai-ask');
+  await writeFile(provider, '#!/bin/sh\ncat > "$PWD/../request"\necho \'["changes","branch"]\'\n', {mode:0o755});
+  const original = (await customize()).stdout;
+  const proposed = (await customize('--ask', 'put changes first')).stdout.trim();
+  assert.equal(proposed, '["changes","branch"]');
+  assert.match(await readFile(join(root, 'request'), 'utf8'), /put changes first/);
+  assert.equal((await customize()).stdout, original);
+  await customize('--apply', proposed);
+  await writeFile(provider, '#!/bin/sh\necho \'["$(whoami)"]\'\n');
+  await assert.rejects(customize('--ask', 'invalid response'), /Available segments/);
+  await assert.rejects(customize('--apply', '["branch","branch"]'), /at most once/);
+  assert.equal((await customize()).stdout.trim(), proposed);
+  assert.equal(await statusline(repo, env), 'clean · fixture-main');
+});
+
 test('Git context preserves remote, divergence, worktree, and pull request meaning', () => {
   assert.deepEqual(gitParts(defaults, repository).map(part => part.text), [
     'feature/prompt-editor',

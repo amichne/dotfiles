@@ -1,0 +1,133 @@
+#!/usr/bin/env -S uv run --offline --locked --script
+# /// script
+# requires-python = ">=3.12,<3.14"
+# dependencies = []
+# [tool.uv]
+# no-build = true
+# [[tool.uv.index]]
+# name = "pypi"
+# url = "https://pypi.org/simple"
+# default = true
+# ///
+"""Send a single text request to a native AI command."""
+
+import argparse
+import os
+import signal
+import subprocess
+import sys
+import tempfile
+from enum import StrEnum
+from typing import assert_never
+
+
+class Provider(StrEnum):
+    CODEX = "codex"
+    COPILOT = "copilot"
+    CLAUDE = "claude"
+
+    def command(self) -> list[str]:
+        match self:
+            case Provider.CODEX:
+                return [
+                    "codex",
+                    "exec",
+                    "--ephemeral",
+                    "--sandbox",
+                    "read-only",
+                    "--skip-git-repo-check",
+                    "--color",
+                    "never",
+                    "-",
+                ]
+            case Provider.COPILOT:
+                return [
+                    "copilot",
+                    "--silent",
+                    "--stream",
+                    "off",
+                    "--available-tools",
+                    "--disable-builtin-mcps",
+                    "--no-custom-instructions",
+                ]
+            case Provider.CLAUDE:
+                return [
+                    "claude",
+                    "--print",
+                    "--output-format",
+                    "text",
+                    "--no-session-persistence",
+                    "--strict-mcp-config",
+                    "--tools",
+                    "",
+                ]
+        assert_never(self)
+
+
+def ask(provider: Provider, prompt: str) -> int:
+    with tempfile.TemporaryDirectory(prefix="ai-ask-") as directory:
+        with subprocess.Popen(
+            provider.command(),
+            cwd=directory,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        ) as process:
+            try:
+                answer, _ = process.communicate(prompt.encode(), timeout=120)
+            except (subprocess.TimeoutExpired, KeyboardInterrupt):
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                _ = process.communicate()
+                raise
+    if process.returncode:
+        print(f"ai-ask: {provider} exited with status {process.returncode}", file=sys.stderr)
+        return process.returncode if process.returncode > 0 else 128 - process.returncode
+    output = answer.decode("utf-8").rstrip("\n")
+    if not output.strip():
+        print(f"ai-ask: {provider} returned an empty answer", file=sys.stderr)
+        return 1
+    print(output)
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    _ = parser.add_argument("--provider", choices=list(Provider), help="overrides AI_PROVIDER")
+    _ = parser.add_argument("prompt", nargs="?", help="request text (default: read stdin)")
+    options = parser.parse_args()
+    name = (
+        options.provider if options.provider is not None else os.environ.get("AI_PROVIDER", "codex")
+    )
+    try:
+        provider = Provider(name)
+    except ValueError:
+        parser.error("AI_PROVIDER must be codex, copilot, or claude")
+    if options.prompt is None and sys.stdin.isatty():
+        parser.error("pass a prompt or pipe text on stdin")
+    try:
+        prompt = sys.stdin.read() if options.prompt is None else str(options.prompt)
+        if not prompt.strip():
+            parser.error("prompt must contain text")
+        return ask(provider, prompt)
+    except FileNotFoundError:
+        print(f"ai-ask: cannot find {provider} on PATH", file=sys.stderr)
+        return 127
+    except subprocess.TimeoutExpired:
+        print(f"ai-ask: {provider} exceeded 120 seconds", file=sys.stderr)
+        return 124
+    except KeyboardInterrupt:
+        return 130
+    except UnicodeError:
+        print("ai-ask: expected UTF-8 text", file=sys.stderr)
+        return 1
+    except OSError as error:
+        print(f"ai-ask: {error.strerror}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
