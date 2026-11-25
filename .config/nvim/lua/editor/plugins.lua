@@ -3,6 +3,16 @@ local M = {}
 M.lazy_commit = '306a05526ada86a7b30af95c5cc81ffba93fef97'
 M.spec = {
   {
+    'nvim-mini/mini.pick', commit = '8c1f75f8ddd8c9f75d07ed2ab5718d2c3cb65a66', -- v0.18.0
+    lazy = true,
+    config = function()
+      -- The palette uses MiniPick directly. Keep the current chooser for other plugins.
+      local select = vim.ui.select
+      require('mini.pick').setup()
+      vim.ui.select = select
+    end,
+  },
+  {
     'dmtrKovalenko/fff', commit = '95fd777c2529fc7b4d7572dabff64cc07268f2c5', -- v0.11.0
     lazy = false,
     build = function() require('fff.download').download_or_build_binary() end,
