@@ -4,6 +4,9 @@ brew "ruff"
 brew "biome"
 cask "kotlin-lsp" if OS.mac?
 
+# Codex backend for the Neovim ACP chat.
+brew "codex-acp"
+
 # Standalone JSON queries and Atlassian Cloud.
 brew "jq"
 brew "atlassian/acli/acli"

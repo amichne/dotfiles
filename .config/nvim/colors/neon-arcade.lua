@@ -13,6 +13,12 @@ local bg, fg, cursor, selection = '#0d0d15', '#d8dcf0', '#ff4fd8', '#2c2c4a'
 local groups = {
   Normal = { fg = fg, bg = bg },
   NormalFloat = { fg = fg, bg = ansi[1] },
+  AgenticTitle = { fg = ansi[15], bg = ansi[1], bold = true },
+  NeonPrompt = { fg = ansi[16], bg = ansi[1] },
+  RenderMarkdownH2 = { fg = ansi[14], bold = true },
+  RenderMarkdownH3 = { fg = ansi[15], bold = true },
+  RenderMarkdownH2Bg = { bg = '#251b31' },
+  RenderMarkdownH3Bg = { bg = '#152731' },
   FloatBorder = { fg = ansi[7], bg = ansi[1] },
   Cursor = { fg = bg, bg = cursor },
   CursorLine = { bg = ansi[1] },

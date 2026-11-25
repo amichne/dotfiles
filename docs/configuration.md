@@ -182,6 +182,7 @@ Use Page Up and Page Down to browse a page at a time. Enter runs the selected ac
 The ACP chat uses agentic.nvim with the GitHub Copilot CLI by default. Install the CLI and sign in with `copilot login`.
 In the prompt, press `Ctrl-s` to send. The chat renders Markdown and displays tool permission requests.
 To use another ACP backend, install its adapter and select **Choose ACP chat provider** in the action palette.
+For Codex, install the separate adapter with `brew install codex-acp`. Press `Space c p` and select `codex-acp`.
 
 The separate agent terminal defaults to `codex`. Set `NVIM_AGENT` to another interactive executable, such as `pi`, to change it.
 In the terminal, press `Ctrl-\` then `Ctrl-n` to return to Normal mode before a leader shortcut.
