@@ -2,7 +2,7 @@
 
 These are the user-scoped instructions for every agent session.
 `~/.codex/AGENTS.md` and `~/.claude/CLAUDE.md` link to this file.
-Resolve `docs/` paths from the dotfiles checkout that supplies this file.
+For prose, use the writing guidance in the project where the text belongs.
 
 ## Route the task
 
@@ -10,7 +10,6 @@ Read only the row that matches the intended action, before acting.
 
 | Intended action | Read |
 | --- | --- |
-| Produce or revise original prose | `docs/writing.md` |
 | Design, change, or review software | Slopsentral's Software Engineering session context; without it, the [global instructions](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/examples/global/AGENTS.md) |
 | Change the dotfiles checkout | `docs/repository.md` in that checkout |
 

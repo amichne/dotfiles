@@ -2,6 +2,8 @@
 
 Edit the ordinary checkout of `amichne/dotfiles` with Git. The checkout installer connects HOME destinations to the source. Run tests from the checkout with disposable HOME directories.
 
+When writing prose for this repository, use its [writing guide](writing.md).
+
 ## Owners
 
 - `AGENTS.md` owns the user-scoped instructions. `~/.codex/AGENTS.md` and
