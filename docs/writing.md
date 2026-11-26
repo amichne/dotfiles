@@ -1,6 +1,6 @@
 # Writing
 
-Apply these preferences to every response and prose artifact. Start with the
+Use these preferences for prose about this repository. Start with the
 reader's purpose and requested format. When you edit a draft, preserve the
 author's meaning, voice, and useful structure. When you write in someone's
 voice, attribute only views or experiences they supplied. Do not announce these rules.
@@ -32,12 +32,6 @@ errors, product names, quoted UI text, and quotations.
 - Remove filler, warm-up phrases, reassurance, slogans, fragments for effect,
   forced contrasts, self-congratulation, vague analogies, unsupported time
   ranges, and closing recaps.
-
-## Controlled English
-
-If `~/.dotfiles/controlled-english.md` exists, apply it to authored prose. That
-private file stays outside the public inventory. It does not apply to code,
-paths, quoted material, or technical identifiers.
 
 ## Finish
 
