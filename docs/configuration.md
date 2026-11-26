@@ -238,8 +238,41 @@ ai-ask 'Suggest a short label for untracked files'
 printf '%s\n' 'Suggest a short label for staged changes' | ai-ask --provider copilot
 ```
 
-Each request starts in a temporary directory. A successful request prints the answer to stdout.
+Plain `ai-ask` requests start in a temporary directory. A successful request prints the answer to stdout.
 A provider failure reports its exit status on stderr. A missing executable exits with 127, and a 120-second timeout exits with 124.
+
+### Use AI in an interactive Zsh command
+
+Use bare `$A` wherever you want a generated argument or a text filter. At the
+start of a command or pipeline stage, it accepts an optional instruction and
+reads piped text. Each stage writes its answer to the next stage.
+
+```zsh
+git diff | $A 'isolate changes to Kotlin interfaces under src' | $A 'render the diff'
+git status --short | $A
+$A 'what does the last error mean?'
+git commit -m $A
+```
+
+In argument position, Zsh passes the answer as one literal value, including
+spaces and newlines. For `git commit -m $A`, the request includes the staged
+diff. Use `git commit -e -m $A` to edit the generated subject before committing.
+To give an argument its own instruction, use ordinary command substitution,
+such as `git commit -m "$($A 'write a subject for the staged changes')"`.
+Write `'$A'` to pass the token literally.
+
+`$A` starts the provider in the working directory and supplies the original
+command line. By default it sends up to three completed commands from the
+current Atuin session, their exit codes, and the last 40 lines of available
+output (up to 4,096 characters per command). Set `AI_ASK_RECENT` to a number
+from 0 to 20 to change the count. Zero skips history access. Missing history
+or captured output leaves the other context available.
+
+Atuin records output when its daemon, PTY proxy, and output capture are enabled.
+To opt in on a machine with shell history enabled, run
+`atuin setup --only --output-capture --daemon` and start a new shell.
+See [Atuin output capture](https://docs.atuin.sh/main/guide/output-capture/) for
+storage, retention, and exclusion settings.
 
 `~/.pi/agent` holds Pi configuration, public instructions, agents, prompts, and LSP settings.
 Use [Pi setup](pi.md) for the public inventory and Kast registration.
