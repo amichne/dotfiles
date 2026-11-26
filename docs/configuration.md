@@ -241,6 +241,45 @@ printf '%s\n' 'Suggest a short label for staged changes' | ai-ask --provider cop
 Plain `ai-ask` requests start in a temporary directory. A successful request prints the answer to stdout.
 A provider failure reports its exit status on stderr. A missing executable exits with 127, and a 120-second timeout exits with 124.
 
+#### Choose the provider, model, effort, and flags
+
+Set defaults for both `ai-ask` and `$A` in
+`${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/config.toml`. Use a separate
+table for each provider so switching providers selects its model and flags.
+
+```toml
+[ai]
+provider = "codex"
+recent = 3
+
+[ai.codex]
+effort = "low"
+flags = ["-c", "model_verbosity='low'"]
+
+[ai.claude]
+model = "sonnet"
+effort = "medium"
+
+[ai.copilot]
+model = "auto"
+```
+
+`AI_PROVIDER`, `AI_MODEL`, `AI_EFFORT`, `AI_FLAGS`, and `AI_ASK_RECENT`
+override the corresponding file settings. An explicit `ai-ask --provider`
+takes precedence over `AI_PROVIDER`. Omit model or effort to use the native
+CLI's default. Use model names and effort levels supported by that provider.
+With Copilot's `auto` model, leave effort unset.
+
+```zsh
+git diff | AI_PROVIDER=claude AI_MODEL=sonnet AI_EFFORT=low $A 'summarize'
+AI_FLAGS='["-c","model_verbosity=\"low\""]' AI_PROVIDER=codex ai-ask 'Suggest a label'
+```
+
+`AI_FLAGS` replaces the selected provider's entire `flags` array. Each string
+is one native CLI argument. Use `[]` to clear the file's flags for one call.
+For bare `$A` inside another command's arguments, export the overrides
+before running that command.
+
 ### Use AI in an interactive Zsh command
 
 Use bare `$A` wherever you want a generated argument or a text filter. At the

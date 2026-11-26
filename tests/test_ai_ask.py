@@ -89,6 +89,73 @@ def test_provider_errors_never_become_answers(home: Home) -> None:
     assert empty.returncode == 1 and not empty.stdout
 
 
+@pytest.mark.parametrize(
+    ("name", "effort_args"),
+    [
+        ("codex", ["-c", 'model_reasoning_effort="low"']),
+        ("claude", ["--effort", "low"]),
+        ("copilot", ["--reasoning-effort", "low"]),
+    ],
+)
+def test_provider_settings_reach_native_argv(home: Home, name: str, effort_args: list[str]) -> None:
+    config = home.tools / "custom xdg/dotfiles/config.toml"
+    config.parent.mkdir(parents=True)
+    _ = config.write_text(
+        f'[ai]\nprovider = "{name}"\n[ai.{name}]\nmodel = "native-model"\n'
+        'effort = "low"\nflags = ["--example", "two words; $(touch unexpected)"]\n'
+    )
+    home.env["XDG_CONFIG_HOME"] = str(config.parent.parent)
+    cmd = str(home.path / ".local/bin/ai-ask")
+    provider = home.tools / name
+    _ = provider.write_text(f"#!{sys.executable}\nimport json,sys\nprint(json.dumps(sys.argv[1:]))")
+    provider.chmod(0o755)
+    result = home.run(cmd, "question")
+    assert result.returncode == 0, result.stderr
+    args = json.loads(result.stdout)
+    assert args[args.index("--model") :] == [
+        "--model",
+        "native-model",
+        *effort_args,
+        "--example",
+        "two words; $(touch unexpected)",
+        *(["-"] if name == "codex" else []),
+    ]
+    home.env.update(AI_FLAGS="[]", AI_MODEL="override", AI_EFFORT="high", AI_PROVIDER="unused")
+    override = home.run(cmd, "--provider", name, "question")
+    assert override.returncode == 0, override.stderr
+    args = json.loads(override.stdout)
+    assert args[args.index("--model") + 1] == "override"
+    assert "--example" not in args and ("high" in args or 'model_reasoning_effort="high"' in args)
+    home.env["AI_PROVIDER"] = name
+    home.env["AI_FLAGS"] = '["--other", "x y"]'
+    _ = config.write_text('[ai]\nprovider = "unused"\n')
+    args = json.loads(home.run(cmd, "question").stdout)
+    assert args[args.index("--other") + 1] == "x y"
+    assert not (home.path / "unexpected").exists()
+
+
+@pytest.mark.parametrize(
+    ("config_text", "environment"),
+    [
+        ("[ai", {}),
+        ('[ai]\nprovider = "unknown"', {}),
+        ('[ai.codex]\nflags = "--flag"', {}),
+        ("[ai.codex]\nmodel = 3", {}),
+        ("", {"AI_FLAGS": "--flag"}),
+        ("", {"AI_FLAGS": "[42]"}),
+    ],
+)
+def test_invalid_settings_fail_before_provider(
+    home: Home, config_text: str, environment: dict[str, str]
+) -> None:
+    config = home.path / ".config/dotfiles/config.toml"
+    config.parent.mkdir(exist_ok=True)
+    _ = config.write_text(config_text)
+    home.env.update(environment)
+    result = home.run(str(home.path / ".local/bin/ai-ask"), "question")
+    assert result.returncode == 2 and not result.stdout
+
+
 def test_terminal_alias_in_argument_and_pipeline_positions(home: Home) -> None:
     provider = home.tools / "codex"
     _ = provider.write_text(
@@ -98,6 +165,8 @@ def test_terminal_alias_in_argument_and_pipeline_positions(home: Home) -> None:
         "task, data = sys.stdin.read().split('\\n', 1)\n"
         "context = json.loads(data)\n"
         "assert context['working_directory'] == os.getcwd()\n"
+        "if context['instruction'] == 'describe this directory':\n"
+        "    assert sys.argv[sys.argv.index('--model') + 1] == 'test-model'\n"
         "with Path('requests').open('a') as log: print(data, file=log)\n"
         "if context['instruction'] == 'filter': print('interface Result')\n"
         "elif context['instruction'] == 'render': print('rendered ' + context['stdin'].strip())\n"
@@ -115,7 +184,7 @@ def test_terminal_alias_in_argument_and_pipeline_positions(home: Home) -> None:
                 "mkdir project && cd project",
                 line,
                 """printf 'bare input' | $A""",
-                """$A 'describe this directory' </dev/null""",
+                """AI_MODEL=test-model $A 'describe this directory' </dev/null""",
                 """printf '<%s>\\n' $A""",
                 """print -r -- 'literal $A'""",
                 "git init -q",
