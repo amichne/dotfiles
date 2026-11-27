@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_home_source_contains_the_requested_public_files() -> None:
     for name in (
+        ".local/bin/ai",
         ".zshrc",
         ".zshenv",
         ".zprofile",
@@ -26,11 +27,12 @@ def test_home_source_contains_the_requested_public_files() -> None:
         ".local/bin/shell-prompt",
     ):
         assert (ROOT / name).is_file(), name
-    for name in ("git-recents", "keys", "shell-prompt"):
+    for name in ("ai", "git-recents", "keys", "shell-prompt"):
         assert os.access(ROOT / ".local/bin" / name, os.X_OK)
     assert {p.name for p in (ROOT / ".config").iterdir()} == {
         "atuin",
         "austincomplete",
+        "dotfiles-defaults.json",
         "ghostty",
         "git",
         "mise",

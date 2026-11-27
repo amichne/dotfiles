@@ -86,11 +86,11 @@ alias zs='exec zsh -l'
 autoload -Uz add-zsh-hook
 _ai_remember_line() { typeset -g _ai_command_line=$1; }
 add-zsh-hook preexec _ai_remember_line
-_ai_stage() { AI_ASK_LINE=${_ai_command_line-} command ai-ask --terminal stage -- "$@"; }
-_ai_argument() { AI_ASK_LINE=${_ai_command_line-} command ai-ask --terminal argument </dev/null; }
+_ai_stage() { AI_ASK_LINE=${_ai_command_line-} command ai --terminal stage -- "$@"; }
+_ai_argument() { AI_ASK_LINE=${_ai_command_line-} command ai --terminal argument </dev/null; }
 # The global alias supplies a single argument. In command position only, the
 # second alias replaces that same word with a filter that accepts stdin and argv.
-_ai_word='"${${:-$(_ai_argument)}:?ai-ask supplied no argument}"'
+_ai_word='"${${:-$(_ai_argument)}:?ai supplied no argument}"'
 alias -g '$A'="$_ai_word"
 alias "${_ai_word}=_ai_stage"
 unset _ai_word

@@ -10,7 +10,7 @@ export const segments = Object.freeze([
 const path = join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'shell-prompt', 'statusline.json');
 const usage = [
   'shell-prompt customize                         Print the active layout',
-  'shell-prompt customize --ask "REQUEST"         Propose a layout with ai-ask',
+  'shell-prompt customize --ask "REQUEST"         Propose a layout with ai',
   'shell-prompt customize --apply \'["branch"]\'    Save a layout for the next prompt',
   'Segments in default order: ' + segments.join(', '),
 ].join('\n');
@@ -62,10 +62,10 @@ export async function customize(args) {
     'Current layout: ' + JSON.stringify(await activeLayout()),
     'Requested change: ' + value,
   ].join('\n');
-  const answer = spawnSync('ai-ask', [], {
+  const answer = spawnSync('ai', [], {
     input: request, encoding: 'utf8', timeout: 130_000, maxBuffer: 64 * 1024,
   });
-  if (answer.error?.code === 'ENOENT') throw new Error('Add the dotfiles .local/bin directory to PATH to use ai-ask.');
-  if (answer.error || answer.status !== 0) throw new Error('ai-ask failed. Check the selected provider and its authentication.');
+  if (answer.error?.code === 'ENOENT') throw new Error('Add the dotfiles .local/bin directory to PATH to use ai.');
+  if (answer.error || answer.status !== 0) throw new Error('ai failed. Check the selected provider and its authentication.');
   console.log(JSON.stringify(parseLayout(answer.stdout)));
 }

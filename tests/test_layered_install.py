@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -117,6 +118,18 @@ def test_empty_home_install_round_trip(installation: Installation) -> None:
     assert not (home / ".zshrc").exists()
     assert not starship.exists()
     installation.apply()
+    settings = home / ".config/dotfiles/config.toml"
+    assert tomllib.loads(settings.read_text()) == {
+        "ai": {
+            "provider": "codex",
+            "recent": 3,
+            "codex": {"flags": []},
+            "copilot": {"flags": []},
+            "claude": {"flags": []},
+        }
+    }
+    assert settings.stat().st_mode & 0o777 == 0o600
+    assert not (installation.source / ".config-backups").exists()
     assert starship.is_symlink()
     assert starship.resolve() == installation.source / ".config/starship.toml"
     editor = home / ".config/nvim/init.lua"
@@ -130,6 +143,7 @@ def test_empty_home_install_round_trip(installation: Installation) -> None:
     assert installation.plan()["changes"] == []
     installation.apply("--uninstall")
     assert not starship.is_symlink()
+    assert settings.exists()
     assert not editor.is_symlink()
     assert not config.exists()
     assert not theme.is_symlink()
@@ -137,6 +151,63 @@ def test_empty_home_install_round_trip(installation: Installation) -> None:
     for name in (".zshenv", ".zprofile", ".zshrc", ".config/git/config"):
         target = home / name
         assert not target.exists() or target.read_bytes() == b""
+
+
+def test_config_upgrade_tracks_checkout_defaults_and_backs_up(installation: Installation) -> None:
+    home = installation.home
+    xdg = home.path / "personal config"
+    home.env.update(XDG_CONFIG_HOME=str(xdg), AI_PROVIDER="claude", AI_ASK_RECENT="19")
+    installation.apply()
+    settings = xdg / "dotfiles/config.toml"
+    original = (
+        b'# personal\n[ai]\nprovider = "copilot"\nrecent = 0\n[ai.copilot]\n'
+        b'model = "auto"\neffort = "low"\nflags = ["--example", "two words"]\n'
+    )
+    _ = settings.write_bytes(original)
+    settings.chmod(0o640)
+    schema = installation.source / ".config/dotfiles-defaults.json"
+    updated = json.loads(schema.read_text())
+    del updated["ai"]["copilot"]["effort"]
+    updated["ai"]["copilot"]["new_option"] = 4
+    _ = schema.write_text(json.dumps(updated))
+    backups = installation.source / ".config-backups"
+    preview = installation.plan()
+    assert preview["changes"] == [{"path": str(settings), "operation": "reconcile"}]
+    assert settings.read_bytes() == original and not backups.exists()
+    result = installation.run("--apply", "--expected-plan", str(preview["planId"]))
+    assert result.returncode == 0, result.stderr
+    saved = Path(json.loads(result.stdout)["configBackup"])
+    assert saved.parent == backups and saved.read_bytes() == original
+    assert saved.stat().st_mode & 0o777 == 0o600
+    assert git(home, installation.source, "check-ignore", "--", str(saved)).returncode == 0
+    effective = tomllib.loads(settings.read_text())["ai"]
+    assert (effective["provider"], effective["recent"]) == ("copilot", 0)
+    assert effective["copilot"] == {
+        "model": "auto",
+        "flags": ["--example", "two words"],
+        "new_option": 4,
+    }
+    assert effective["claude"] == {"flags": []}
+    assert settings.stat().st_mode & 0o777 == 0o640
+    with settings.open("ab") as stream:
+        _ = stream.write(b"# keep this comment\n")
+    assert installation.plan()["changes"] == []
+    installation.apply()
+    assert settings.read_bytes().endswith(b"# keep this comment\n")
+    assert list(backups.iterdir()) == [saved]
+
+
+def test_stale_or_malformed_config_stops_apply(installation: Installation) -> None:
+    settings = installation.home.path / ".config/dotfiles/config.toml"
+    plan_id = str(installation.plan()["planId"])
+    settings.parent.mkdir(parents=True)
+    _ = settings.write_text("[ai]\nrecent = 1\n")
+    assert "stale-plan" in installation.run("--apply", "--expected-plan", plan_id).stderr
+    _ = settings.write_text("[ai")
+    assert installation.run().returncode != 0
+    assert settings.read_text() == "[ai"
+    assert not (installation.source / ".config-backups").exists()
+    assert not (installation.home.path / ".zshenv").exists()
 
 
 def test_upgrade_theme_only_block_keeps_personal_settings(installation: Installation) -> None:

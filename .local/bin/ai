@@ -106,6 +106,10 @@ class Settings:
 
     @classmethod
     def load(cls, provider_override: str | None, terminal: bool) -> "Settings":
+        source = Path(__file__).resolve().parents[2]
+        defaults: dict[str, object] = json.loads(
+            (source / ".config/dotfiles-defaults.json").read_bytes()
+        )["ai"]
         root = os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config"
         path = Path(root) / "dotfiles" / "config.toml"
         try:
@@ -115,16 +119,25 @@ class Settings:
             ai = {}
         except (tomllib.TOMLDecodeError, UnicodeError) as error:
             raise ValueError(f"{path}: invalid TOML ({error})") from error
-        if not table(ai) or ai.keys() - {"provider", "recent", *Provider}:
+        if not table(ai) or ai.keys() - defaults.keys():
             raise ValueError(f"{path}: [ai] expects provider, recent, or a provider table")
-        name = provider_override or os.environ.get("AI_PROVIDER", ai.get("provider", "codex"))
+        name = provider_override or os.environ.get(
+            "AI_PROVIDER", ai.get("provider", defaults["provider"])
+        )
         try:
             provider = Provider(name)
         except ValueError as error:
             raise ValueError("provider must be codex, copilot, or claude") from error
         config = ai.get(provider, {})
-        if not table(config) or config.keys() - {"model", "effort", "flags"}:
+        provider_defaults = defaults[provider]
+        if (
+            not table(provider_defaults)
+            or not table(config)
+            or config.keys() - provider_defaults.keys()
+        ):
             raise ValueError(f"{path}: [ai.{provider}] expects model, effort, and flags")
+
+        config = provider_defaults | config
 
         def setting(key: str) -> str | None:
             value = os.environ.get(f"AI_{key.upper()}", config.get(key))
@@ -134,7 +147,7 @@ class Settings:
                 raise ValueError(f"{provider} {key} must be a nonempty string")
             return value
 
-        flags: object = config.get("flags", [])
+        flags = config["flags"]
         if "AI_FLAGS" in os.environ:
             try:
                 flags = json.loads(os.environ["AI_FLAGS"])
@@ -144,7 +157,7 @@ class Settings:
             raise ValueError(f"{provider} flags must be an array of strings without NUL bytes")
         recent = 0
         if terminal:
-            count = os.environ.get("AI_ASK_RECENT", ai.get("recent", 3))
+            count = os.environ.get("AI_ASK_RECENT", ai.get("recent", defaults["recent"]))
             if isinstance(count, str) and count.isascii() and count.isdigit():
                 count = int(count)
             if type(count) is not int or not 0 <= count <= 20:
@@ -194,7 +207,7 @@ async def captured_output(activity: list[Activity]) -> None:
                 "initialize",
                 {
                     "protocolVersion": "2024-11-05",
-                    "clientInfo": {"name": "ai-ask", "version": "1"},
+                    "clientInfo": {"name": "ai", "version": "1"},
                     "capabilities": {},
                 },
             )
@@ -308,9 +321,7 @@ def terminal_prompt(mode: str, instruction: str | None, count: int) -> str:
 
 def ask(settings: Settings, prompt: str, terminal: str | None = None) -> int:
     provider = settings.provider
-    with (
-        nullcontext(None) if terminal else tempfile.TemporaryDirectory(prefix="ai-ask-")
-    ) as directory:
+    with nullcontext(None) if terminal else tempfile.TemporaryDirectory(prefix="ai-") as directory:
         with subprocess.Popen(
             provider.command(settings.model, settings.effort, settings.flags),
             cwd=directory,
@@ -329,14 +340,14 @@ def ask(settings: Settings, prompt: str, terminal: str | None = None) -> int:
                 _ = process.communicate()
                 raise
     if process.returncode:
-        print(f"ai-ask: {provider} exited with status {process.returncode}", file=sys.stderr)
+        print(f"ai: {provider} exited with status {process.returncode}", file=sys.stderr)
         return process.returncode if process.returncode > 0 else 128 - process.returncode
     output = answer.decode("utf-8").rstrip("\n")
     if not output.strip():
-        print(f"ai-ask: {provider} returned an empty answer", file=sys.stderr)
+        print(f"ai: {provider} returned an empty answer", file=sys.stderr)
         return 1
     if terminal == "argument" and (output.strip() == "AI_ASK_NO_ARGUMENT" or "\0" in output):
-        print("ai-ask: could not supply a shell argument", file=sys.stderr)
+        print("ai: could not supply a shell argument", file=sys.stderr)
         return 1
     print(output)
     return 0
@@ -357,7 +368,7 @@ def main() -> int:
     except ValueError as error:
         parser.error(str(error))
     except OSError as error:
-        print(f"ai-ask: could not read configuration: {error}", file=sys.stderr)
+        print(f"ai: could not read configuration: {error}", file=sys.stderr)
         return 1
     if options.terminal is None and options.prompt is None and sys.stdin.isatty():
         parser.error("pass a prompt or pipe text on stdin")
@@ -370,21 +381,21 @@ def main() -> int:
             parser.error("prompt must contain text")
         return ask(settings, prompt)
     except FileNotFoundError:
-        print(f"ai-ask: cannot find {settings.provider} on PATH", file=sys.stderr)
+        print(f"ai: cannot find {settings.provider} on PATH", file=sys.stderr)
         return 127
     except subprocess.TimeoutExpired:
-        print(f"ai-ask: {settings.provider} exceeded 120 seconds", file=sys.stderr)
+        print(f"ai: {settings.provider} exceeded 120 seconds", file=sys.stderr)
         return 124
     except KeyboardInterrupt:
         return 130
     except UnicodeError:
-        print("ai-ask: expected UTF-8 text", file=sys.stderr)
+        print("ai: expected UTF-8 text", file=sys.stderr)
         return 1
     except ValueError as error:
-        print(f"ai-ask: {error}", file=sys.stderr)
+        print(f"ai: {error}", file=sys.stderr)
         return 2
     except OSError as error:
-        print(f"ai-ask: {error.strerror}", file=sys.stderr)
+        print(f"ai: {error.strerror}", file=sys.stderr)
         return 1
 
 

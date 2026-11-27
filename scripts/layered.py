@@ -11,8 +11,10 @@ import tempfile
 from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
+from dotfiles_config import reconcile
 from install_state import apply_lock, digest, encoded
 
 START = b"# >>> amichne/dotfiles >>>"
@@ -170,12 +172,23 @@ class Change:
 
 
 @dataclass(frozen=True)
+class ConfigChange:
+    target: Path
+    before: File | None
+    after: File
+
+    def report(self) -> dict[str, object]:
+        return {"path": str(self.target), "operation": "reconcile"}
+
+
+@dataclass(frozen=True)
 class Plan:
     identity: str
     revision: str
     ownership: bytes
     previous: File | None
     changes: tuple[Change, ...]
+    config: ConfigChange | None
 
 
 def ownership_record(source: Path, paths: list[str], created: list[str]) -> bytes:
@@ -236,11 +249,32 @@ def build_plan(source: Path, revision: str, home: Path, state: Path, uninstall: 
         after = desired(entry, before, owned, name in initial, uninstall)
         if before != after:
             changes.append(Change(entry, before, after))
+    config_change = None
+    if not uninstall:
+        target = config / "dotfiles/config.toml"
+        check_parents(target, home)
+        if target.is_relative_to(source) or target.is_relative_to(state):
+            raise LayerConflict(f"destination overlaps installer files: {target}")
+        current = inspect(target)
+        if isinstance(current, Link):
+            raise LayerConflict(f"unexpected symlink: {target}")
+        defaults = source / ".config/dotfiles-defaults.json"
+        if defaults.resolve() != defaults or not defaults.is_file():
+            raise LayerConflict(f"missing or linked checkout file: {defaults}")
+        template = defaults.read_bytes()
+        try:
+            data = reconcile(template, current.data if current else None)
+        except ValueError as error:
+            raise LayerConflict(f"cannot reconcile {target}: {error}") from error
+        after_config = File(data, current.mode if current else 0o600)
+        snapshots.append([str(target), fingerprint(current), digest(template)])
+        if current != after_config:
+            config_change = ConfigChange(target, current, after_config)
     ownership = ownership_record(source, paths, initial)
     identity = digest(
         encoded([revision, digest(ownership), fingerprint(ledger), uninstall, snapshots])
     )
-    return Plan(identity, revision, ownership, ledger, tuple(changes))
+    return Plan(identity, revision, ownership, ledger, tuple(changes), config_change)
 
 
 def write(path: Path, before: Contents, after: Contents, home: Path) -> None:
@@ -288,19 +322,34 @@ def layered_install(
 ) -> dict[str, object]:
     with apply_lock(state) if expected is not None else nullcontext():
         plan = build_plan(source, revision(), home, state, uninstall)
+        changes = [change.report() for change in plan.changes]
+        if plan.config:
+            changes.append(plan.config.report())
         report: dict[str, object] = {
             "status": "planned",
             "action": "uninstall" if uninstall else "install",
             "source": str(source),
             "revision": plan.revision,
             "planId": plan.identity,
-            "changes": [change.report() for change in plan.changes],
+            "changes": changes,
         }
         if expected is None:
             return report
         if plan.identity != expected:
             raise LayerConflict("stale-plan")
         ledger = state / "layered.json"
+        if plan.config and plan.config.before:
+            directory = source / ".config-backups"
+            directory.mkdir(mode=0o700, exist_ok=True)
+            info = directory.lstat()
+            if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077 or info.st_uid != os.getuid():
+                raise LayerConflict(f"expected a private backup directory: {directory}")
+            stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%S.%fZ")
+            with tempfile.NamedTemporaryFile(
+                dir=directory, prefix=stamp + "-", suffix=".toml", delete=False
+            ) as saved:
+                _ = saved.write(plan.config.before.data)
+                report["configBackup"] = saved.name
         if plan.changes:
             backup = Path(tempfile.mkdtemp(prefix="layered-", dir=state))
             report["backup"] = str(backup)
@@ -320,6 +369,8 @@ def layered_install(
                 write(ledger, plan.previous, File(plan.ownership, 0o600), home)
             for change in plan.changes:
                 write(change.entry.target, change.before, change.after, home)
+        if plan.config:
+            write(plan.config.target, plan.config.before, plan.config.after, home)
         if uninstall and ledger.exists():
             ledger.unlink()
     report["status"] = "uninstalled" if uninstall else "installed"

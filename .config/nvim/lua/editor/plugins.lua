@@ -17,6 +17,12 @@ end
 
 M.lazy_commit = '306a05526ada86a7b30af95c5cc81ffba93fef97'
 M.spec = {
+  { 'nvim-lua/plenary.nvim', commit = '74b06c6c75e4eeb3108ec01852001636d85a932b', lazy = true },
+  {
+    'pwntester/octo.nvim', commit = '4b229445735c394ad9659ab28dc9285a26782356',
+    cmd = 'Octo', event = 'BufReadCmd octo://*', dependencies = { 'plenary.nvim' },
+    opts = { picker = 'default', enable_builtin = true, file_panel = { icons = false } },
+  },
   {
     'carlos-algms/agentic.nvim', commit = '4750d6ce4298b3018dd67f975a1457afbeeaa09f',
     lazy = true, main = 'agentic',

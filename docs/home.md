@@ -31,6 +31,14 @@ Read the plan, then apply it with the printed ID.
 | `ghostty/themes/Neon Arcade` in the same configuration directory | A link makes the checkout palette available by name in Ghostty. |
 | `ghostty/config.ghostty` in the same configuration directory | A marked block selects Neon Arcade and loads the cursor trail shader from the checkout. |
 | `nvim/init.lua` in the same configuration directory | A link loads the editor setup and colorscheme from the checkout. |
+| `dotfiles/config.toml` in the same configuration directory | An editable file with the defaults for `ai` and `$A`. |
+
+After updating the checkout, preview and apply the installer to refresh `dotfiles/config.toml`.
+It keeps your values for supported keys, adds missing defaults, and removes retired keys and tables.
+If the file needs rewriting, the installer saves its original bytes, including comments, in a dated
+private TOML file under the checkout’s Git-ignored `.config-backups/` directory.
+The apply result gives its path in `configBackup`. Copy it back to restore that version.
+A current config keeps its formatting. Uninstall leaves your settings in place.
 
 Ghostty reads the palette from `.config/ghostty/themes/Neon Arcade` in the checkout.
 The trail follows the terminal cursor and fades in 160 milliseconds. It uses the active cursor color.

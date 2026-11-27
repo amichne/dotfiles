@@ -112,12 +112,12 @@ test('a slow Git status keeps branch identity and never claims the worktree is c
   assert.equal(await statusline(repo, {PATH:root + ':/usr/bin:/bin'}), 'fixture-main · Git status unavailable');
 });
 
-test('customize proposes through ai-ask and applies only an explicit valid layout', async t => {
+test('customize proposes through ai and applies only an explicit valid layout', async t => {
   const {root, repo} = await fixture(t);
   const env = {...runtimeEnv, XDG_CONFIG_HOME:join(root, 'config'), PATH:root + ':' + runtimeEnv.PATH};
   const launcher = fileURLToPath(new URL('../.local/bin/shell-prompt', import.meta.url));
   const customize = (...args) => exec(launcher, ['customize', ...args], {cwd:repo, env});
-  const provider = join(root, 'ai-ask');
+  const provider = join(root, 'ai');
   await writeFile(provider, '#!/bin/sh\ncat > "$PWD/../request"\necho \'["changes","branch"]\'\n', {mode:0o755});
   const original = (await customize()).stdout;
   const proposed = (await customize('--ask', 'put changes first')).stdout.trim();

@@ -20,6 +20,7 @@
 !/.gradle/init.d/cache-retention.init.gradle.kts
 
 !/.config/
+!/.config/dotfiles-defaults.json
 !/.config/atuin/
 !/.config/atuin/config.toml
 !/.config/austincomplete/
@@ -49,8 +50,8 @@
 
 !/.local/
 !/.local/bin/
-!/.local/bin/ai-ask
-!/.local/bin/ai-ask.lock
+!/.local/bin/ai
+!/.local/bin/ai.lock
 !/.local/bin/austincomplete
 !/.local/bin/austincomplete.lock
 !/.local/bin/dotfiles
@@ -107,6 +108,7 @@
 /.dotfiles/controlled-english.md
 
 # Generated state stays outside the source inventory.
+/.config-backups/
 **/.venv/
 /site/
 **/__pycache__/

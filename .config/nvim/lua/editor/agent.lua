@@ -26,7 +26,7 @@ end
 function M.ask()
   if toggle_existing(vim.t.editor_ask) then return end
   local legacy = vim.env.NVIM_AGENT
-  local command = vim.env.NVIM_ASK_COMMAND or (legacy and vim.fs.basename(legacy) == 'ai-ask' and legacy) or 'ai-ask'
+  local command = vim.env.NVIM_ASK_COMMAND or (legacy and vim.fs.basename(legacy) == 'ai' and legacy) or 'ai'
   if vim.fn.executable(command) ~= 1 then
     vim.notify('Ask AI executable missing: ' .. command, vim.log.levels.ERROR)
     return
@@ -37,7 +37,7 @@ end
 function M.terminal()
   if toggle_existing(vim.t.editor_terminal) then return end
   local agent = vim.env.NVIM_AGENT or 'codex'
-  if vim.fs.basename(agent) == 'ai-ask' then agent = 'codex' end
+  if vim.fs.basename(agent) == 'ai' then agent = 'codex' end
   if vim.fn.executable(agent) ~= 1 then
     vim.notify('Agent executable missing: ' .. agent, vim.log.levels.ERROR)
     return
