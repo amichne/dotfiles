@@ -16,7 +16,7 @@ end
 function M.open(command)
   local buf = api.nvim_create_buf(false, true)
   local provider = vim.fs.basename(command)
-  vim.b[buf].ask_provider = provider == 'ai-ask' and (vim.env.AI_PROVIDER or 'codex') or provider
+  vim.b[buf].ask_provider = provider == 'ai-ask' and vim.env.AI_PROVIDER or provider
   vim.b[buf].ask_status = 'Enter send · Ctrl-J newline'
   vim.bo[buf].bufhidden = 'hide'
   vim.t.editor_ask = buf
