@@ -118,6 +118,7 @@ def test_migrate_preserves_other_files_and_archives_git(migration: Installation)
             "source": str(migration.source / ".config/nvim/init.lua"),
             "block": None,
         },
+        {"path": str(home.path / ".config/dotfiles/config.toml"), "operation": "reconcile"},
     ]
     migration.apply()
     assert ghostty.is_file() and migration.plan()["changes"] == []

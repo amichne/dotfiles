@@ -16,7 +16,7 @@ def test_ai_ask_keeps_a_completed_answer_until_dismissed(home: Home, custom: boo
         pytest.skip("the editor configuration needs Neovim 0.12 or later")
     assert version.returncode == 0 and version.stderr.strip() == "1", version.stderr
 
-    ask = home.tools / ("custom backend" if custom else "ai-ask")
+    ask = home.tools / ("custom backend" if custom else "ai")
     _ = ask.write_text(
         '#!/bin/sh\n[ "$#" -eq 0 ] || exit 64\nquestion=$(cat)\n'
         'if [ "$question" = fail ]; then echo "provider unavailable" >&2; exit 1; fi\n'
@@ -58,6 +58,17 @@ local function run()
   assert(vim.wait(3000, function() return vim.b.ask_status == 'Request failed · q dismiss' end))
   assert(vim.fn.index(vim.fn.getline(1, '$'), '## Request failed') >= 0)
   assert(vim.fn.getline('$') == 'provider unavailable')
+  press('q')
+  vim.api.nvim_buf_set_name(0, 'octo://example/project/issue/42')
+  vim.bo.filetype = 'octo'
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {'Issue title', 'Body with $(literal) text'})
+  press(' a')
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {'Summarize'})
+  press('<CR>')
+  assert(vim.wait(3000, function() return vim.b.ask_status == 'q dismiss' end))
+  local request = vim.json.decode(vim.fn.getline('$'))
+  assert(request.question == 'Summarize' and request.octo.source == 'octo://example/project/issue/42')
+  assert(request.octo.text == 'Issue title' .. string.char(10) .. 'Body with $(literal) text')
 end
 local ok, err = xpcall(run, debug.traceback)
 if not ok then print(err) end

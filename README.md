@@ -29,7 +29,7 @@ The source contains:
 
 Use ordinary Git in the checkout to review, stage, and commit changes.
 
-Use `ai-ask` to prompt Codex, Copilot, or Claude from a CLI. Use `shell-prompt customize` to change the Starship Git status line.
+Use `ai` to prompt Codex, Copilot, or Claude from a CLI. Use `shell-prompt customize` to change the Starship Git status line.
 
 From the checkout, run `brew bundle install --file Brewfile --no-upgrade` for the core shell tools.
 With uv and Python available, `./.local/bin/setup-tools` previews setup.

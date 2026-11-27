@@ -58,7 +58,7 @@ def test_prompt_from_another_cli(home: Home, provider: str, expected: list[str])
     )
     binary.chmod(0o755)
     env = home.env.copy()
-    args = [str(home.path / ".local/bin/ai-ask")]
+    args = [str(home.path / ".local/bin/ai")]
     if provider == "copilot":
         env["AI_PROVIDER"] = provider
     if provider == "claude":
@@ -73,7 +73,7 @@ def test_prompt_from_another_cli(home: Home, provider: str, expected: list[str])
 
 
 def test_provider_errors_never_become_answers(home: Home) -> None:
-    cmd = str(home.path / ".local/bin/ai-ask")
+    cmd = str(home.path / ".local/bin/ai")
     home.env["AI_PROVIDER"] = "unknown"
     assert home.run(cmd, "text").returncode == 2
     home.env["AI_PROVIDER"] = "codex"
@@ -105,7 +105,7 @@ def test_provider_settings_reach_native_argv(home: Home, name: str, effort_args:
         'effort = "low"\nflags = ["--example", "two words; $(touch unexpected)"]\n'
     )
     home.env["XDG_CONFIG_HOME"] = str(config.parent.parent)
-    cmd = str(home.path / ".local/bin/ai-ask")
+    cmd = str(home.path / ".local/bin/ai")
     provider = home.tools / name
     _ = provider.write_text(f"#!{sys.executable}\nimport json,sys\nprint(json.dumps(sys.argv[1:]))")
     provider.chmod(0o755)
@@ -152,7 +152,7 @@ def test_invalid_settings_fail_before_provider(
     config.parent.mkdir(exist_ok=True)
     _ = config.write_text(config_text)
     home.env.update(environment)
-    result = home.run(str(home.path / ".local/bin/ai-ask"), "question")
+    result = home.run(str(home.path / ".local/bin/ai"), "question")
     assert result.returncode == 2 and not result.stdout
 
 
@@ -255,7 +255,7 @@ def test_terminal_readback_uses_completed_session_entries_and_their_output(home:
     _ = provider.write_text("#!/bin/sh\ncat\n")
     provider.chmod(0o755)
     home.env.update(ATUIN_SESSION="fixture", AI_ASK_RECENT="1")
-    cmd = str(home.path / ".local/bin/ai-ask")
+    cmd = str(home.path / ".local/bin/ai")
     result = home.run(cmd, "--terminal", "argument")
     assert result.returncode == 0, result.stderr
     context = json.loads(result.stdout.split("\n", 1)[1])

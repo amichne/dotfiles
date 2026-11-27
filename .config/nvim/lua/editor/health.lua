@@ -5,7 +5,7 @@ function M.check()
   health.start('Editor dependencies')
   if vim.fn.has('nvim-0.12') == 1 then health.ok('Neovim 0.12+ APIs available')
   else health.error('Neovim 0.12+ is required') end
-  for _, command in ipairs({ 'git', 'curl', 'fd', 'rg' }) do
+  for _, command in ipairs({ 'git', 'gh', 'curl', 'fd', 'rg' }) do
     if vim.fn.executable(command) == 1 then health.ok(command .. ' available')
     else health.error(command .. ' missing from PATH') end
   end

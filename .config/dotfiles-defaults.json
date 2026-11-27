@@ -1,0 +1,9 @@
+{
+  "ai": {
+    "provider": "codex",
+    "recent": 3,
+    "codex": { "model": null, "effort": null, "flags": [] },
+    "copilot": { "model": null, "effort": null, "flags": [] },
+    "claude": { "model": null, "effort": null, "flags": [] }
+  }
+}

@@ -14,9 +14,16 @@ function M.show(buf)
 end
 
 function M.open(command)
+  local context
+  if vim.bo.filetype == 'octo' then
+    context = {
+      source = api.nvim_buf_get_name(0),
+      text = table.concat(api.nvim_buf_get_lines(0, 0, -1, false), '\n'),
+    }
+  end
   local buf = api.nvim_create_buf(false, true)
   local provider = vim.fs.basename(command)
-  vim.b[buf].ask_provider = provider == 'ai-ask' and vim.env.AI_PROVIDER or provider
+  vim.b[buf].ask_provider = provider == 'ai' and vim.env.AI_PROVIDER or provider
   vim.b[buf].ask_status = 'Enter send · Ctrl-J newline'
   vim.bo[buf].bufhidden = 'hide'
   vim.t.editor_ask = buf
@@ -53,7 +60,12 @@ function M.open(command)
       vim.b[buf].ask_status = success and 'q dismiss' or 'Request failed · q dismiss'
       vim.cmd.redrawstatus()
     end
-    local started, process = pcall(vim.system, { command }, { stdin = question, text = true }, vim.schedule_wrap(finish))
+    local prompt = question
+    if context then
+      prompt = 'Answer the question using the Octo buffer as reference material.\n'
+        .. vim.json.encode({ question = question, octo = context })
+    end
+    local started, process = pcall(vim.system, { command }, { stdin = prompt, text = true }, vim.schedule_wrap(finish))
     if not started then
       finish({ code = -1, stderr = tostring(process) })
       return

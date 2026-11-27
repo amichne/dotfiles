@@ -170,6 +170,7 @@ The editor uses the Neon Arcade colors from Rex and Ghostty. Space is the leader
 | `Space 2` | Show or hide the ACP chat. Reopen it to continue the conversation. |
 | `Space c p` | Choose an installed ACP provider for a new conversation. |
 | `Space a` | Ask AI a one-shot question. |
+| `Space g i` / `Space g p` | Browse GitHub issues or pull requests with Octo. |
 | `Space t` | Show or hide the agent terminal. |
 | `Space f` | Find a file by fuzzy name. |
 | `Space /` | Search file contents. |
@@ -187,10 +188,15 @@ For Codex, install the separate adapter with `brew install codex-acp`. Press `Sp
 The separate agent terminal defaults to `codex`. Set `NVIM_AGENT` to another interactive executable, such as `pi`, to change it.
 In the terminal, press `Ctrl-\` then `Ctrl-n` to return to Normal mode before a leader shortcut.
 
-For a single question, choose **Ask AI (one-shot)** from the action palette. It uses `ai-ask` on your path.
+Octo uses your authenticated GitHub CLI account. Open an issue or pull request from the list,
+or use `:Octo <GitHub URL>`. Press `Space a` in the Octo buffer to ask about it.
+Submitting sends the buffer name and text, including unsaved edits, with your question.
+The answer opens in the AI pane. Use Octo’s own editing commands to post to GitHub.
+
+For a single question, choose **Ask AI (one-shot)** from the action palette. It uses `ai` on your path.
 Ctrl-J adds a line. Enter sends the question and displays the Markdown answer.
 The pane shows the provider and request status. In Normal mode, `Space a` hides or reopens it, and `q` dismisses it.
-`AI_PROVIDER` selects `codex`, `claude`, or `copilot` for `ai-ask`.
+`AI_PROVIDER` selects `codex`, `claude`, or `copilot` for `ai`.
 To use another backend, set `NVIM_ASK_COMMAND` to an executable name or path.
 It receives one question on stdin. On success it writes Markdown to stdout. On failure it returns a nonzero exit code and writes to stderr.
 
@@ -213,7 +219,7 @@ The helper needs Node and Git. The refresh operation also needs authenticated `g
 ### Customize the Git status line
 
 Run `shell-prompt customize` to see the active segments in display order.
-To preview a layout, describe the change. The customizer sends your description, active layout, and available segments to `ai-ask`.
+To preview a layout, describe the change. The customizer sends your description, active layout, and available segments to `ai`.
 
 ```sh
 shell-prompt customize --ask 'Show the branch first, then file changes, then the pull request'
@@ -229,23 +235,25 @@ Only `--ask` calls an AI provider. To use Claude for one suggestion, prefix the 
 
 ### Call an AI provider from a CLI
 
-`ai-ask` reads a quoted prompt or reads standard input when you omit the argument.
+`ai` reads a quoted prompt or reads standard input when you omit the argument.
 It runs `codex exec` by default. Install and authenticate the native CLI for each provider you use.
 Set `AI_PROVIDER` to `codex`, `copilot`, or `claude` to select a default. The `--provider` flag takes precedence.
 
 ```sh
-ai-ask 'Suggest a short label for untracked files'
-printf '%s\n' 'Suggest a short label for staged changes' | ai-ask --provider copilot
+ai 'Suggest a short label for untracked files'
+printf '%s\n' 'Suggest a short label for staged changes' | ai --provider copilot
 ```
 
-Plain `ai-ask` requests start in a temporary directory. A successful request prints the answer to stdout.
+Plain `ai` requests start in a temporary directory. A successful request prints the answer to stdout.
 A provider failure reports its exit status on stderr. A missing executable exits with 127, and a 120-second timeout exits with 124.
 
 #### Choose the provider, model, effort, and flags
 
-Set defaults for both `ai-ask` and `$A` in
+Set defaults for both `ai` and `$A` in
 `${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/config.toml`. Use a separate
 table for each provider so switching providers selects its model and flags.
+The installer starts with Codex, three recent commands, and empty flags for each provider.
+Model and effort default to the native CLI. The following example customizes those settings.
 
 ```toml
 [ai]
@@ -265,14 +273,14 @@ model = "auto"
 ```
 
 `AI_PROVIDER`, `AI_MODEL`, `AI_EFFORT`, `AI_FLAGS`, and `AI_ASK_RECENT`
-override the corresponding file settings. An explicit `ai-ask --provider`
+override the corresponding file settings. An explicit `ai --provider`
 takes precedence over `AI_PROVIDER`. Omit model or effort to use the native
 CLI's default. Use model names and effort levels supported by that provider.
 With Copilot's `auto` model, leave effort unset.
 
 ```zsh
 git diff | AI_PROVIDER=claude AI_MODEL=sonnet AI_EFFORT=low $A 'summarize'
-AI_FLAGS='["-c","model_verbosity=\"low\""]' AI_PROVIDER=codex ai-ask 'Suggest a label'
+AI_FLAGS='["-c","model_verbosity=\"low\""]' AI_PROVIDER=codex ai 'Suggest a label'
 ```
 
 `AI_FLAGS` replaces the selected provider's entire `flags` array. Each string
