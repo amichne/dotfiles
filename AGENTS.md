@@ -10,7 +10,7 @@ Read only the row that matches the intended action, before acting.
 
 | Intended action | Read |
 | --- | --- |
-| Design, change, or review software | Slopsentral's Software Engineering session context; without it, the [global instructions](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/docs/examples/global/AGENTS.md) |
+| Design, change, or review software | The installed Slopsentral skill whose trigger matches the action; without the plugins, the [task catalog](https://raw.githubusercontent.com/amichne/slopsentral/refs/heads/main/source/CATALOG.md) |
 | Change the dotfiles checkout | `docs/repository.md` in that checkout |
 
 If a required file is unavailable, name the gap and complete independent
