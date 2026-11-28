@@ -37,6 +37,10 @@ authorized work without claiming compliance.
 - After an implementation task completes in a personal repository, commit its
   changes, push the task branch, and open or update a pull request. This is
   standing authorization for those three actions.
-- For work repositories or unknown ownership, keep publication authorization
-  specific to the task. Obey a request for local-only work.
-- Merges, deployments, and release publication need separate explicit authorization.
+- In a personal repository, also merge that pull request once its required
+  checks pass. Use the repository's merge path, such as its merge queue. A
+  request to fix something, such as failing CI, is a request to land the fix.
+  Do not ask again before merging.
+- For work repositories or unknown ownership, keep publication and merge
+  authorization specific to the task. Obey a request for local-only work.
+- Deployments and release publication need separate explicit authorization.
